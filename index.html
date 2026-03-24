@@ -614,14 +614,6 @@
       <div class="type-chip selected" data-type="short">💬 Respuesta corta</div>
       <div class="type-chip selected" data-type="order">🔢 Ordenar</div>
     </div>
-    <div id="apikey-section" style="margin-bottom:14px">
-      <label>🔑 API Key de Anthropic <span style="font-weight:400;color:var(--muted);font-size:0.82rem">— solo se guarda en tu navegador</span></label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input type="password" id="api-key-input" placeholder="sk-ant-..." style="margin-bottom:0;flex:1" oninput="saveApiKey(this.value)">
-        <button type="button" onclick="toggleApiKeyVisibility()" style="background:none;border:2px solid var(--border);border-radius:10px;padding:10px 14px;cursor:pointer;font-size:1rem;white-space:nowrap">👁</button>
-      </div>
-      <p style="font-size:0.78rem;color:var(--muted);margin-top:4px">Consíguela gratis en <a href="https://console.anthropic.com" target="_blank" style="color:var(--primary)">console.anthropic.com</a></p>
-    </div>
     <button class="btn btn-primary" onclick="generateWithAI()" id="ai-btn">
       <span id="ai-btn-text">✦ Generar control con IA</span>
     </button>
@@ -880,16 +872,9 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
 Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipos a lo que tenga sentido con ese contenido.`;
 
   try {
-    const apiKey = document.getElementById('api-key-input').value.trim();
-    if (!apiKey) { showToast('⚠️ Introduce tu API Key de Anthropic primero'); btn.disabled = false; document.getElementById('ai-btn-text').innerHTML = '✦ Generar control con IA'; return; }
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('/.netlify/functions/generate', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-allow-browser': 'true'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -897,6 +882,12 @@ Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipo
       })
     });
     const data = await resp.json();
+    if (!resp.ok || data.error) {
+      throw new Error(data.error?.message || data.error || 'Error de la API');
+    }
+    if (!data.content) {
+      throw new Error('Respuesta inesperada: ' + JSON.stringify(data));
+    }
     const text = data.content.map(i => i.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
     const quiz = JSON.parse(clean);
@@ -1438,25 +1429,8 @@ function launchConfetti() {
   setTimeout(() => wrap.remove(), 4000);
 }
 
-// ══════════════════════════════════════════════
-//  API KEY HELPERS
-// ══════════════════════════════════════════════
-function saveApiKey(val) {
-  try { localStorage.setItem('cs_apikey', val); } catch(e) {}
-}
-
-function toggleApiKeyVisibility() {
-  const inp = document.getElementById('api-key-input');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-}
-
 // ── Init on start ──
 window.addEventListener('load', () => {
-  // Restore API key from session (survives page refresh but not tab close)
-  try {
-    const saved = localStorage.getItem('cs_apikey');
-    if (saved) document.getElementById('api-key-input').value = saved;
-  } catch(e) {}
   renderNotesTable();
   // If URL contains a quiz param, go straight to student view and hide teacher UI
   if (new URLSearchParams(window.location.search).get('quiz')) {
