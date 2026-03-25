@@ -555,7 +555,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" onclick="showView('teacher')">👩‍🏫 Profesor</button>
     <button class="tab-btn" onclick="showView('student')">🎒 Alumno</button>
-    <button class="tab-btn" onclick="showView('notes')">📊 Notas</button>
+    
   </div>
 </header>
 
@@ -694,36 +694,7 @@
   </div>
 </div>
 
-<!-- ═══════════════ RESULTS VIEW ═══════════════ -->
-<div id="results-view" class="view">
-  <div class="card">
-    <h2>📊 Registro de notas</h2>
-    <div id="notes-controls" style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="exportCSV()">⬇️ Exportar para Excel</button>
-      <button class="btn btn-sm" onclick="clearNotes()" style="background:#e5e7eb;color:#374151">🗑 Limpiar registros</button>
-    </div>
-    <div class="notes-table-wrap">
-      <table id="notes-table" style="display:none">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Alumno</th>
-            <th>Clase</th>
-            <th>Control</th>
-            <th>Nota</th>
-            <th>Fecha</th>
-          </tr>
-        </thead>
-        <tbody id="notes-tbody"></tbody>
-      </table>
-    </div>
-    <div id="notes-empty" class="empty-state" style="display:none">
-      <div class="emoji">📋</div>
-      <p style="font-weight:700">Aún no hay notas registradas</p>
-      <p style="font-size:0.9rem;margin-top:6px">Las notas aparecerán aquí cuando los alumnos entreguen controles.</p>
-    </div>
-  </div>
-</div>
+
 
 <!-- ═══════════════ RESULTS SCREEN ═══════════════ -->
 <div id="results-screen" style="display:none;padding:32px;max-width:680px;margin:0 auto">
@@ -766,11 +737,6 @@ function showView(v) {
     document.getElementById('student-view').classList.add('active');
     document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
     loadStudentView();
-  } else if (v === 'notes') {
-    document.getElementById('results-view').style.display = 'block';
-    document.getElementById('results-view').classList.add('active');
-    document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
-    renderNotesTable();
   }
 }
 
@@ -1362,44 +1328,7 @@ function backToStudent() {
   showView('student');
 }
 
-// ══════════════════════════════════════════════
-//  NOTES TABLE
-// ══════════════════════════════════════════════
-function renderNotesTable() {
-  const tbody = document.getElementById('notes-tbody');
-  const empty = document.getElementById('notes-empty');
-  tbody.innerHTML = '';
-  if (!submissions.length) { empty.style.display = 'block'; document.getElementById('notes-table').style.display = 'none'; return; }
-  empty.style.display = 'none';
-  document.getElementById('notes-table').style.display = 'table';
-  const sorted = [...submissions].sort((a, b) => a.name.localeCompare(b.name));
-  sorted.forEach((s, i) => {
-    const cls2 = s.score >= 7 ? 'high' : s.score >= 5 ? 'mid' : 'low';
-    tbody.innerHTML += `<tr><td>${i + 1}</td><td>${escHtml(s.name)}</td><td>${escHtml(s.class)}</td><td>${escHtml(s.quiz)}</td><td><span class="note-badge ${cls2}">${s.score}</span></td><td>${escHtml(s.date)}</td></tr>`;
-  });
-}
 
-function exportCSV() {
-  if (!submissions.length) { showToast('No hay notas que exportar'); return; }
-  const sorted = [...submissions].sort((a, b) => a.name.localeCompare(b.name));
-  const header = 'Alumno,Clase,Control,Nota,Fecha\n';
-  const rows = sorted.map(s => `"${s.name}","${s.class}","${s.quiz}","${s.score}","${s.date}"`).join('\n');
-  const csvContent = '\uFEFF' + header + rows;
-  const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
-  const a = document.createElement('a');
-  a.href = dataUri;
-  a.download = 'notas_controles.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast('✅ CSV descargado — ábrelo con Excel');
-}
-
-function clearNotes() {
-  if (!confirm('¿Borrar todos los registros de notas?')) return;
-  submissions = [];
-  renderNotesTable();
-}
 
 // ══════════════════════════════════════════════
 //  HELPERS
@@ -1439,7 +1368,6 @@ function launchConfetti() {
 
 // ── Init on start ──
 window.addEventListener('load', () => {
-  renderNotesTable();
   // If URL contains a quiz param, go straight to student view and hide teacher UI
   if (new URLSearchParams(window.location.search).get('quiz')) {
     document.querySelector('.tab-bar').style.display = 'none';
