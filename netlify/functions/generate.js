@@ -10,39 +10,44 @@ exports.handler = async function(event) {
     return { statusCode: 500, body: JSON.stringify({ error: 'API key not configured' }) };
   }
 
-  return new Promise((resolve) => {
-    const options = {
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'Content-Length': Buffer.byteLength(event.body)
-      }
-    };
+  try {
+    const body = JSON.parse(event.body);
+    
+    return new Promise((resolve) => {
+      const postData = JSON.stringify(body);
+      
+      const options = {
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
 
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        resolve({
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => resolve({
           statusCode: 200,
           headers: { 'Content-Type': 'application/json' },
           body: data
-        });
+        }));
       });
-    });
 
-    req.on('error', (err) => {
-      resolve({
+      req.on('error', (err) => resolve({
         statusCode: 500,
         body: JSON.stringify({ error: err.message })
-      });
+      }));
+
+      req.write(postData);
+      req.end();
     });
 
-    req.write(event.body);
-    req.end();
-  });
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+  }
 };
