@@ -722,6 +722,9 @@ let timerInterval = null;
 let timerSeconds = 0;
 let submissions = [];
 
+// ── Archivo cargado para IA ──
+let uploadedFile = null; // { type: 'image'|'pdf'|'text', mediaType, base64, text, name }
+
 // ══════════════════════════════════════════════
 //  NAVIGATION
 // ══════════════════════════════════════════════
@@ -752,11 +755,91 @@ function getSelectedTypes() {
 }
 
 // ══════════════════════════════════════════════
+//  FILE UPLOAD HANDLING
+// ══════════════════════════════════════════════
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) processUploadedFile(file);
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) processUploadedFile(file);
+}
+
+function processUploadedFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  const imgTypes = ['png', 'jpg', 'jpeg', 'webp'];
+  const isImg = imgTypes.includes(ext);
+  const isPdf = ext === 'pdf';
+  const isTxt = ext === 'txt';
+
+  if (!isImg && !isPdf && !isTxt) {
+    showToast('⚠️ Formato no soportado. Usa PDF, imagen o TXT.');
+    return;
+  }
+
+  // Show preview chip
+  document.getElementById('file-preview').style.display = 'block';
+  document.getElementById('file-chip-icon').textContent = isPdf ? '📄' : isImg ? '🖼️' : '📝';
+  document.getElementById('file-chip-name').textContent = file.name;
+
+  if (isImg) {
+    // Show image preview
+    const reader = new FileReader();
+    reader.onload = e => {
+      const b64 = e.target.result.split(',')[1];
+      uploadedFile = { type: 'image', mediaType: file.type, base64: b64, name: file.name };
+      document.getElementById('img-preview').src = e.target.result;
+      document.getElementById('img-preview-wrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+
+  } else if (isPdf) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const b64 = e.target.result.split(',')[1];
+      uploadedFile = { type: 'pdf', mediaType: 'application/pdf', base64: b64, name: file.name };
+      document.getElementById('img-preview-wrap').style.display = 'none';
+      showToast('📄 PDF cargado correctamente');
+    };
+    reader.readAsDataURL(file);
+
+  } else if (isTxt) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      uploadedFile = { type: 'text', text: e.target.result, name: file.name };
+      document.getElementById('img-preview-wrap').style.display = 'none';
+      // Auto-fill textarea with txt content
+      document.getElementById('material-input').value = e.target.result.substring(0, 5000);
+      showToast('📝 Texto cargado en el campo de material');
+    };
+    reader.readAsText(file);
+  }
+}
+
+function removeFile() {
+  uploadedFile = null;
+  document.getElementById('file-preview').style.display = 'none';
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('img-preview').src = '';
+  document.getElementById('file-chip-name').textContent = '';
+  document.getElementById('file-input').value = '';
+}
+
+// ══════════════════════════════════════════════
 //  AI GENERATION
 // ══════════════════════════════════════════════
 async function generateWithAI() {
   const material = document.getElementById('material-input').value.trim();
-  if (!material) { showToast('⚠️ Pega el material del tema primero'); return; }
+  const hasFile = uploadedFile && (uploadedFile.type === 'image' || uploadedFile.type === 'pdf');
+
+  if (!material && !hasFile) {
+    showToast('⚠️ Sube un archivo o pega el material del tema');
+    return;
+  }
   const n = parseInt(document.getElementById('num-questions').value) || 6;
   const types = getSelectedTypes();
   if (!types.length) { showToast('⚠️ Selecciona al menos un tipo de pregunta'); return; }
@@ -771,11 +854,7 @@ async function generateWithAI() {
   const typeNames = { test: 'tipo test (4 opciones a,b,c,d)', tf: 'verdadero/falso', fill: 'completar huecos (usa ___ para el hueco)', match: 'relacionar columnas (4 pares)', short: 'respuesta corta (1-2 palabras)', order: 'ordenar elementos (4-5 items)' };
   const typeDescriptions = types.map(t => typeNames[t]).filter(Boolean).join(', ');
 
-  const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en este material:
-
----
-${material.substring(0, 3000)}
----
+  const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en el material adjunto${material ? ' y el texto proporcionado' : ''}.
 
 Usa estos tipos de preguntas (distribúyelos equilibradamente): ${typeDescriptions}.
 
@@ -837,14 +916,37 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
 
 Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipos a lo que tenga sentido con ese contenido.`;
 
+  // Build message content (multimodal if file present)
+  let messageContent = [];
+
+  if (hasFile) {
+    if (uploadedFile.type === 'image') {
+      messageContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: uploadedFile.mediaType, data: uploadedFile.base64 }
+      });
+    } else if (uploadedFile.type === 'pdf') {
+      messageContent.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: uploadedFile.base64 }
+      });
+    }
+  }
+
+  // Always append the text prompt (with optional extra text from textarea)
+  const finalPrompt = material
+    ? prompt + `\n\nTexto adicional del profesor:\n${material.substring(0, 2000)}`
+    : prompt;
+  messageContent.push({ type: 'text', text: finalPrompt });
+
   try {
     const resp = await fetch('/.netlify/functions/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: messageContent }]
       })
     });
     const data = await resp.json();
