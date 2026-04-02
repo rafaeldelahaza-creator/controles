@@ -11,15 +11,12 @@ function getAccessToken(email, privateKey) {
       exp: now + 3600,
       iat: now
     })).toString('base64url');
-
     const crypto = require('crypto');
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(`${header}.${payload}`);
     const signature = sign.sign(privateKey, 'base64url');
     const jwt = `${header}.${payload}.${signature}`;
-
     const postData = `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`;
-
     const options = {
       hostname: 'oauth2.googleapis.com',
       path: '/token',
@@ -29,7 +26,6 @@ function getAccessToken(email, privateKey) {
         'Content-Length': Buffer.byteLength(postData)
       }
     };
-
     const req = https.request(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -49,24 +45,21 @@ exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
-
   const email = process.env.GOOGLE_SERVICE_EMAIL;
   const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
   const sheetId = process.env.GOOGLE_SHEET_ID;
-
   if (!email || !privateKey || !sheetId) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Missing environment variables' }) };
   }
-
   try {
-    const { name, cls, quiz, score, date, time } = JSON.parse(event.body);
+    const { name, cls, quiz, score, date, time, tabSwitches, blurCount } = JSON.parse(event.body);
+    const cleanName = (name || '').trim();
+    const cleanCls = (cls || '').trim();
+    const cleanQuiz = (quiz || '').trim();
     const token = await getAccessToken(email, privateKey);
-
-    const values = [[name, cls, quiz, score, date, time]];
+    const values = [[cleanName, cleanCls, cleanQuiz, score, date, time, tabSwitches || 0, blurCount || 0]];
     const body = JSON.stringify({ values });
-
-    const path = `/v4/spreadsheets/${sheetId}/values/A:F:append?valueInputOption=USER_ENTERED`;
-
+    const path = `/v4/spreadsheets/${sheetId}/values/A:H:append?valueInputOption=USER_ENTERED`;
     return new Promise((resolve) => {
       const options = {
         hostname: 'sheets.googleapis.com',
@@ -78,7 +71,6 @@ exports.handler = async function(event) {
           'Content-Length': Buffer.byteLength(body)
         }
       };
-
       const req = https.request(options, (res) => {
         let data = '';
         res.on('data', chunk => data += chunk);
