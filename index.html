@@ -208,7 +208,6 @@
     margin-bottom: 10px;
   }
   .student-info-form > * { flex: 1; }
-  #student-name { cursor: pointer; }
 
   /* question cards in student view */
   .sq-card {
@@ -626,35 +625,6 @@
     margin-bottom: 0;
   }
   .pw-field-input:focus { border-color: var(--primary-light); }
-
-  /* ── CONFIRM MODAL ── */
-  #confirm-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(30,27,74,0.45);
-    z-index: 9998;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(2px);
-  }
-  #confirm-modal.hidden { display: none !important; }
-  .hidden { display: none !important; }
-  .confirm-box {
-    background: var(--card);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 40px rgba(79,70,229,0.22);
-    border: 1.5px solid var(--border);
-    padding: 36px 32px 28px;
-    max-width: 380px;
-    width: 90%;
-    text-align: center;
-  }
-  .confirm-icon { font-size: 2.8rem; margin-bottom: 10px; }
-  .confirm-title { font-family: 'Baloo 2', cursive; font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
-  .confirm-sub { color: var(--muted); font-size: 0.93rem; margin-bottom: 24px; line-height: 1.5; }
-  .confirm-btns { display: flex; gap: 12px; justify-content: center; }
-  .confirm-btns .btn { flex: 1; justify-content: center; }
 </style>
 </head>
 <body>
@@ -670,28 +640,6 @@
       onkeydown="if(event.key==='Enter') checkPassword()">
     <div class="pw-error" id="pw-error"></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="checkPassword()">🔓 Entrar al control</button>
-  </div>
-</div>
-
-<!-- ═══════════════ PREVIEW MODAL ═══════════════ -->
-<div id="preview-modal" class="hidden" style="position:fixed;inset:0;background:var(--bg);z-index:9997;overflow-y:auto;">
-  <div style="background:#7c3aed;color:#fff;padding:12px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,0.15)">
-    <span style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800">👁 VISTA PREVIA — Así verán el control tus alumnos</span>
-    <button onclick="closePreview()" class="btn btn-sm" style="margin-left:auto;background:rgba(255,255,255,0.2);color:#fff;border:1.5px solid rgba(255,255,255,0.4)">✖ Cerrar vista previa</button>
-  </div>
-  <div id="preview-content" style="max-width:860px;margin:0 auto;padding:28px 32px"></div>
-</div>
-
-<div id="confirm-modal" class="hidden">
-  <div class="confirm-box">
-    <div class="confirm-icon">📝</div>
-    <div class="confirm-title">¿Entregar el control?</div>
-    <div class="confirm-sub">Una vez entregado no podrás cambiar tus respuestas.<br>Asegúrate de haberlo repasado todo.</div>
-    <div id="confirm-blank-warning" style="display:none;background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-weight:700;font-size:0.88rem;color:#92400e;text-align:left;"></div>
-    <div class="confirm-btns">
-      <button class="btn btn-primary" style="background:#6b7280" onclick="closeConfirm()">✖ Cancelar</button>
-      <button class="btn btn-green" onclick="confirmAndSubmit()">✅ Entregar</button>
-    </div>
   </div>
 </div>
 
@@ -792,7 +740,6 @@
     </div>
     <hr style="margin:20px 0;border:none;border-top:1.5px solid var(--border)">
     <button class="btn btn-green" onclick="publishQuiz()" style="margin-right:10px">🚀 Publicar control</button>
-    <button class="btn btn-primary" onclick="previewQuiz()" style="margin-right:10px;background:#7c3aed">👁 Vista previa</button>
     <button class="btn btn-primary btn-sm" onclick="clearEditor()" style="background:#6b7280">🗑 Limpiar</button>
   </div>
 
@@ -833,21 +780,15 @@
       </div>
     </div>
     <div class="card">
-      <label>Selecciona tu clase y nombre</label>
+      <label>Tu nombre completo</label>
       <div class="student-info-form">
-        <select id="student-class" onchange="updateNameDropdown()" style="margin-bottom:0">
-          <option value="">— Elige tu clase —</option>
-          <option value="5º Primaria">5º Primaria</option>
-          <option value="6º Primaria">6º Primaria</option>
-        </select>
-        <select id="student-name" style="margin-bottom:0">
-          <option value="">— Primero elige clase —</option>
-        </select>
+        <input type="text" id="student-name" placeholder="Apellidos, Nombre" style="margin-bottom:0">
+        <input type="text" id="student-class" placeholder="Clase (ej: 5ºA)" style="margin-bottom:0">
       </div>
     </div>
     <div id="sq-questions"></div>
     <div style="text-align:center;margin-top:8px">
-      <button class="btn btn-green" onclick="confirmSubmit()" style="font-size:1.1rem;padding:14px 36px">
+      <button class="btn btn-green" onclick="submitQuiz()" style="font-size:1.1rem;padding:14px 36px">
         ✅ Entregar control
       </button>
     </div>
@@ -1285,79 +1226,6 @@ function removeQImage(qi) {
 // ══════════════════════════════════════════════
 //  PUBLISH
 // ══════════════════════════════════════════════
-function previewQuiz() {
-  if (!editorQuestions.length) { showToast('⚠️ Añade preguntas primero'); return; }
-  const title = document.getElementById('quiz-title-input').value || 'Control';
-  const cls = document.getElementById('quiz-class-input').value || '';
-  const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
-  const questions = JSON.parse(JSON.stringify(editorQuestions));
-
-  const container = document.getElementById('preview-content');
-  container.innerHTML = '';
-
-  // Header
-  container.innerHTML = `
-    <div class="quiz-header" style="text-align:center;margin-bottom:28px">
-      <div class="quiz-title" style="font-family:'Baloo 2',cursive;font-size:2rem;color:var(--primary)">${escHtml(title)}</div>
-      <div class="quiz-meta" style="color:var(--muted);font-size:0.95rem;margin-top:4px">${questions.length} preguntas · ${timeMin} minutos${cls ? ' · ' + escHtml(cls) : ''}</div>
-    </div>
-    <div style="background:#eef2ff;border:1.5px solid var(--border);border-radius:12px;padding:12px 18px;margin-bottom:20px;font-size:0.88rem;color:var(--muted);font-weight:700">
-      ℹ️ Vista previa — los campos son interactivos pero no se puede entregar. El orden de preguntas y respuestas se mezclará al publicar.
-    </div>
-  `;
-
-  // Render questions
-  questions.forEach((q, i) => {
-    const card = document.createElement('div');
-    card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar' };
-    const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
-    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div></div>${imgHtml}<div class="sq-answer" id="pv-answer-${i}"></div>`;
-    container.appendChild(card);
-
-    // Render answer using temp IDs prefixed with pv-
-    const wrap = card.querySelector(`#pv-answer-${i}`);
-    if (q.type === 'test') {
-      const opts = q.options.map((opt, oi) => `<li><input type="radio" id="pv-opt-${i}-${oi}" name="pv-q${i}" value="${escHtml(opt)}"><label for="pv-opt-${i}-${oi}">${escHtml(opt)}</label></li>`).join('');
-      wrap.innerHTML = `<ul class="options-list">${opts}</ul>`;
-    } else if (q.type === 'tf') {
-      wrap.innerHTML = `<div class="tf-row">
-        <button class="tf-btn" onclick="this.parentNode.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('selected-v','selected-f'));this.classList.add('selected-v')">✅ Verdadero</button>
-        <button class="tf-btn" onclick="this.parentNode.querySelectorAll('.tf-btn').forEach(b=>b.classList.remove('selected-v','selected-f'));this.classList.add('selected-f')">❌ Falso</button>
-      </div>`;
-    } else if (q.type === 'fill') {
-      const parts = q.text.split('___');
-      let html = '<div class="blank-container">';
-      parts.forEach((part, pi) => {
-        html += `<span>${escHtml(part)}</span>`;
-        if (pi < parts.length - 1) html += `<input class="blank-input" type="text" placeholder="…">`;
-      });
-      html += '</div>';
-      wrap.innerHTML = html;
-    } else if (q.type === 'match') {
-      let html = '<div class="match-grid">';
-      q.leftItems.forEach((left, li) => {
-        const opts = q.rightItems.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
-        html += `<div class="match-left">${escHtml(left)}</div><select class="match-select"><option value="">— elige —</option>${opts}</select>`;
-      });
-      html += '</div>';
-      wrap.innerHTML = html;
-    } else if (q.type === 'short') {
-      wrap.innerHTML = `<input class="short-input" type="text" placeholder="Escribe tu respuesta…">`;
-    } else if (q.type === 'order') {
-      const items = q.items.map((item, ii) => `<li class="order-item" style="cursor:default"><span class="order-num">${ii + 1}</span><span>${escHtml(item)}</span></li>`).join('');
-      wrap.innerHTML = `<ul class="order-list">${items}</ul>`;
-    }
-  });
-
-  document.getElementById('preview-modal').classList.remove('hidden');
-  document.getElementById('preview-modal').scrollTop = 0;
-}
-
-function closePreview() {
-  document.getElementById('preview-modal').classList.add('hidden');
-}
-
 function publishQuiz() {
   if (!editorQuestions.length) { showToast('⚠️ Añade preguntas primero'); return; }
   const title = document.getElementById('quiz-title-input').value || 'Control';
@@ -1587,141 +1455,12 @@ function matchShortAnswer(studentRaw, acceptedList) {
 }
 
 // ══════════════════════════════════════════════
-//  LISTA DE ALUMNOS — actualiza cada curso
+//  SUBMIT & GRADE
 // ══════════════════════════════════════════════
-const CLASES = {
-  "5º Primaria": [
-    "ÁVILA RAMOS, CAROLINA",
-    "BRACHO TORRES, JUANA BEATRIZ",
-    "CALVILLO MERLO, MIGUEL ÁNGEL",
-    "CASTILLO MORENO, ENRIQUE",
-    "CASTILLO NAZARENO, DIANA ALEXANDRA",
-    "CHEN, LUNA",
-    "CORONEL BENÍTEZ, THIAGO ALEX",
-    "DÍAZ VÁZQUEZ, LUCÍA",
-    "GARCÍA MARÍN, ADELA",
-    "GIRALDO HINCAPIE, JUAN ESTEBAN",
-    "GUTIÉRREZ HERNÁNDEZ, DAVID",
-    "LEÑA NAVARRO, DAVID",
-    "LÓPEZ CLAUS, DAVID",
-    "LÓPEZ HURTADO, DAVID GABRIEL",
-    "LÓPEZ ORTEGA, JIMENA",
-    "MARTÍNEZ CHAKOU, ADAM",
-    "MESA GRANIZO, NAYARA",
-    "MUÑOZ SALMORAL, LUCÍA",
-    "PADILLA RODRÍGUEZ, RAFAEL",
-    "PEDROSA VALLEJO, PAULA",
-    "PORTILLO RODRÍGUEZ, EDWARD",
-    "PRIEGO CLAVIJO, INMACULADA",
-    "ROMERO DELGADO, ARANTXA",
-    "SÁNCHEZ MORALES, ZAIDA",
-    "SEGURA HERNÁNDEZ, ALBANIA",
-    "SIERRA FLORES, EDERIXZON ISAIR",
-    "URIBE PLATA, ISABELLA ANANY",
-    "VELÁZQUEZ GARCÍA, ARON"
-  ],
-  "6º Primaria": [
-    "ABOUHAIK LAHIANE, AICHA SARAY",
-    "AGUAGALLO ALVARADO, ADRIÁN NEYMAR",
-    "ALONSO ÁLVAREZ, SAMUEL",
-    "ARROYO CASADO, NOA",
-    "CAMACHO JIMÉNEZ, BERNANDO",
-    "CAÑUELO RODRÍGUEZ, CARMEN",
-    "CAORSI TERPOLILI, PEDRO",
-    "CARMONA AJMO, ADRIÁN",
-    "CHEN, LINNA",
-    "CORTÉS MELLADO, JUAN",
-    "CORTÉS MORENO, PAMELA",
-    "CUENCA GONZÁLEZ, PABLO",
-    "DE LA HAZA MATEO, VALERIA",
-    "GALVIS SERNA, SEBASTIÁN",
-    "GILARTE NÚÑEZ, ERIK",
-    "JIMÉNEZ PEÑA, ELENA",
-    "MANZANO MENDOZA, MARÍA",
-    "MARTÍNEZ ORTEGA, SOL ARAMY",
-    "MOLINA JIMÉNEZ, MACARENA",
-    "MONTES DE OCA SÁNCHEZ, DARÍO",
-    "PERONCINI PÉREZ, MATÍAS SEBASTÍAN",
-    "ROMPINELLI GODINO, SHARA",
-    "RUIZ MARTÍNEZ, MARÍA DOLORES",
-    "SANDOVAL SÁNCHEZ, FREDYTSEN ALONSO",
-    "SIRBU CUSCEAC, ALEXANDRU",
-    "SUANES PRIEGO, ALBA"
-  ]
-};
-
-function updateNameDropdown() {
-  const cls = document.getElementById('student-class').value;
-  const nameSelect = document.getElementById('student-name');
-  nameSelect.innerHTML = '';
-  if (!cls || !CLASES[cls]) {
-    nameSelect.innerHTML = '<option value="">— Primero elige clase —</option>';
-    return;
-  }
-  nameSelect.innerHTML = '<option value="">— Elige tu nombre —</option>';
-  CLASES[cls].forEach(nombre => {
-    const opt = document.createElement('option');
-    opt.value = nombre;
-    opt.textContent = nombre;
-    nameSelect.appendChild(opt);
-  });
-}
-
-
-function getBlankQuestions() {
-  const questions = currentQuiz._rendered || currentQuiz.questions;
-  const blanks = [];
-  questions.forEach((q, i) => {
-    let empty = false;
-    if (q.type === 'test') {
-      empty = !document.querySelector(`input[name="q${i}"]:checked`);
-    } else if (q.type === 'tf') {
-      empty = !document.getElementById(`tf-val-${i}`)?.value;
-    } else if (q.type === 'fill') {
-      const inputs = document.querySelectorAll(`#sq-answer-${i} .blank-input`);
-      empty = [...inputs].every(el => !el.value.trim());
-    } else if (q.type === 'short') {
-      empty = !document.getElementById(`short-${i}`)?.value.trim();
-    } else if (q.type === 'match') {
-      const sels = q.leftItems.map((_, li) => document.getElementById(`match-${i}-${li}`));
-      empty = sels.every(s => !s || !s.value);
-    } else if (q.type === 'order') {
-      empty = false; // order always has a value
-    }
-    if (empty) blanks.push(i + 1);
-  });
-  return blanks;
-}
-
-function confirmSubmit() {
-  const name = document.getElementById('student-name').value || '';
-  if (!name) { showToast('⚠️ Por favor, selecciona tu nombre antes de entregar.'); return; }
-
-  const blanks = getBlankQuestions();
-  const warning = document.getElementById('confirm-blank-warning');
-  if (blanks.length > 0) {
-    warning.textContent = `⚠️ Tienes ${blanks.length} pregunta${blanks.length > 1 ? 's' : ''} sin contestar: nº ${blanks.join(', ')}.`;
-    warning.style.display = 'block';
-  } else {
-    warning.style.display = 'none';
-  }
-
-  document.getElementById('confirm-modal').classList.remove('hidden');
-}
-
-function closeConfirm() {
-  document.getElementById('confirm-modal').classList.add('hidden');
-}
-
-function confirmAndSubmit() {
-  document.getElementById('confirm-modal').classList.add('hidden');
-  submitQuiz();
-}
-
 function submitQuiz() {
   clearInterval(timerInterval);
-  const name = document.getElementById('student-name').value || '';
-  const cls = document.getElementById('student-class').value || currentQuiz.class || '–';
+  const name = (document.getElementById('student-name').value || '').trim();
+  const cls = (document.getElementById('student-class').value || currentQuiz.class || '–').trim();
   if (!name) { showToast('⚠️ Por favor, selecciona tu nombre antes de entregar.'); startTimer(timerSeconds); return; }
   const questions = currentQuiz._rendered || currentQuiz.questions;
 
@@ -1927,9 +1666,8 @@ window.addEventListener('load', () => {
     if (urlQuiz) {
       currentQuiz = urlQuiz;
       if (urlQuiz.password) {
-        // Show password screen before revealing the quiz
-        document.getElementById('student-view').style.display = 'block';
-        document.getElementById('student-view').classList.add('active');
+        // Hide teacher UI, show student view, then show password screen on top
+        showView('student');
         showPasswordScreen();
       } else {
         showView('student');
