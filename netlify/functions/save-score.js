@@ -41,52 +41,82 @@ function getAccessToken(email, privateKey) {
   });
 }
 
+function appendToSheet(token, sheetId, sheetName, values) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({ values });
+    const range = encodeURIComponent(`${sheetName}!A:A`);
+    const path = `/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
+    const options = {
+      hostname: 'sheets.googleapis.com',
+      path,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve(JSON.parse(data)));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
+
   const email = process.env.GOOGLE_SERVICE_EMAIL;
   const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
   const sheetId = process.env.GOOGLE_SHEET_ID;
+
   if (!email || !privateKey || !sheetId) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Missing environment variables' }) };
   }
+
   try {
-    const { name, cls, quiz, score, date, time, tabSwitches, blurCount } = JSON.parse(event.body);
+    const { name, cls, quiz, score, date, time, tabSwitches, blurCount, review } = JSON.parse(event.body);
+
     const cleanName = (name || '').trim();
-    const cleanCls = (cls || '').trim();
+    const cleanCls  = (cls  || '').trim();
     const cleanQuiz = (quiz || '').trim();
+
     const token = await getAccessToken(email, privateKey);
-    const values = [[cleanName, cleanCls, cleanQuiz, score, date, time, tabSwitches || 0, blurCount || 0]];
-    const body = JSON.stringify({ values });
-    const path = `/v4/spreadsheets/${sheetId}/values/A:H:append?valueInputOption=USER_ENTERED`;
-    return new Promise((resolve) => {
-      const options = {
-        hostname: 'sheets.googleapis.com',
-        path,
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body)
-        }
-      };
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => resolve({
-          statusCode: 200,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ok: true })
-        }));
+
+    // ── 1) Hoja principal de notas (igual que antes) ──────────────────
+    await appendToSheet(token, sheetId, 'Hoja 1', [[
+      cleanName, cleanCls, cleanQuiz, score, date, time,
+      tabSwitches || 0, blurCount || 0
+    ]]);
+
+    // ── 2) Hoja de respuestas por clase ───────────────────────────────
+    let respuestasSheet = null;
+    if (cleanCls.includes('5')) respuestasSheet = 'Respuestas 5°';
+    if (cleanCls.includes('6')) respuestasSheet = 'Respuestas 6°';
+
+    if (respuestasSheet && Array.isArray(review) && review.length > 0) {
+      // Fila: Alumno | Control | Fecha | Hora | Nota | P1 | R1 | ✓1 | P2 | R2 | ✓2 | …
+      const row = [cleanName, cleanQuiz, date, time, score];
+      review.forEach(r => {
+        row.push(r.text          || '–');
+        row.push(r.studentAnswer || '–');
+        row.push(r.correct ? 'Sí' : r.partial ? 'Parcial' : 'No');
       });
-      req.on('error', (err) => resolve({
-        statusCode: 500,
-        body: JSON.stringify({ error: err.message })
-      }));
-      req.write(body);
-      req.end();
-    });
+      await appendToSheet(token, sheetId, respuestasSheet, [row]);
+    }
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ok: true })
+    };
+
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
