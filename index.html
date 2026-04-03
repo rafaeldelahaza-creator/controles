@@ -209,7 +209,6 @@
   }
   .student-info-form > * { flex: 1; }
   #student-name { cursor: pointer; }
-
   /* question cards in student view */
   .sq-card {
     background: var(--card);
@@ -493,6 +492,81 @@
   }
   .toast.show { transform: translateY(0); opacity: 1; }
 
+  /* ── COUNTDOWN OVERLAY (anti-cheat forced submit) ── */
+  #countdown-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(239,68,68,0.92);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    backdrop-filter: blur(4px);
+  }
+  #countdown-overlay.hidden { display: none !important; }
+  .cd-icon { font-size: 3.5rem; margin-bottom: 10px; animation: cd-pulse 0.8s infinite alternate; }
+  .cd-title { font-family: 'Baloo 2', cursive; font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+  .cd-sub { font-size: 1rem; opacity: 0.88; margin-bottom: 28px; }
+  .cd-number {
+    font-family: 'Baloo 2', cursive;
+    font-size: 6rem;
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: cd-pulse 0.8s infinite alternate;
+  }
+  @keyframes cd-pulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
+  }
+
+  /* ── TIME UP OVERLAY ── */
+  #timeup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(79,70,229,0.93);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    text-align: center;
+    backdrop-filter: blur(4px);
+  }
+  #timeup-overlay.hidden { display: none !important; }
+  .tu-icon { font-size: 4rem; margin-bottom: 12px; }
+  .tu-title { font-family: 'Baloo 2', cursive; font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+  .tu-sub { font-size: 1rem; opacity: 0.88; }
+
+  /* ── ALREADY SUBMITTED SCREEN ── */
+  #already-submitted-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #already-submitted-screen.hidden { display: none !important; }
+  .as-box {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--border);
+    padding: 40px 36px 32px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+  }
+  .as-icon { font-size: 3.5rem; margin-bottom: 12px; }
+  .as-title { font-family: 'Baloo 2', cursive; font-size: 1.6rem; color: var(--accent2); margin-bottom: 8px; }
+  .as-sub { color: var(--muted); font-size: 0.93rem; line-height: 1.6; }
+
   /* ── QUESTION IMAGE ── */
   .q-img-section { margin-top: 10px; }
   .q-img-add-btn {
@@ -595,6 +669,49 @@
     0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)}
   }
 
+  /* ── IDENTIFICATION SCREEN ── */
+  #identify-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #identify-screen.hidden { display: none !important; }
+  .id-box {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--border);
+    padding: 40px 36px 32px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+  }
+  .id-icon { font-size: 3rem; margin-bottom: 12px; }
+  .id-title { font-family: 'Baloo 2', cursive; font-size: 1.6rem; color: var(--primary); margin-bottom: 6px; }
+  .id-sub { color: var(--muted); font-size: 0.93rem; margin-bottom: 24px; }
+  .id-select {
+    width: 100%;
+    padding: 13px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    background: #f8f9ff;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border 0.2s;
+    cursor: pointer;
+  }
+  .id-select:focus { border-color: var(--primary-light); background: #fff; }
+  .id-select.error { border-color: var(--danger); background: #fff5f5; }
+  .id-error { color: var(--danger); font-weight: 700; font-size: 0.9rem; margin-bottom: 12px; min-height: 22px; }
+
   /* ── PUBLISH PASSWORD FIELD ── */
   .pw-field-wrap {
     background: #f0f4ff;
@@ -670,6 +787,25 @@
       onkeydown="if(event.key==='Enter') checkPassword()">
     <div class="pw-error" id="pw-error"></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="checkPassword()">🔓 Entrar al control</button>
+  </div>
+</div>
+
+<!-- ═══════════════ IDENTIFY SCREEN ═══════════════ -->
+<div id="identify-screen" class="hidden">
+  <div class="id-box">
+    <div class="id-icon">🎒</div>
+    <div class="id-title" id="id-quiz-name">Control</div>
+    <div class="id-sub">Selecciona tu clase y tu nombre para empezar.</div>
+    <select class="id-select" id="id-class" onchange="idUpdateNames()">
+      <option value="">— Elige tu clase —</option>
+      <option value="5º Primaria">5º Primaria</option>
+      <option value="6º Primaria">6º Primaria</option>
+    </select>
+    <select class="id-select" id="id-name">
+      <option value="">— Primero elige clase —</option>
+    </select>
+    <div class="id-error" id="id-error"></div>
+    <button class="btn btn-green" style="width:100%;justify-content:center;font-size:1.05rem" onclick="confirmIdentity()">🚀 Empezar el control</button>
   </div>
 </div>
 
@@ -811,6 +947,7 @@
     <button class="btn btn-danger btn-sm" onclick="clearEditor()">🗑 Borrar control activo</button>
   </div>
 
+
 </div>
 
 <!-- ═══════════════ STUDENT VIEW ═══════════════ -->
@@ -830,19 +967,6 @@
       <div class="timer-display" id="timer-display">–</div>
       <div class="progress-bar-wrap">
         <div class="progress-bar-fill" id="progress-bar-fill" style="width:100%"></div>
-      </div>
-    </div>
-    <div class="card">
-      <label>Selecciona tu clase y nombre</label>
-      <div class="student-info-form">
-        <select id="student-class" onchange="updateNameDropdown()" style="margin-bottom:0">
-          <option value="">— Elige tu clase —</option>
-          <option value="5º Primaria">5º Primaria</option>
-          <option value="6º Primaria">6º Primaria</option>
-        </select>
-        <select id="student-name" style="margin-bottom:0">
-          <option value="">— Primero elige clase —</option>
-        </select>
       </div>
     </div>
     <div id="sq-questions"></div>
@@ -871,6 +995,30 @@
   <div id="review-cards"></div>
 </div>
 
+<!-- ═══════════════ COUNTDOWN OVERLAY (anti-cheat) ═══════════════ -->
+<div id="countdown-overlay" class="hidden">
+  <div class="cd-icon">⚠️</div>
+  <div class="cd-title">Demasiados cambios de pestaña</div>
+  <div class="cd-sub">Tu control se entregará automáticamente en…</div>
+  <div class="cd-number" id="cd-number">3</div>
+</div>
+
+<!-- ═══════════════ TIME UP OVERLAY ═══════════════ -->
+<div id="timeup-overlay" class="hidden">
+  <div class="tu-icon">⏱</div>
+  <div class="tu-title">¡Tiempo agotado!</div>
+  <div class="tu-sub">Tu control ha sido enviado automáticamente.</div>
+</div>
+
+<!-- ═══════════════ ALREADY SUBMITTED ═══════════════ -->
+<div id="already-submitted-screen" class="hidden">
+  <div class="as-box">
+    <div class="as-icon">✅</div>
+    <div class="as-title">Control ya entregado</div>
+    <div class="as-sub">Ya has entregado este control anteriormente.<br>Si crees que es un error, habla con tu profesor/a.</div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -881,6 +1029,8 @@ let currentQuiz = null;
 let timerInterval = null;
 let timerSeconds = 0;
 let submissions = [];
+let studentName = '';
+let studentClass = '';
 
 // ── Archivo cargado para IA ──
 let uploadedFile = null; // { type: 'image'|'pdf'|'text', mediaType, base64, text, name }
@@ -1405,12 +1555,18 @@ function loadStudentView() {
     document.getElementById('quiz-student-container').style.display = 'none';
     return;
   }
-  // If quiz has a password and it comes from URL (shared link), show password screen
+  // Comprobar si ya entregó este control en esta sesión
+  const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
+  if (sessionStorage.getItem(submitKey)) {
+    document.getElementById('already-submitted-screen').classList.remove('hidden');
+    return;
+  }
+  // If quiz has a password and it comes from URL (shared link), show password screen first
   if (currentQuiz.password && getQuizFromUrl()) {
     showPasswordScreen();
     return;
   }
-  startStudentQuiz();
+  showIdentifyScreen();
 }
 
 function showPasswordScreen() {
@@ -1430,7 +1586,7 @@ function checkPassword() {
     document.getElementById('password-screen').classList.add('hidden');
     document.getElementById('teacher-view').classList.remove('active');
     document.getElementById('student-view').classList.add('active');
-    startStudentQuiz();
+    showIdentifyScreen();
   } else {
     const inp = document.getElementById('pw-input');
     inp.classList.add('error');
@@ -1438,6 +1594,52 @@ function checkPassword() {
     inp.value = '';
     setTimeout(() => inp.focus(), 50);
   }
+}
+
+function showIdentifyScreen() {
+  const screen = document.getElementById('identify-screen');
+  screen.classList.remove('hidden');
+  document.getElementById('id-quiz-name').textContent = currentQuiz.title || 'Control';
+  document.getElementById('id-class').value = '';
+  document.getElementById('id-name').innerHTML = '<option value="">— Primero elige clase —</option>';
+  document.getElementById('id-error').textContent = '';
+}
+
+function idUpdateNames() {
+  const cls = document.getElementById('id-class').value;
+  const nameSelect = document.getElementById('id-name');
+  nameSelect.innerHTML = '';
+  if (!cls || !CLASES[cls]) {
+    nameSelect.innerHTML = '<option value="">— Primero elige clase —</option>';
+    return;
+  }
+  nameSelect.innerHTML = '<option value="">— Elige tu nombre —</option>';
+  CLASES[cls].forEach(nombre => {
+    const opt = document.createElement('option');
+    opt.value = nombre;
+    opt.textContent = nombre;
+    nameSelect.appendChild(opt);
+  });
+}
+
+function confirmIdentity() {
+  const cls = document.getElementById('id-class').value;
+  const name = document.getElementById('id-name').value;
+  const errEl = document.getElementById('id-error');
+  if (!cls) {
+    errEl.textContent = '⚠️ Por favor, elige tu clase.';
+    document.getElementById('id-class').classList.add('error');
+    return;
+  }
+  if (!name) {
+    errEl.textContent = '⚠️ Por favor, selecciona tu nombre.';
+    document.getElementById('id-name').classList.add('error');
+    return;
+  }
+  studentName = name;
+  studentClass = cls;
+  document.getElementById('identify-screen').classList.add('hidden');
+  startStudentQuiz();
 }
 
 function startStudentQuiz() {
@@ -1552,7 +1754,38 @@ function startTimer(seconds) {
     const pct = (timerSeconds / seconds) * 100;
     document.getElementById('progress-bar-fill').style.width = pct + '%';
     if (timerSeconds <= 60) document.getElementById('timer-display').classList.add('warning');
-    if (timerSeconds <= 0) { clearInterval(timerInterval); submitQuiz(); }
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      showTimeUpAndSubmit();
+    }
+  }, 1000);
+}
+
+function showTimeUpAndSubmit() {
+  const overlay = document.getElementById('timeup-overlay');
+  overlay.classList.remove('hidden');
+  setTimeout(() => {
+    overlay.classList.add('hidden');
+    submitQuiz();
+  }, 2500);
+}
+
+function showCountdownAndSubmit() {
+  clearInterval(timerInterval); // pausar timer para que no interfiera
+  const overlay = document.getElementById('countdown-overlay');
+  const numEl = document.getElementById('cd-number');
+  overlay.classList.remove('hidden');
+  let count = 3;
+  numEl.textContent = count;
+  const cd = setInterval(() => {
+    count--;
+    if (count <= 0) {
+      clearInterval(cd);
+      overlay.classList.add('hidden');
+      submitQuiz();
+    } else {
+      numEl.textContent = count;
+    }
   }, 1000);
 }
 
@@ -1652,22 +1885,6 @@ const CLASES = {
   ]
 };
 
-function updateNameDropdown() {
-  const cls = document.getElementById('student-class').value;
-  const nameSelect = document.getElementById('student-name');
-  nameSelect.innerHTML = '';
-  if (!cls || !CLASES[cls]) {
-    nameSelect.innerHTML = '<option value="">— Primero elige clase —</option>';
-    return;
-  }
-  nameSelect.innerHTML = '<option value="">— Elige tu nombre —</option>';
-  CLASES[cls].forEach(nombre => {
-    const opt = document.createElement('option');
-    opt.value = nombre;
-    opt.textContent = nombre;
-    nameSelect.appendChild(opt);
-  });
-}
 
 
 function getBlankQuestions() {
@@ -1696,8 +1913,7 @@ function getBlankQuestions() {
 }
 
 function confirmSubmit() {
-  const name = (document.getElementById('student-name').value || '').trim();
-  if (!name) { showToast('⚠️ Por favor, selecciona tu nombre antes de entregar.'); return; }
+  if (!studentName) { showToast('⚠️ Error: nombre no registrado. Recarga la página.'); return; }
 
   const blanks = getBlankQuestions();
   const warning = document.getElementById('confirm-blank-warning');
@@ -1722,9 +1938,9 @@ function confirmAndSubmit() {
 
 function submitQuiz() {
   clearInterval(timerInterval);
-  const name = (document.getElementById('student-name').value || '').trim();
-  const cls = document.getElementById('student-class').value || currentQuiz.class || '–';
-  if (!name) { showToast('⚠️ Por favor, selecciona tu nombre antes de entregar.'); startTimer(timerSeconds); return; }
+  const name = studentName;
+  const cls = studentClass || currentQuiz.class || '–';
+  if (!name) { showToast('⚠️ Error: nombre no registrado. Recarga la página.'); return; }
   const questions = currentQuiz._rendered || currentQuiz.questions;
 
   // Calcular el total real de puntos del control (puede no ser exactamente 10 por redondeos de la IA)
@@ -1798,14 +2014,18 @@ function submitQuiz() {
   const timeNow = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   submissions.push({ name, class: cls, quiz: currentQuiz.title, score, date: today });
 
-  // Guardar en Google Sheets (incluyendo contadores anti-copia)
+  // Guardar en Google Sheets (nota + respuestas completas)
+  const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
+  sessionStorage.setItem(submitKey, '1');
+
   fetch('/.netlify/functions/save-score', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name, cls, quiz: currentQuiz.title, score, date: today, time: timeNow,
       tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
-      blurCount: window._antiCheat ? window._antiCheat.blurCount : 0
+      blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
+      review
     })
   }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
 
@@ -1839,6 +2059,8 @@ function showResults(score, name, review) {
 
 function backToStudent() {
   document.getElementById('results-screen').style.display = 'none';
+  studentName = '';
+  studentClass = '';
   showView('student');
 }
 
@@ -1890,9 +2112,11 @@ function launchConfetti() {
   function isStudentActive() {
     const container = document.getElementById('quiz-student-container');
     const results = document.getElementById('results-screen');
+    const identifying = !document.getElementById('identify-screen').classList.contains('hidden');
     return currentQuiz &&
       container && container.style.display !== 'none' &&
-      results && results.style.display === 'none';
+      results && results.style.display === 'none' &&
+      !identifying;
   }
 
   // 1) Deshabilitar clic derecho, selección de texto y copiar
@@ -1905,8 +2129,7 @@ function launchConfetti() {
     if (!isStudentActive() || !document.hidden) return;
     window._antiCheat.tabSwitches++;
     if (window._antiCheat.tabSwitches >= MAX_SWITCHES) {
-      showToast('⚠️ Demasiados cambios de pestaña. Enviando el control…');
-      setTimeout(() => submitQuiz(), 1500);
+      showCountdownAndSubmit();
     } else {
       showToast(`⚠️ ¡No cambies de pestaña! Aviso ${window._antiCheat.tabSwitches}/${MAX_SWITCHES}`);
     }
