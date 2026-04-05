@@ -1626,9 +1626,9 @@ function loadStudentView() {
     document.getElementById('quiz-student-container').style.display = 'none';
     return;
   }
-  // Comprobar si ya entregó este control
+  // Comprobar si ya entregó este control en esta sesión
   const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
-  if (localStorage.getItem(submitKey)) {
+  if (sessionStorage.getItem(submitKey)) {
     document.getElementById('already-submitted-screen').classList.remove('hidden');
     return;
   }
@@ -2087,7 +2087,7 @@ function submitQuiz() {
 
   // Guardar en Google Sheets (nota + respuestas completas)
   const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
-  localStorage.setItem(submitKey, '1');
+  sessionStorage.setItem(submitKey, '1');
 
   fetch('/.netlify/functions/save-score', {
     method: 'POST',
