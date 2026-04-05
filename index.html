@@ -392,6 +392,30 @@
   .note-badge.mid { background: #fef3c7; color: #92400e; }
   .note-badge.low { background: #fee2e2; color: #991b1b; }
 
+  /* ── BANCO DE CONTROLES ── */
+  .bank-item {
+    background: #f8f9ff;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .bank-item-info { flex: 1; min-width: 0; }
+  .bank-item-title { font-weight: 800; font-size: 0.97rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bank-item-meta { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .bank-item-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+  .bank-item-link {
+    margin-top: 10px;
+    width: 100%;
+    display: none;
+  }
+  .bank-item-link.visible { display: block; }
+  .bank-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 0.93rem; }
+
   /* ── LINK BOX ── */
   .link-box {
     display: flex;
@@ -613,6 +637,27 @@
     font-size: 0.92rem;
     color: var(--primary);
   }
+  .file-chips-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .file-chip-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #eef2ff;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--primary);
+  }
+  .file-chip-item .chip-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-chip-item img { max-height: 60px; border-radius: 6px; border: 1px solid var(--border); }
+  .file-chips-count { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
 
   @media (max-width: 600px) {
     header { padding: 14px 16px; flex-wrap: wrap; }
@@ -850,20 +895,14 @@
     <!-- Upload zone -->
     <div id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
       <div class="upload-icon">📂</div>
-      <div class="upload-text">Arrastra aquí un <strong>PDF, imagen (foto del libro/pizarra)</strong> o haz clic para seleccionar</div>
-      <div class="upload-sub">PDF · PNG · JPG · JPEG · WEBP · TXT</div>
-      <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" style="display:none" onchange="handleFileSelect(event)">
+      <div class="upload-text">Arrastra aquí <strong>PDFs, imágenes</strong> (puedes subir varios) o haz clic para seleccionar</div>
+      <div class="upload-sub">PDF · PNG · JPG · JPEG · WEBP · TXT — se pueden subir varios archivos a la vez</div>
+      <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" style="display:none" multiple onchange="handleFileSelect(event)">
     </div>
-    <!-- File preview -->
+    <!-- Multi-file preview list -->
     <div id="file-preview" style="display:none">
-      <div class="file-chip">
-        <span id="file-chip-icon">📄</span>
-        <span id="file-chip-name"></span>
-        <button onclick="removeFile()" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:1rem;margin-left:auto">✕</button>
-      </div>
-      <div id="img-preview-wrap" style="display:none;margin-top:10px">
-        <img id="img-preview" style="max-width:100%;max-height:200px;border-radius:10px;border:1.5px solid var(--border)">
-      </div>
+      <div class="file-chips-list" id="file-chips-list"></div>
+      <div class="file-chips-count" id="file-chips-count"></div>
     </div>
     <!-- Or text -->
     <div style="display:flex;align-items:center;gap:10px;margin:10px 0">
@@ -929,6 +968,7 @@
     <hr style="margin:20px 0;border:none;border-top:1.5px solid var(--border)">
     <button class="btn btn-green" onclick="publishQuiz()" style="margin-right:10px">🚀 Publicar control</button>
     <button class="btn btn-primary" onclick="previewQuiz()" style="margin-right:10px;background:#7c3aed">👁 Vista previa</button>
+    <button class="btn btn-accent" onclick="saveToBank()" style="margin-right:10px">💾 Guardar en banco</button>
     <button class="btn btn-primary btn-sm" onclick="clearEditor()" style="background:#6b7280">🗑 Limpiar</button>
   </div>
 
@@ -947,6 +987,11 @@
     <button class="btn btn-danger btn-sm" onclick="clearEditor()">🗑 Borrar control activo</button>
   </div>
 
+  <div class="card" id="bank-card">
+    <h2>📚 Banco de controles</h2>
+    <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px">Controles guardados listos para publicar. Persisten aunque cierres el navegador.</p>
+    <div id="bank-list"></div>
+  </div>
 
 </div>
 
@@ -1032,8 +1077,8 @@ let submissions = [];
 let studentName = '';
 let studentClass = '';
 
-// ── Archivo cargado para IA ──
-let uploadedFile = null; // { type: 'image'|'pdf'|'text', mediaType, base64, text, name }
+// ── Archivos cargados para IA ──
+let uploadedFiles = []; // Array de { type, mediaType, base64, name } | { type:'text', text, name }
 
 // ══════════════════════════════════════════════
 //  NAVIGATION
@@ -1065,18 +1110,19 @@ function getSelectedTypes() {
 }
 
 // ══════════════════════════════════════════════
-//  FILE UPLOAD HANDLING
+//  FILE UPLOAD HANDLING (múltiples archivos)
 // ══════════════════════════════════════════════
 function handleDrop(event) {
   event.preventDefault();
   document.getElementById('upload-zone').classList.remove('drag-over');
-  const file = event.dataTransfer.files[0];
-  if (file) processUploadedFile(file);
+  const files = Array.from(event.dataTransfer.files);
+  files.forEach(f => processUploadedFile(f));
 }
 
 function handleFileSelect(event) {
-  const file = event.target.files[0];
-  if (file) processUploadedFile(file);
+  const files = Array.from(event.target.files);
+  files.forEach(f => processUploadedFile(f));
+  event.target.value = ''; // reset so same file can be re-added
 }
 
 function processUploadedFile(file) {
@@ -1087,55 +1133,77 @@ function processUploadedFile(file) {
   const isTxt = ext === 'txt';
 
   if (!isImg && !isPdf && !isTxt) {
-    showToast('⚠️ Formato no soportado. Usa PDF, imagen o TXT.');
+    showToast('⚠️ Formato no soportado: ' + file.name);
     return;
   }
 
-  // Show preview chip
-  document.getElementById('file-preview').style.display = 'block';
-  document.getElementById('file-chip-icon').textContent = isPdf ? '📄' : isImg ? '🖼️' : '📝';
-  document.getElementById('file-chip-name').textContent = file.name;
-
   if (isImg) {
-    // Show image preview
     const reader = new FileReader();
     reader.onload = e => {
       const b64 = e.target.result.split(',')[1];
-      uploadedFile = { type: 'image', mediaType: file.type, base64: b64, name: file.name };
-      document.getElementById('img-preview').src = e.target.result;
-      document.getElementById('img-preview-wrap').style.display = 'block';
+      uploadedFiles.push({ type: 'image', mediaType: file.type, base64: b64, name: file.name, dataUrl: e.target.result });
+      renderFileChips();
     };
     reader.readAsDataURL(file);
-
   } else if (isPdf) {
     const reader = new FileReader();
     reader.onload = e => {
       const b64 = e.target.result.split(',')[1];
-      uploadedFile = { type: 'pdf', mediaType: 'application/pdf', base64: b64, name: file.name };
-      document.getElementById('img-preview-wrap').style.display = 'none';
-      showToast('📄 PDF cargado correctamente');
+      uploadedFiles.push({ type: 'pdf', mediaType: 'application/pdf', base64: b64, name: file.name });
+      renderFileChips();
     };
     reader.readAsDataURL(file);
-
   } else if (isTxt) {
     const reader = new FileReader();
     reader.onload = e => {
-      uploadedFile = { type: 'text', text: e.target.result, name: file.name };
-      document.getElementById('img-preview-wrap').style.display = 'none';
-      // Auto-fill textarea with txt content
-      document.getElementById('material-input').value = e.target.result.substring(0, 5000);
-      showToast('📝 Texto cargado en el campo de material');
+      uploadedFiles.push({ type: 'text', text: e.target.result, name: file.name });
+      // Auto-fill textarea with txt content (append)
+      const ta = document.getElementById('material-input');
+      ta.value = (ta.value ? ta.value + '\n\n' : '') + e.target.result.substring(0, 3000);
+      renderFileChips();
+      showToast('📝 Texto añadido al campo de material');
     };
     reader.readAsText(file);
   }
 }
 
+function renderFileChips() {
+  const preview = document.getElementById('file-preview');
+  const list = document.getElementById('file-chips-list');
+  const count = document.getElementById('file-chips-count');
+
+  if (uploadedFiles.length === 0) {
+    preview.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  preview.style.display = 'block';
+  list.innerHTML = '';
+  uploadedFiles.forEach((f, i) => {
+    const icon = f.type === 'pdf' ? '📄' : f.type === 'image' ? '🖼️' : '📝';
+    const chip = document.createElement('div');
+    chip.className = 'file-chip-item';
+    chip.innerHTML = `<span>${icon}</span><span class="chip-name">${escHtml(f.name)}</span>${f.type === 'image' ? `<img src="${f.dataUrl}" alt="">` : ''}<button onclick="removeFileAt(${i})" style="background:none;border:none;cursor:pointer;color:var(--danger);font-size:0.9rem;flex-shrink:0">✕</button>`;
+    list.appendChild(chip);
+  });
+
+  const imgs = uploadedFiles.filter(f => f.type === 'image').length;
+  const pdfs = uploadedFiles.filter(f => f.type === 'pdf').length;
+  const parts = [];
+  if (imgs) parts.push(`${imgs} imagen${imgs > 1 ? 'es' : ''}`);
+  if (pdfs) parts.push(`${pdfs} PDF${pdfs > 1 ? 's' : ''}`);
+  count.textContent = parts.length ? `📎 ${parts.join(', ')} cargados` : '';
+}
+
+function removeFileAt(idx) {
+  uploadedFiles.splice(idx, 1);
+  renderFileChips();
+}
+
 function removeFile() {
-  uploadedFile = null;
-  document.getElementById('file-preview').style.display = 'none';
-  document.getElementById('img-preview-wrap').style.display = 'none';
-  document.getElementById('img-preview').src = '';
-  document.getElementById('file-chip-name').textContent = '';
+  uploadedFiles = [];
+  renderFileChips();
   document.getElementById('file-input').value = '';
 }
 
@@ -1144,9 +1212,9 @@ function removeFile() {
 // ══════════════════════════════════════════════
 async function generateWithAI() {
   const material = document.getElementById('material-input').value.trim();
-  const hasFile = uploadedFile && (uploadedFile.type === 'image' || uploadedFile.type === 'pdf');
+  const hasVisualFiles = uploadedFiles.some(f => f.type === 'image' || f.type === 'pdf');
 
-  if (!material && !hasFile) {
+  if (!material && uploadedFiles.length === 0) {
     showToast('⚠️ Sube un archivo o pega el material del tema');
     return;
   }
@@ -1164,9 +1232,17 @@ async function generateWithAI() {
   const typeNames = { test: 'tipo test (4 opciones a,b,c,d)', tf: 'verdadero/falso', fill: 'completar huecos (usa ___ para el hueco)', match: 'relacionar columnas (4 pares)', short: 'respuesta corta (1-2 palabras)', order: 'ordenar elementos (4-5 items)' };
   const typeDescriptions = types.map(t => typeNames[t]).filter(Boolean).join(', ');
 
+  const imageInstructions = hasVisualFiles ? `
+INSTRUCCIONES PARA USO DE IMÁGENES:
+- Puedes incluir una imagen en una pregunta SOLO si la respuesta se deduce visualmente de esa imagen (por ejemplo: un diagrama sin etiquetas, un mapa sin nombres, una ilustración sin texto explicativo).
+- NUNCA uses una imagen en una pregunta si la respuesta ya aparece escrita en la imagen (textos, etiquetas, títulos, pies de foto, etc.). En ese caso, usa solo el texto como fuente.
+- NUNCA repitas la respuesta en la imagen si el alumno puede leerla directamente allí.
+- Si decides incluir una imagen, copia el campo "image" con el índice del archivo (0, 1, 2...) correspondiente.` : '';
+
   const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en el material adjunto${material ? ' y el texto proporcionado' : ''}.
 
 Usa estos tipos de preguntas (distribúyelos equilibradamente): ${typeDescriptions}.
+${imageInstructions}
 
 Responde SOLO con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown):
 {
@@ -1226,24 +1302,19 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
 
 Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipos a lo que tenga sentido con ese contenido.`;
 
-  // Build message content (multimodal if file present)
+  // Build multimodal message content
   let messageContent = [];
 
-  if (hasFile) {
-    if (uploadedFile.type === 'image') {
-      messageContent.push({
-        type: 'image',
-        source: { type: 'base64', media_type: uploadedFile.mediaType, data: uploadedFile.base64 }
-      });
-    } else if (uploadedFile.type === 'pdf') {
-      messageContent.push({
-        type: 'document',
-        source: { type: 'base64', media_type: 'application/pdf', data: uploadedFile.base64 }
-      });
+  // Add all visual files (images + PDFs) in order
+  uploadedFiles.forEach(f => {
+    if (f.type === 'image') {
+      messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
+    } else if (f.type === 'pdf') {
+      messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
     }
-  }
+  });
 
-  // Always append the text prompt (with optional extra text from textarea)
+  // Append text prompt (with optional extra text from textarea)
   const finalPrompt = material
     ? prompt + `\n\nTexto adicional del profesor:\n${material.substring(0, 2000)}`
     : prompt;
@@ -2103,6 +2174,142 @@ function launchConfetti() {
 }
 
 // ══════════════════════════════════════════════
+//  BANCO DE CONTROLES (localStorage)
+// ══════════════════════════════════════════════
+const BANK_KEY = 'proferafa_bank';
+
+function loadBank() {
+  try {
+    return JSON.parse(localStorage.getItem(BANK_KEY) || '[]');
+  } catch(e) { return []; }
+}
+
+function saveBank(bank) {
+  localStorage.setItem(BANK_KEY, JSON.stringify(bank));
+}
+
+function saveToBank() {
+  if (!editorQuestions.length) { showToast('⚠️ Añade preguntas primero'); return; }
+  const title = document.getElementById('quiz-title-input').value.trim() || 'Control sin título';
+  const cls = document.getElementById('quiz-class-input').value.trim() || '';
+  const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
+  const password = (document.getElementById('quiz-password-input').value || '').trim();
+
+  const quiz = {
+    id: Date.now(),
+    title,
+    class: cls,
+    timeMinutes: timeMin,
+    questions: JSON.parse(JSON.stringify(editorQuestions)),
+    password: password || '',
+    savedAt: new Date().toLocaleDateString('es-ES')
+  };
+
+  const bank = loadBank();
+  bank.unshift(quiz); // más reciente primero
+  saveBank(bank);
+  renderBank();
+  showToast('💾 Control guardado en el banco');
+}
+
+function deleteBankItem(id) {
+  if (!confirm('¿Eliminar este control del banco?')) return;
+  const bank = loadBank().filter(q => q.id !== id);
+  saveBank(bank);
+  renderBank();
+  showToast('🗑 Control eliminado del banco');
+}
+
+function loadBankItemIntoEditor(id) {
+  const quiz = loadBank().find(q => q.id === id);
+  if (!quiz) return;
+  loadQuizIntoEditor(quiz);
+  document.getElementById('editor-card').style.display = 'block';
+  document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
+  showToast('✏️ Control cargado en el editor');
+}
+
+function publishBankItem(id) {
+  const quiz = loadBank().find(q => q.id === id);
+  if (!quiz) return;
+
+  currentQuiz = quiz;
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
+  const base = window.location.href.split('?')[0];
+  const quizUrl = base + '?quiz=' + encoded;
+
+  // Show link inside the bank item
+  const linkDiv = document.getElementById('bank-link-' + id);
+  const linkInput = document.getElementById('bank-link-input-' + id);
+  const pwBanner = document.getElementById('bank-pw-' + id);
+  if (linkDiv) {
+    linkInput.value = quizUrl;
+    linkDiv.classList.add('visible');
+    if (quiz.password) {
+      pwBanner.style.display = 'block';
+      pwBanner.querySelector('span').textContent = quiz.password;
+    } else {
+      pwBanner.style.display = 'none';
+    }
+  }
+  showToast(quiz.password ? '🔒 Control publicado con contraseña' : '🚀 Enlace generado — cópialo y compártelo');
+}
+
+function copyBankLink(id) {
+  const input = document.getElementById('bank-link-input-' + id);
+  if (input) {
+    navigator.clipboard.writeText(input.value);
+    showToast('📋 Enlace copiado');
+  }
+}
+
+function renderBank() {
+  const bank = loadBank();
+  const list = document.getElementById('bank-list');
+  if (!list) return;
+
+  if (bank.length === 0) {
+    list.innerHTML = '<div class="bank-empty">📭 El banco está vacío. Guarda un control con el botón 💾 del editor.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  bank.forEach(quiz => {
+    const item = document.createElement('div');
+    item.className = 'bank-item';
+    const qCount = quiz.questions ? quiz.questions.length : 0;
+    const meta = [
+      quiz.class || '',
+      qCount + ' pregunta' + (qCount !== 1 ? 's' : ''),
+      quiz.timeMinutes + ' min',
+      quiz.password ? '🔒 Con contraseña' : '',
+      'Guardado: ' + quiz.savedAt
+    ].filter(Boolean).join(' · ');
+
+    item.innerHTML = `
+      <div class="bank-item-info">
+        <div class="bank-item-title">${escHtml(quiz.title)}</div>
+        <div class="bank-item-meta">${escHtml(meta)}</div>
+      </div>
+      <div class="bank-item-actions">
+        <button class="btn btn-green btn-sm" onclick="publishBankItem(${quiz.id})">🚀 Publicar</button>
+        <button class="btn btn-primary btn-sm" onclick="loadBankItemIntoEditor(${quiz.id})" style="background:#7c3aed">✏️ Editar</button>
+        <button class="btn btn-sm" onclick="deleteBankItem(${quiz.id})" style="background:#fee2e2;color:#991b1b">🗑</button>
+      </div>
+      <div class="bank-item-link" id="bank-link-${quiz.id}">
+        <div class="link-box" style="margin-top:0">
+          <input type="text" id="bank-link-input-${quiz.id}" readonly style="background:transparent;border:none;font-size:0.9rem;color:var(--primary);font-weight:700;flex:1;outline:none;margin-bottom:0">
+          <button class="copy-btn" onclick="copyBankLink(${quiz.id})">📋 Copiar</button>
+        </div>
+        <div id="bank-pw-${quiz.id}" style="display:none;margin-top:8px;background:#d1fae5;border:1.5px solid #10b981;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#065f46;font-weight:700">
+          🔒 Contraseña: <span style="letter-spacing:2px"></span>
+        </div>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+// ══════════════════════════════════════════════
 //  ANTI-COPIA
 // ══════════════════════════════════════════════
 (function initAntiCheat() {
@@ -2145,6 +2352,9 @@ function launchConfetti() {
 
 // ── Init on start ──
 window.addEventListener('load', () => {
+  // Cargar banco de controles
+  renderBank();
+
   // If URL contains a quiz param, go straight to student view and hide teacher UI
   if (new URLSearchParams(window.location.search).get('quiz')) {
     document.querySelector('.tab-bar').style.display = 'none';
