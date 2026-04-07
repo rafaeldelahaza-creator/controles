@@ -1876,7 +1876,12 @@ function normalizeAnswer(text) {
     .replace(/^(el|la|los|las|un|una|unos|unas)\s+/i, '') // quitar artículos al inicio
     .replace(/[^a-z0-9\s]/g, '') // quitar símbolos excepto espacios y alfanum
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    // Errores ortográficos típicos de primaria (se normalizan antes de comparar)
+    .replace(/k/g, 'c')              // c/k: kilo=cilo, ke=ce
+    .replace(/\bh/g, '')             // h muda al inicio: hoyo=oyo, hola=ola
+    .replace(/([aeiou])h/g, '$1')    // h muda interior: alcohol=alcool
+    .replace(/m(?=[bp])/g, 'n');     // m/n ante b/p: tambien=tanbien, campo=canpo
 }
 
 function matchShortAnswer(studentRaw, acceptedList) {
