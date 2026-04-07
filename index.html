@@ -1884,12 +1884,35 @@ function matchShortAnswer(studentRaw, acceptedList) {
   if (!studentNorm) return false;
   for (const ans of acceptedList) {
     const ansNorm = normalizeAnswer(ans);
-    if (studentNorm === ansNorm) return true;
+    if (fuzzyMatch(studentNorm, ansNorm)) return true;
     // Coincidencia parcial: si el alumno escribe una palabra que contiene la respuesta o viceversa
     // (útil para "el oxígeno" vs "oxígeno", "O2" vs "oxigeno", etc.)
     if (ansNorm && (studentNorm.includes(ansNorm) || ansNorm.includes(studentNorm))) return true;
   }
   return false;
+}
+
+// ══════════════════════════════════════════════
+//  FUZZY MATCHING (tolerancia a errores ortográficos)
+// ══════════════════════════════════════════════
+function levenshtein(a, b) {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) =>
+    Array.from({ length: b.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[a.length][b.length];
+}
+
+function fuzzyMatch(student, expected) {
+  if (!student || !expected) return false;
+  if (student === expected) return true;
+  // Permite hasta 1 error en palabras de ≤6 letras, hasta 2 errores en palabras más largas
+  const maxDist = expected.length <= 6 ? 1 : 2;
+  return levenshtein(student, expected) <= maxDist;
 }
 
 // ══════════════════════════════════════════════
@@ -2037,9 +2060,9 @@ function submitQuiz() {
 
     } else if (q.type === 'fill') {
       const blankEls = document.querySelectorAll(`#sq-answer-${i} .blank-input`);
-      const answers = [...blankEls].map(el => el.value.trim().toLowerCase());
-      const expected = (q.blanks || []).map(b => b.toLowerCase());
-      const matches = answers.filter((a, ai) => a === (expected[ai] || '')).length;
+      const answers = [...blankEls].map(el => normalizeAnswer(el.value));
+      const expected = (q.blanks || []).map(b => normalizeAnswer(b));
+      const matches = answers.filter((a, ai) => fuzzyMatch(a, expected[ai] || '')).length;
       studentAnswer = answers.join(', ');
       if (matches === expected.length) { earnedPoints += q.points; }
       else if (matches > 0) { earnedPoints += (q.points * matches / expected.length); }
