@@ -1910,9 +1910,13 @@ function levenshtein(a, b) {
 function fuzzyMatch(student, expected) {
   if (!student || !expected) return false;
   if (student === expected) return true;
-  // Permite hasta 1 error en palabras de ≤6 letras, hasta 2 errores en palabras más largas
-  const maxDist = expected.length <= 6 ? 1 : 2;
-  return levenshtein(student, expected) <= maxDist;
+  // Palabras cortas (<5 letras): sin margen, deben estar bien escritas
+  if (expected.length < 5) return false;
+  // Solo se permite 1 error tipográfico
+  if (levenshtein(student, expected) !== 1) return false;
+  // La primera letra debe coincidir para evitar confusiones graves (tisole ≠ sistole)
+  if (student[0] !== expected[0]) return false;
+  return true;
 }
 
 // ══════════════════════════════════════════════
@@ -2062,7 +2066,7 @@ function submitQuiz() {
       const blankEls = document.querySelectorAll(`#sq-answer-${i} .blank-input`);
       const answers = [...blankEls].map(el => normalizeAnswer(el.value));
       const expected = (q.blanks || []).map(b => normalizeAnswer(b));
-      const matches = answers.filter((a, ai) => fuzzyMatch(a, expected[ai] || '')).length;
+      const matches = answers.filter((a, ai) => a === (expected[ai] || '')).length;
       studentAnswer = answers.join(', ');
       if (matches === expected.length) { earnedPoints += q.points; }
       else if (matches > 0) { earnedPoints += (q.points * matches / expected.length); }
