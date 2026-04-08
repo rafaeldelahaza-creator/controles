@@ -1790,10 +1790,59 @@ function selectTF(qi, val, btn) {
 function setupDragDrop(qi) {
   const list = document.getElementById(`order-list-${qi}`);
   let dragEl = null;
+
+  // ── RATÓN (desktop) ──────────────────────────
   list.querySelectorAll('.order-item').forEach(item => {
-    item.addEventListener('dragstart', () => { dragEl = item; item.classList.add('dragging'); });
-    item.addEventListener('dragend', () => { item.classList.remove('dragging'); updateOrderNums(qi); });
-    item.addEventListener('dragover', e => { e.preventDefault(); const after = getDragAfter(list, e.clientY); if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl); });
+    item.addEventListener('dragstart', () => {
+      dragEl = item;
+      item.classList.add('dragging');
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      dragEl = null;
+      updateOrderNums(qi);
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault();
+      const after = getDragAfter(list, e.clientY);
+      if (after) list.insertBefore(dragEl, after);
+      else list.appendChild(dragEl);
+    });
+  });
+
+  // ── TÁCTIL (tablets / móviles) ───────────────
+  list.querySelectorAll('.order-item').forEach(item => {
+    item.addEventListener('touchstart', e => {
+      dragEl = item;
+      item.classList.add('dragging');
+    }, { passive: true });
+
+    item.addEventListener('touchend', e => {
+      if (!dragEl) return;
+      dragEl.classList.remove('dragging');
+      dragEl = null;
+      updateOrderNums(qi);
+    }, { passive: true });
+
+    item.addEventListener('touchmove', e => {
+      e.preventDefault();
+      if (!dragEl) return;
+      const touch = e.touches[0];
+      dragEl.style.visibility = 'hidden';
+      const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      dragEl.style.visibility = '';
+      if (!elBelow) return;
+      const target = elBelow.closest('.order-item');
+      if (target && target !== dragEl && target.closest(`#order-list-${qi}`)) {
+        const box = target.getBoundingClientRect();
+        const midY = box.top + box.height / 2;
+        if (touch.clientY < midY) {
+          list.insertBefore(dragEl, target);
+        } else {
+          list.insertBefore(dragEl, target.nextSibling);
+        }
+      }
+    }, { passive: false });
   });
 }
 
