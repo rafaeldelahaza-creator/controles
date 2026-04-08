@@ -1601,7 +1601,9 @@ function previewQuiz() {
     card.className = 'sq-card';
     const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
-    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div></div>${imgHtml}<div class="sq-answer" id="pv-answer-${i}"></div>`;
+    const pvTotalPoints = questions.reduce((s, qq) => s + (qq.points || 0), 0);
+    const pvWeight = pvTotalPoints > 0 ? Math.round((q.points / pvTotalPoints) * 100) / 10 : q.points;
+    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${pvWeight} pt${pvWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="pv-answer-${i}"></div>`;
     container.appendChild(card);
 
     // Render answer using temp IDs prefixed with pv-
@@ -1802,12 +1804,14 @@ function renderStudentQuestions() {
   }));
   currentQuiz._rendered = shuffledQuestions;
 
+  const sqTotalPoints = currentQuiz.questions.reduce((s, qq) => s + (qq.points || 0), 0);
   shuffledQuestions.forEach((q, i) => {
+    const sqWeight = sqTotalPoints > 0 ? Math.round((q.points / sqTotalPoints) * 100) / 10 : q.points;
     const card = document.createElement('div');
     card.className = 'sq-card';
     const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
-    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div></div>${imgHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
+    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${sqWeight} pt${sqWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
     container.appendChild(card);
     renderStudentAnswer(q, i);
   });
@@ -1958,9 +1962,15 @@ function matchShortAnswer(studentRaw, acceptedList) {
   for (const ans of acceptedList) {
     const ansNorm = normalizeAnswer(ans);
     if (fuzzyMatch(studentNorm, ansNorm)) return true;
-    // Coincidencia parcial: si el alumno escribe una palabra que contiene la respuesta o viceversa
-    // (útil para "el oxígeno" vs "oxígeno", "O2" vs "oxigeno", etc.)
-    if (ansNorm && (studentNorm.includes(ansNorm) || ansNorm.includes(studentNorm))) return true;
+    // Coincidencia por palabra completa: "tabique interventricular" contiene "tabique" como palabra
+    if (ansNorm && ansNorm.length >= 4) {
+      const wordRe = new RegExp('(?:^|\\s)' + ansNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
+      if (wordRe.test(studentNorm)) return true;
+    }
+    if (studentNorm && studentNorm.length >= 4) {
+      const wordReRev = new RegExp('(?:^|\\s)' + studentNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
+      if (wordReRev.test(ansNorm)) return true;
+    }
   }
   return false;
 }
@@ -2139,7 +2149,17 @@ function submitQuiz() {
       const blankEls = document.querySelectorAll(`#sq-answer-${i} .blank-input`);
       const answers = [...blankEls].map(el => normalizeAnswer(el.value));
       const expected = (q.blanks || []).map(b => normalizeAnswer(b));
-      const matches = answers.filter((a, ai) => a === (expected[ai] || '')).length;
+      const matches = answers.filter((a, ai) => {
+        const exp = expected[ai] || '';
+        if (a === exp) return true;
+        if (exp.length >= 4) {
+          const wordRe = new RegExp('(?:^|\\s)' + exp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
+          if (wordRe.test(a)) return true;
+          const wordReRev = new RegExp('(?:^|\\s)' + a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
+          if (a.length >= 4 && wordReRev.test(exp)) return true;
+        }
+        return false;
+      }).length;
       studentAnswer = answers.join(', ');
       if (matches === expected.length) { earnedPoints += q.points; }
       else if (matches > 0) { earnedPoints += (q.points * matches / expected.length); }
