@@ -186,6 +186,52 @@
   .correct-radio { accent-color: var(--accent2); width: 18px; height: 18px; cursor: pointer; }
   .correct-label { font-size: 0.8rem; color: var(--accent2); font-weight: 700; }
   .del-q { position: absolute; top: 12px; right: 14px; background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; }
+  .regen-q { position: absolute; top: 12px; right: 42px; background: none; border: none; color: var(--primary); font-size: 1.1rem; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+  .regen-q:hover { opacity: 1; }
+
+  /* Panel regenerar pregunta */
+  .regen-panel {
+    background: #eef2ff;
+    border: 1.5px solid var(--primary-light);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 10px;
+    display: none;
+  }
+  .regen-panel.open { display: block; }
+  .regen-panel label { font-size: 0.82rem; color: var(--primary); font-weight: 800; display: block; margin-bottom: 8px; }
+  .regen-type-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .regen-type-btn {
+    padding: 5px 12px; border-radius: 16px; border: 2px solid var(--primary-light);
+    background: #fff; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .regen-type-btn.sel { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .regen-action-btn {
+    padding: 6px 16px; border-radius: 20px; border: none;
+    background: var(--primary); color: #fff; font-size: 0.85rem; font-weight: 800;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+  }
+  .regen-action-btn:disabled { opacity: 0.55; cursor: default; }
+
+  /* Indicador puntos totales */
+  .points-total-bar {
+    display: flex; align-items: center; gap: 12px;
+    background: #f0fdf4; border: 1.5px solid #bbf7d0;
+    border-radius: 10px; padding: 10px 16px; margin-bottom: 12px;
+    font-weight: 800; font-size: 0.92rem;
+  }
+  .points-total-bar.ok { background: #f0fdf4; border-color: #86efac; color: #166534; }
+  .points-total-bar.warn { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+  .pts-sum { font-size: 1.3rem; font-weight: 900; }
+
+  /* Input puntos en q-header */
+  .pts-input {
+    width: 54px; text-align: center; border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 3px 6px; font-size: 0.85rem; font-weight: 800;
+    font-family: 'Nunito', sans-serif; background: #fff; color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .pts-input:focus { outline: none; border-color: var(--primary); }
 
   /* ── STUDENT VIEW ── */
   #student-view .quiz-header {
@@ -984,6 +1030,12 @@
       </div>
     </div>
     <div id="questions-editor"></div>
+    <div id="points-total-bar" class="points-total-bar ok" style="display:none">
+      <span>📊 Total puntos:</span>
+      <span class="pts-sum" id="pts-sum-val">0</span>
+      <span>/ 10</span>
+      <span id="pts-sum-msg" style="margin-left:6px;font-size:0.82rem"></span>
+    </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
       <button class="btn btn-accent btn-sm" onclick="addQuestion('test')">+ Test</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('tf')">+ V/F</button>
@@ -1439,6 +1491,123 @@ function renderEditor() {
   editorQuestions.forEach((q, i) => {
     container.appendChild(buildEditorBlock(q, i));
   });
+  updatePointsBar();
+}
+
+function updatePointsBar() {
+  if (!editorQuestions.length) {
+    document.getElementById('points-total-bar').style.display = 'none';
+    return;
+  }
+  const total = Math.round(editorQuestions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0) * 100) / 100;
+  const bar = document.getElementById('points-total-bar');
+  const sumEl = document.getElementById('pts-sum-val');
+  const msg = document.getElementById('pts-sum-msg');
+  bar.style.display = 'flex';
+  sumEl.textContent = total;
+  const ok = Math.abs(total - 10) < 0.01;
+  bar.className = 'points-total-bar ' + (ok ? 'ok' : 'warn');
+  msg.textContent = ok ? '✅ ¡Todo cuadra!' : total < 10 ? `⚠️ Faltan ${Math.round((10 - total) * 100) / 100} pts` : `⚠️ Sobran ${Math.round((total - 10) * 100) / 100} pts`;
+}
+
+function toggleRegenPanel(i) {
+  const panel = document.getElementById(`regen-panel-${i}`);
+  if (panel) panel.classList.toggle('open');
+}
+
+function selectRegenType(i, type) {
+  const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
+  btns.forEach(b => b.classList.remove('sel'));
+  const clicked = [...btns].find(b => b.textContent.includes({test:'Test',tf:'V/F',fill:'Huecos',match:'Relacionar',short:'Corta',order:'Ordenar'}[type]));
+  if (clicked) clicked.classList.add('sel');
+  document.getElementById(`regen-panel-${i}`).__regenType = type;
+}
+
+// Guarda el tipo seleccionado en el dataset del panel
+function getRegenType(i) {
+  // Lee qué botón tiene la clase 'sel' en el panel
+  const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
+  const typeMap = {'📋 Test':'test','✅ V/F':'tf','✏️ Huecos':'fill','🔗 Relacionar':'match','💬 Corta':'short','🔢 Ordenar':'order'};
+  let sel = null;
+  btns.forEach(b => { if (b.classList.contains('sel')) sel = typeMap[b.textContent.trim()] || Object.values(typeMap).find(v => b.textContent.includes(v)); });
+  // Fallback: busca por texto
+  if (!sel) {
+    btns.forEach(b => {
+      if (b.classList.contains('sel')) {
+        const txt = b.textContent.trim();
+        for (const [k, v] of Object.entries({'Test':'test','V/F':'tf','Huecos':'fill','Relacionar':'match','Corta':'short','Ordenar':'order'})) {
+          if (txt.includes(k)) sel = v;
+        }
+      }
+    });
+  }
+  return sel || editorQuestions[i]?.type || 'test';
+}
+
+async function regenQuestion(i) {
+  const type = getRegenType(i);
+  const btn = document.getElementById(`regen-btn-${i}`);
+  const btnText = document.getElementById(`regen-btn-text-${i}`);
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Generando…';
+
+  // Contexto: preguntas ya existentes (sin la que vamos a reemplazar)
+  const otherQs = editorQuestions.filter((_, idx) => idx !== i);
+  const existingTexts = otherQs.map((q, n) => `${n+1}. [${q.type}] ${q.text}`).join('\n');
+
+  // Material disponible
+  const material = document.getElementById('material-input').value.trim();
+  const subject = document.getElementById('subject-input').value || 'la asignatura';
+  const typeLabels = { test: 'test (4 opciones, una correcta)', tf: 'verdadero/falso', fill: 'completar huecos', match: 'relacionar columnas (4 pares)', short: 'respuesta corta', order: 'ordenar elementos' };
+
+  const prompt = `Eres un generador de preguntas para un examen de primaria (5º-6º) de ${subject}.
+
+Ya existen estas preguntas en el control:
+${existingTexts || '(Ninguna todavía)'}
+
+Necesito UNA SOLA pregunta nueva de tipo "${typeLabels[type] || type}".
+IMPORTANTE:
+- No debe repetir ninguna de las preguntas ya existentes
+- Debe ser coherente con el tema del resto de preguntas
+- Debe estar en español
+${material ? `\nMaterial de referencia:\n${material.substring(0, 3000)}` : ''}
+
+Responde SOLO con el JSON de la pregunta, sin explicaciones, sin bloques de código, sin markdown. Formato exacto:
+${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","b) opción2","c) opción3","d) opción4"],"correct":"a) opción1","points":1}' :
+  type === 'tf' ? '{"type":"tf","text":"afirmación","correct":"verdadero","points":0.5}' :
+  type === 'fill' ? '{"type":"fill","text":"La ___ es importante.","blanks":["respuesta"],"points":1}' :
+  type === 'match' ? '{"type":"match","text":"Relaciona:","leftItems":["A","B","C","D"],"rightItems":["1","2","3","4"],"correctPairs":{"A":"1","B":"2","C":"3","D":"4"},"points":2}' :
+  type === 'short' ? '{"type":"short","text":"¿Pregunta?","correct":"respuesta","acceptedAnswers":["respuesta"],"points":1}' :
+  '{"type":"order","text":"Ordena:","items":["1","2","3"],"correctOrder":["1","2","3"],"points":2}'}`;
+
+  try {
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error?.message || 'Error API');
+    const text = data.content.map(c => c.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const newQ = JSON.parse(clean);
+    // Conservar los puntos actuales de la pregunta si el profesor los había ajustado
+    newQ.points = editorQuestions[i].points;
+    newQ.id = Date.now();
+    editorQuestions[i] = newQ;
+    renderEditor();
+    // Reabrir el panel para que se vea el resultado
+    showToast('✅ Pregunta regenerada correctamente');
+  } catch(e) {
+    showToast('❌ Error al regenerar. Inténtalo de nuevo.');
+    console.error(e);
+    btn.disabled = false;
+    btnText.textContent = '✦ Generar nueva pregunta';
+  }
 }
 
 function buildEditorBlock(q, i) {
@@ -1448,11 +1617,17 @@ function buildEditorBlock(q, i) {
 
   const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar' };
   let inner = `
-    <button class="del-q" onclick="deleteQuestion(${i})">✕</button>
+    <button class="del-q" onclick="deleteQuestion(${i})" title="Eliminar pregunta">✕</button>
+    <button class="regen-q" onclick="toggleRegenPanel(${i})" title="Regenerar esta pregunta con IA">🔄</button>
     <div class="q-header">
       <div class="q-num">${i + 1}</div>
       <div class="q-type-badge">${typeLabels[q.type] || q.type}</div>
-      <span style="font-size:0.8rem;color:var(--muted);margin-left:auto">${q.points} pt${q.points !== 1 ? 's' : ''}</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <input type="number" class="pts-input" id="pts-input-${i}" value="${q.points}" min="0" max="10" step="0.5"
+          oninput="editorQuestions[${i}].points=parseFloat(this.value)||0;updatePointsBar()"
+          title="Puntos de esta pregunta">
+        <span style="font-size:0.8rem;color:var(--muted)">pts</span>
+      </div>
     </div>
     <label>Pregunta</label>
     <textarea oninput="editorQuestions[${i}].text=this.value" style="min-height:60px">${escHtml(q.text || '')}</textarea>
@@ -1498,6 +1673,20 @@ function buildEditorBlock(q, i) {
     inner += `<label>Orden correcto (uno por línea)</label>
     <textarea style="min-height:80px" oninput="editorQuestions[${i}].correctOrder=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);editorQuestions[${i}].items=[...editorQuestions[${i}].correctOrder]">${escHtml((q.correctOrder||q.items||[]).join('\n'))}</textarea>`;
   }
+
+  // Panel regenerar pregunta con IA
+  inner += `
+    <div class="regen-panel" id="regen-panel-${i}">
+      <label>🔄 Regenerar esta pregunta — elige el tipo nuevo:</label>
+      <div class="regen-type-row" id="regen-types-${i}">
+        ${['test','tf','fill','match','short','order'].map(t =>
+          `<button class="regen-type-btn${t === q.type ? ' sel' : ''}" onclick="selectRegenType(${i},'${t}')">${typeLabels[t]}</button>`
+        ).join('')}
+      </div>
+      <button class="regen-action-btn" id="regen-btn-${i}" onclick="regenQuestion(${i})">
+        <span id="regen-btn-text-${i}">✦ Generar nueva pregunta</span>
+      </button>
+    </div>`;
 
   div.innerHTML = inner;
   return div;
@@ -1651,6 +1840,12 @@ function closePreview() {
 
 function publishQuiz() {
   if (!editorQuestions.length) { showToast('⚠️ Añade preguntas primero'); return; }
+  const total = Math.round(editorQuestions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0) * 100) / 100;
+  if (Math.abs(total - 10) > 0.01) {
+    showToast(`⚠️ Los puntos suman ${total}/10. Ajústalos antes de publicar.`);
+    document.getElementById('points-total-bar').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
   const title = document.getElementById('quiz-title-input').value || 'Control';
   const cls = document.getElementById('quiz-class-input').value || '';
   const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
