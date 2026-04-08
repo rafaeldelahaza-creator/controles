@@ -1364,6 +1364,13 @@ ${difficultyInstructions}
 Usa estos tipos de preguntas (distribúyelos equilibradamente): ${typeDescriptions}.
 ${imageInstructions}
 
+PUNTUACIÓN — MUY IMPORTANTE:
+- El campo "points" de cada pregunta representa su valor en la nota final sobre 10.
+- La suma de todos los "points" debe ser EXACTAMENTE 10. Sin excepción.
+- Asigna más puntos a preguntas más complejas (match, order, short) y menos a las más sencillas (tf, test simple).
+- Usa valores con hasta 1 decimal (ej: 1.5, 2.5) para ajustar con precisión.
+- Antes de responder, verifica mentalmente que la suma da 10.
+
 Responde SOLO con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown):
 {
   "title": "Control de ${subject}",
@@ -1376,21 +1383,21 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
       "text": "¿Pregunta?",
       "options": ["a) opción1", "b) opción2", "c) opción3", "d) opción4"],
       "correct": "a) opción1",
-      "points": 1
+      "points": 2
     },
     {
       "id": 2,
       "type": "tf",
       "text": "Afirmación verdadera o falsa.",
       "correct": "verdadero",
-      "points": 0.5
+      "points": 1
     },
     {
       "id": 3,
       "type": "fill",
       "text": "La capital de España es ___.",
       "blanks": ["Madrid"],
-      "points": 1
+      "points": 2
     },
     {
       "id": 4,
@@ -1399,7 +1406,7 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
       "leftItems": ["Elemento A", "Elemento B", "Elemento C", "Elemento D"],
       "rightItems": ["Descripción 1", "Descripción 2", "Descripción 3", "Descripción 4"],
       "correctPairs": {"Elemento A": "Descripción 1", "Elemento B": "Descripción 2", "Elemento C": "Descripción 3", "Elemento D": "Descripción 4"},
-      "points": 2
+      "points": 3
     },
     {
       "id": 5,
@@ -1407,7 +1414,7 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
       "text": "¿Cómo se llama...?",
       "correct": "respuesta",
       "acceptedAnswers": ["respuesta", "respuesta alternativa"],
-      "points": 1
+      "points": 1.5
     },
     {
       "id": 6,
@@ -1415,12 +1422,12 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
       "text": "Ordena los siguientes elementos:",
       "items": ["Primero", "Segundo", "Tercero", "Cuarto"],
       "correctOrder": ["Primero", "Segundo", "Tercero", "Cuarto"],
-      "points": 2
+      "points": 0.5
     }
   ]
 }
 
-Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipos a lo que tenga sentido con ese contenido.`;
+Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipos a lo que tenga sentido con ese contenido. Recuerda: los "points" deben sumar exactamente 10.`;
 
   // Build multimodal message content
   let messageContent = [];
@@ -1482,6 +1489,23 @@ function loadQuizIntoEditor(quiz) {
   document.getElementById('quiz-title-input').value = quiz.title || '';
   document.getElementById('time-limit').value = quiz.timeMinutes || 8;
   editorQuestions = quiz.questions || [];
+
+  // Corrección automática: si la IA no asignó exactamente 10 puntos, reescalar proporcionalmente
+  const rawTotal = editorQuestions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0);
+  if (rawTotal > 0 && Math.abs(rawTotal - 10) > 0.01) {
+    const factor = 10 / rawTotal;
+    let acum = 0;
+    editorQuestions.forEach((q, i) => {
+      if (i < editorQuestions.length - 1) {
+        q.points = Math.round((q.points * factor) * 10) / 10;
+        acum += q.points;
+      } else {
+        // Última pregunta absorbe el residuo para garantizar suma exacta = 10
+        q.points = Math.round((10 - acum) * 10) / 10;
+      }
+    });
+  }
+
   renderEditor();
 }
 
