@@ -393,6 +393,27 @@
   .note-badge.low { background: #fee2e2; color: #991b1b; }
 
   /* ── BANCO DE CONTROLES ── */
+  .diff-chip {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 2px solid var(--border);
+    background: #f8f9ff;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .diff-chip.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .bank-sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .bank-sort-bar label { margin-bottom: 0; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+  .bank-sort-bar select { width: auto; margin-bottom: 0; padding: 6px 10px; font-size: 0.85rem; }
+  /* ── BANCO DE CONTROLES ── */
   .bank-item {
     background: #f8f9ff;
     border: 1.5px solid var(--border);
@@ -925,6 +946,12 @@
         <input type="number" id="time-limit" value="8" min="3" max="15">
       </div>
     </div>
+    <label>Dificultad del control</label>
+    <div class="type-grid" id="difficulty-chips" style="margin-bottom:14px">
+      <div class="diff-chip" data-diff="facil" onclick="selectDifficulty(this)">🟢 Fácil</div>
+      <div class="diff-chip selected" data-diff="normal" onclick="selectDifficulty(this)">🟡 Normal</div>
+      <div class="diff-chip" data-diff="dificil" onclick="selectDifficulty(this)">🔴 Difícil</div>
+    </div>
     <label>Tipos de preguntas a incluir</label>
     <div class="type-grid" id="type-chips">
       <div class="type-chip selected" data-type="test">📋 Tipo test</div>
@@ -990,6 +1017,28 @@
   <div class="card" id="bank-card">
     <h2>📚 Banco de controles</h2>
     <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px">Controles guardados listos para publicar. Persisten aunque cierres el navegador.</p>
+    <div class="bank-sort-bar">
+      <label>Ordenar por:</label>
+      <select id="bank-sort1" onchange="renderBank()">
+        <option value="reciente">📅 Más reciente</option>
+        <option value="titulo">🔤 Título A→Z</option>
+        <option value="clase">🏫 Clase</option>
+        <option value="preguntas">🔢 Nº preguntas</option>
+      </select>
+      <label style="margin-left:6px">y luego por:</label>
+      <select id="bank-sort2" onchange="renderBank()">
+        <option value="ninguno">— ninguno —</option>
+        <option value="reciente">📅 Más reciente</option>
+        <option value="titulo">🔤 Título A→Z</option>
+        <option value="clase">🏫 Clase</option>
+        <option value="preguntas">🔢 Nº preguntas</option>
+      </select>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="exportBank()" style="background:#0891b2">⬇️ Exportar</button>
+        <label for="import-bank-input" style="display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:30px;border:none;background:#7c3aed;color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.88rem;cursor:pointer;margin-bottom:0;transition:transform 0.15s,box-shadow 0.15s">⬆️ Importar</label>
+        <input type="file" id="import-bank-input" accept=".json" style="display:none" onchange="importBank(event)">
+      </div>
+    </div>
     <div id="bank-list"></div>
   </div>
 
@@ -1096,6 +1145,16 @@ function showView(v) {
     document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
     loadStudentView();
   }
+}
+
+function selectDifficulty(chip) {
+  document.querySelectorAll('.diff-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+}
+
+function getSelectedDifficulty() {
+  const chip = document.querySelector('.diff-chip.selected');
+  return chip ? chip.dataset.diff : 'normal';
 }
 
 // ══════════════════════════════════════════════
@@ -1228,6 +1287,13 @@ async function generateWithAI() {
 
   const subject = document.getElementById('subject-input').value || 'Asignatura';
   const timeLimit = document.getElementById('time-limit').value || 8;
+  const difficulty = getSelectedDifficulty();
+
+  const difficultyInstructions = {
+    facil: `NIVEL DE DIFICULTAD: FÁCIL. Las preguntas deben ser sencillas y directas, usando vocabulario básico. Las respuestas de test deben tener distractores claramente incorrectos. Los huecos deben ser palabras clave obvias del texto. Ideal para repasar conceptos básicos o alumnos con dificultades.`,
+    normal: `NIVEL DE DIFICULTAD: NORMAL. Equilibrio entre preguntas directas y preguntas que requieren algo de reflexión. Vocabulario adecuado para 5º-6º de primaria. Los distractores del test deben ser plausibles pero claramente distintos de la respuesta correcta.`,
+    dificil: `NIVEL DE DIFICULTAD: DIFÍCIL. Las preguntas deben requerir comprensión profunda, relación entre conceptos y capacidad de razonamiento. Incluye preguntas de aplicación ("¿Por qué…?", "¿Qué pasaría si…?", "¿En qué se diferencia…?"). Los distractores del test deben ser muy similares a la respuesta correcta. Usa vocabulario preciso y técnico del tema.`
+  }[difficulty];
 
   const typeNames = { test: 'tipo test (4 opciones a,b,c,d)', tf: 'verdadero/falso', fill: 'completar huecos (usa ___ para el hueco)', match: 'relacionar columnas (4 pares)', short: 'respuesta corta (1-2 palabras)', order: 'ordenar elementos (4-5 items)' };
   const typeDescriptions = types.map(t => typeNames[t]).filter(Boolean).join(', ');
@@ -1240,6 +1306,8 @@ INSTRUCCIONES PARA USO DE IMÁGENES:
 - Si decides incluir una imagen, copia el campo "image" con el índice del archivo (0, 1, 2...) correspondiente.` : '';
 
   const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en el material adjunto${material ? ' y el texto proporcionado' : ''}.
+
+${difficultyInstructions}
 
 Usa estos tipos de preguntas (distribúyelos equilibradamente): ${typeDescriptions}.
 ${imageInstructions}
@@ -1790,59 +1858,10 @@ function selectTF(qi, val, btn) {
 function setupDragDrop(qi) {
   const list = document.getElementById(`order-list-${qi}`);
   let dragEl = null;
-
-  // ── RATÓN (desktop) ──────────────────────────
   list.querySelectorAll('.order-item').forEach(item => {
-    item.addEventListener('dragstart', () => {
-      dragEl = item;
-      item.classList.add('dragging');
-    });
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      dragEl = null;
-      updateOrderNums(qi);
-    });
-    item.addEventListener('dragover', e => {
-      e.preventDefault();
-      const after = getDragAfter(list, e.clientY);
-      if (after) list.insertBefore(dragEl, after);
-      else list.appendChild(dragEl);
-    });
-  });
-
-  // ── TÁCTIL (tablets / móviles) ───────────────
-  list.querySelectorAll('.order-item').forEach(item => {
-    item.addEventListener('touchstart', e => {
-      dragEl = item;
-      item.classList.add('dragging');
-    }, { passive: true });
-
-    item.addEventListener('touchend', e => {
-      if (!dragEl) return;
-      dragEl.classList.remove('dragging');
-      dragEl = null;
-      updateOrderNums(qi);
-    }, { passive: true });
-
-    item.addEventListener('touchmove', e => {
-      e.preventDefault();
-      if (!dragEl) return;
-      const touch = e.touches[0];
-      dragEl.style.visibility = 'hidden';
-      const elBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-      dragEl.style.visibility = '';
-      if (!elBelow) return;
-      const target = elBelow.closest('.order-item');
-      if (target && target !== dragEl && target.closest(`#order-list-${qi}`)) {
-        const box = target.getBoundingClientRect();
-        const midY = box.top + box.height / 2;
-        if (touch.clientY < midY) {
-          list.insertBefore(dragEl, target);
-        } else {
-          list.insertBefore(dragEl, target.nextSibling);
-        }
-      }
-    }, { passive: false });
+    item.addEventListener('dragstart', () => { dragEl = item; item.classList.add('dragging'); });
+    item.addEventListener('dragend', () => { item.classList.remove('dragging'); updateOrderNums(qi); });
+    item.addEventListener('dragover', e => { e.preventDefault(); const after = getDragAfter(list, e.clientY); if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl); });
   });
 }
 
@@ -2301,6 +2320,58 @@ function deleteBankItem(id) {
   showToast('🗑 Control eliminado del banco');
 }
 
+function duplicateBankItem(id) {
+  const original = loadBank().find(q => q.id === id);
+  if (!original) return;
+  const copy = JSON.parse(JSON.stringify(original));
+  copy.id = Date.now();
+  copy.title = copy.title + ' (copia)';
+  copy.savedAt = new Date().toLocaleDateString('es-ES');
+  const bank = loadBank();
+  bank.unshift(copy);
+  saveBank(bank);
+  renderBank();
+  showToast('📋 Control duplicado');
+}
+
+function exportBank() {
+  const bank = loadBank();
+  if (!bank.length) { showToast('⚠️ El banco está vacío'); return; }
+  const json = JSON.stringify(bank, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g, '-');
+  a.href = url;
+  a.download = `banco_controles_${fecha}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇️ Banco exportado correctamente');
+}
+
+function importBank(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error('Formato incorrecto');
+      const existing = loadBank();
+      const existingIds = new Set(existing.map(q => q.id));
+      const nuevos = imported.filter(q => !existingIds.has(q.id));
+      const merged = [...nuevos, ...existing];
+      saveBank(merged);
+      renderBank();
+      showToast(`✅ ${nuevos.length} control${nuevos.length !== 1 ? 'es' : ''} importado${nuevos.length !== 1 ? 's' : ''} (${imported.length - nuevos.length} ya existían)`);
+    } catch(err) {
+      showToast('❌ Archivo no válido. Usa un JSON exportado desde esta app.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // reset para poder importar el mismo fichero otra vez
+}
+
 function loadBankItemIntoEditor(id) {
   const quiz = loadBank().find(q => q.id === id);
   if (!quiz) return;
@@ -2345,7 +2416,7 @@ function copyBankLink(id) {
 }
 
 function renderBank() {
-  const bank = loadBank();
+  let bank = loadBank();
   const list = document.getElementById('bank-list');
   if (!list) return;
 
@@ -2353,6 +2424,25 @@ function renderBank() {
     list.innerHTML = '<div class="bank-empty">📭 El banco está vacío. Guarda un control con el botón 💾 del editor.</div>';
     return;
   }
+
+  const sort1 = document.getElementById('bank-sort1')?.value || 'reciente';
+  const sort2 = document.getElementById('bank-sort2')?.value || 'ninguno';
+
+  function sortValue(quiz, criterion) {
+    if (criterion === 'reciente') return -(quiz.id || 0);
+    if (criterion === 'titulo')   return (quiz.title || '').toLowerCase();
+    if (criterion === 'clase')    return (quiz.class || '').toLowerCase();
+    if (criterion === 'preguntas') return -(quiz.questions?.length || 0);
+    return 0;
+  }
+
+  bank = [...bank].sort((a, b) => {
+    const v1a = sortValue(a, sort1), v1b = sortValue(b, sort1);
+    const cmp1 = v1a < v1b ? -1 : v1a > v1b ? 1 : 0;
+    if (cmp1 !== 0 || sort2 === 'ninguno') return cmp1;
+    const v2a = sortValue(a, sort2), v2b = sortValue(b, sort2);
+    return v2a < v2b ? -1 : v2a > v2b ? 1 : 0;
+  });
 
   list.innerHTML = '';
   bank.forEach(quiz => {
@@ -2375,6 +2465,7 @@ function renderBank() {
       <div class="bank-item-actions">
         <button class="btn btn-green btn-sm" onclick="publishBankItem(${quiz.id})">🚀 Publicar</button>
         <button class="btn btn-primary btn-sm" onclick="loadBankItemIntoEditor(${quiz.id})" style="background:#7c3aed">✏️ Editar</button>
+        <button class="btn btn-primary btn-sm" onclick="duplicateBankItem(${quiz.id})" style="background:#0891b2">📋 Duplicar</button>
         <button class="btn btn-sm" onclick="deleteBankItem(${quiz.id})" style="background:#fee2e2;color:#991b1b">🗑</button>
       </div>
       <div class="bank-item-link" id="bank-link-${quiz.id}">
