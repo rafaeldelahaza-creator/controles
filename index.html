@@ -1284,7 +1284,7 @@
     </div>
 
     <div class="live-btn-row" style="margin-top:14px">
-      <button class="live-btn-stop" onclick="closeLiveControl()">🔒 Cerrar control</button>
+      <button class="live-btn-stop" onclick="closeLiveControl()">✅ Terminar control</button>
       <button class="btn btn-primary btn-sm" id="live-report-btn" onclick="openReport()" style="background:#7c3aed;display:none">📋 Ver informe final</button>
       <span class="live-last-update" id="live-last-update"></span>
     </div>
@@ -2769,8 +2769,10 @@ function launchConfetti() {
 //  INFORME POST-CONTROL
 // ══════════════════════════════════════════════
 async function openReport() {
-  if (!liveActiveQuizTitle) {
-    showToast('⚠️ Publica un control primero para ver su informe');
+  const reportTitle = liveActiveQuizTitle || lastClosedQuizTitle;
+  const reportClass = liveActiveQuizClass || lastClosedQuizClass || (currentQuiz?.class || '');
+  if (!reportTitle) {
+    showToast('⚠️ No hay ningún control disponible para el informe');
     return;
   }
   document.getElementById('report-modal').classList.add('open');
@@ -2780,12 +2782,11 @@ async function openReport() {
   document.getElementById('report-student-body').innerHTML = '';
 
   try {
-    const clsHint = liveActiveQuizClass || (currentQuiz?.class || '');
-    const url = '/.netlify/functions/get-scores?quiz=' + encodeURIComponent(liveActiveQuizTitle)
-              + (clsHint ? '&cls=' + encodeURIComponent(clsHint) : '');
+    const url = '/.netlify/functions/get-scores?quiz=' + encodeURIComponent(reportTitle)
+              + (reportClass ? '&cls=' + encodeURIComponent(reportClass) : '');
     const res = await fetch(url);
     const data = await res.json();
-    renderReport(data.submissions || [], data.questionStats || []);
+    renderReport(data.submissions || [], data.questionStats || [], reportTitle);
   } catch(e) {
     document.getElementById('report-meta').textContent = '❌ Error al cargar datos de Sheets.';
   }
@@ -2795,8 +2796,8 @@ function closeReport() {
   document.getElementById('report-modal').classList.remove('open');
 }
 
-function renderReport(submissions, questionStats) {
-  const quizTitle = liveActiveQuizTitle || '–';
+function renderReport(submissions, questionStats, reportTitle) {
+  const quizTitle = reportTitle || liveActiveQuizTitle || lastClosedQuizTitle || '–';
   const total = submissions.length;
   if (total === 0) {
     document.getElementById('report-meta').textContent = 'Todavía no hay entregas para este control.';
@@ -2882,7 +2883,7 @@ function downloadReportPDF() {
   const modal = document.getElementById('report-modal');
   const box = modal.querySelector('.report-box');
   // Crear ventana de impresión con el contenido del informe
-  const title = (liveActiveQuizTitle || 'Informe') + ' — Informe';
+  const title = (liveActiveQuizTitle || lastClosedQuizTitle || 'Informe') + ' — Informe';
   const content = box.innerHTML;
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html lang="es"><head>
@@ -2928,12 +2929,21 @@ function downloadReportPDF() {
 let livePollingInterval = null;
 let liveActiveQuizTitle = null;
 let liveActiveQuizClass = null;
+let lastClosedQuizTitle = null;
+let lastClosedQuizClass = null;
 
 function startLivePanel(quizTitle, quizClass) {
   liveActiveQuizTitle = quizTitle;
   liveActiveQuizClass = quizClass || '';
   document.getElementById('live-quiz-name').textContent = quizTitle;
   document.getElementById('live-panel').classList.add('visible');
+  // Resetear estado visual del panel por si venía de un control cerrado
+  document.querySelector('.live-dot').style.background = '';
+  document.querySelector('.live-dot').style.animation = '';
+  document.querySelector('.live-dot').style.boxShadow = '';
+  document.querySelector('.live-title').textContent = '📡 Seguimiento en tiempo real';
+  document.querySelector('.live-btn-stop').style.display = '';
+  document.getElementById('live-report-btn').style.display = 'none';
   fetchLiveScores();
   livePollingInterval = setInterval(fetchLiveScores, 20000);
 }
@@ -2946,21 +2956,22 @@ function stopLivePanel() {
 }
 
 function closeLiveControl() {
-  if (!confirm('¿Cerrar el seguimiento?\n\nEl enlace seguirá funcionando para quien lo tenga. Para impedir el acceso fuera de horario, usa la opción "Programar cierre" al publicar.')) return;
+  // Guardar título/clase antes de limpiar, para el informe posterior
+  lastClosedQuizTitle = liveActiveQuizTitle;
+  lastClosedQuizClass = liveActiveQuizClass;
   // Detener polling
   clearInterval(livePollingInterval);
   livePollingInterval = null;
-  // Actualizar UI del panel: ocultar botón cerrar, mostrar botón informe, quitar punto pulsante
+  // Actualizar UI
   document.querySelector('.live-dot').style.background = '#9ca3af';
   document.querySelector('.live-dot').style.animation = 'none';
   document.querySelector('.live-dot').style.boxShadow = 'none';
-  document.querySelector('.live-title').textContent = '🔒 Control cerrado';
-  document.getElementById('live-last-update').textContent = 'Seguimiento detenido · ' + new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
-  // Mostrar botón informe final, ocultar botón cerrar
+  document.querySelector('.live-title').textContent = '✅ Control terminado';
+  document.getElementById('live-last-update').textContent = 'Terminado · ' + new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
   document.querySelector('.live-btn-stop').style.display = 'none';
   document.getElementById('live-report-btn').style.display = 'inline-flex';
-  showToast('🔒 Control cerrado — ya puedes ver el informe final');
-  // Hacer una última consulta para tener los datos más frescos
+  showToast('✅ Control terminado — ya puedes ver el informe final');
+  // Última consulta con datos frescos
   fetchLiveScores();
 }
 
