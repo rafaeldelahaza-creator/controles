@@ -516,43 +516,6 @@
   }
   .sheets-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(22,163,74,0.3); }
 
-  /* ── MODO PROGRAMADO ── */
-  .schedule-wrap {
-    background: #f0f4ff; border: 1.5px solid var(--border);
-    border-radius: 12px; padding: 14px 18px; margin-top: 14px;
-  }
-  .schedule-toggle {
-    display: flex; align-items: center; gap: 10px;
-    cursor: pointer; font-weight: 700; font-size: 0.92rem; user-select: none;
-  }
-  .schedule-toggle input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
-  .schedule-fields { margin-top: 12px; display: none; }
-  .schedule-fields.open { display: block; }
-  .schedule-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .schedule-row > div { flex: 1; min-width: 160px; }
-  .schedule-row label { font-size: 0.82rem; color: var(--primary); font-weight: 800; }
-  .schedule-row input[type=datetime-local] {
-    width: 100%; padding: 9px 12px; border: 2px solid var(--border);
-    border-radius: 10px; font-family: 'Nunito', sans-serif; font-size: 0.92rem;
-    background: #fff; color: var(--text); margin-bottom: 0;
-  }
-  .schedule-row input[type=datetime-local]:focus { border-color: var(--primary-light); outline: none; }
-  #schedule-status {
-    margin-top: 10px; font-size: 0.82rem; font-weight: 700; display: none;
-  }
-  #schedule-status.waiting { color: #92400e; background: #fef3c7; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 6px 12px; }
-  #schedule-status.closed  { color: #991b1b; background: #fee2e2; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 6px 12px; }
-  #schedule-status.open    { color: #065f46; background: #d1fae5; border: 1.5px solid #6ee7b7; border-radius: 8px; padding: 6px 12px; }
-
-  /* Pantalla alumno: control no disponible aún */
-  #quiz-scheduled-screen {
-    display: none; text-align: center; padding: 60px 24px;
-  }
-  #quiz-scheduled-screen .qs-icon { font-size: 3rem; margin-bottom: 14px; }
-  #quiz-scheduled-screen .qs-title { font-family: 'Baloo 2', cursive; font-size: 1.5rem; color: var(--primary); margin-bottom: 8px; }
-  #quiz-scheduled-screen .qs-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 16px; }
-  #quiz-scheduled-screen .qs-countdown { font-family: 'Baloo 2', cursive; font-size: 2rem; color: var(--accent); font-weight: 800; }
-
   /* ── MODAL INFORME POST-CONTROL ── */
   #report-modal {
     position: fixed; inset: 0; background: rgba(30,27,75,0.55);
@@ -1211,26 +1174,6 @@
       <div class="pw-field-label">🔒 Contraseña de acceso para alumnos <span style="color:var(--muted);font-weight:400;font-size:0.75rem">(opcional — si la dejas vacía, entran sin contraseña)</span></div>
       <input type="text" class="pw-field-input" id="quiz-password-input" placeholder="Ej: sol2024  — escríbela antes de publicar" autocomplete="off">
     </div>
-
-    <div class="schedule-wrap">
-      <label class="schedule-toggle">
-        <input type="checkbox" id="schedule-enabled" onchange="toggleSchedule()">
-        🗓 Programar apertura y cierre automático
-      </label>
-      <div class="schedule-fields" id="schedule-fields">
-        <div class="schedule-row">
-          <div>
-            <label>⏰ Apertura</label>
-            <input type="datetime-local" id="schedule-open">
-          </div>
-          <div>
-            <label>🔒 Cierre</label>
-            <input type="datetime-local" id="schedule-close">
-          </div>
-        </div>
-        <div id="schedule-status"></div>
-      </div>
-    </div>
   </div>
 
   <div class="card" id="editor-card" style="display:none">
@@ -1341,7 +1284,8 @@
     </div>
 
     <div class="live-btn-row" style="margin-top:14px">
-      <button class="live-btn-stop" onclick="stopLivePanel()">⏹ Detener seguimiento</button>
+      <button class="live-btn-stop" onclick="closeLiveControl()">🔒 Cerrar control</button>
+      <button class="btn btn-primary btn-sm" id="live-report-btn" onclick="openReport()" style="background:#7c3aed;display:none">📋 Ver informe final</button>
       <span class="live-last-update" id="live-last-update"></span>
     </div>
   </div>
@@ -1382,12 +1326,6 @@
     <div class="emoji">📭</div>
     <p style="font-weight:700;font-size:1.1rem">No hay ningún control activo</p>
     <p style="font-size:0.9rem;margin-top:6px">El profesor tiene que publicar un control primero.</p>
-  </div>
-  <div id="quiz-scheduled-screen">
-    <div class="qs-icon">🗓</div>
-    <div class="qs-title" id="qs-title">Control programado</div>
-    <div class="qs-sub" id="qs-sub">Este control estará disponible a partir de:</div>
-    <div class="qs-countdown" id="qs-countdown"></div>
   </div>
   <div id="quiz-student-container" style="display:none">
     <div class="quiz-header">
@@ -2177,19 +2115,7 @@ function closePreview() {
   document.getElementById('preview-modal').classList.add('hidden');
 }
 
-async function shortenUrl(longUrl) {
-  try {
-    const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
-    if (!res.ok) throw new Error('TinyURL error');
-    const short = await res.text();
-    if (short.startsWith('https://tinyurl.com/')) return short.trim();
-    throw new Error('Respuesta inesperada');
-  } catch(e) {
-    return longUrl; // fallback: enlace largo
-  }
-}
-
-async function publishQuiz() {
+function publishQuiz() {
   if (!editorQuestions.length) { showToast('⚠️ Añade preguntas primero'); return; }
   const total = Math.round(editorQuestions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0) * 100) / 100;
   if (Math.abs(total - 10) > 0.01) {
@@ -2201,26 +2127,20 @@ async function publishQuiz() {
   const cls = document.getElementById('quiz-class-input').value || '';
   const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
   const password = (document.getElementById('quiz-password-input').value || '').trim();
-  const schedule = getScheduleConfig();
-  currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password: password || '', schedule };
+  currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password: password || '' };
   const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentQuiz))));
   const base = window.location.href.split('?')[0];
-  const longUrl = base + '?quiz=' + encoded;
-
+  const quizUrl = base + '?quiz=' + encoded;
   document.getElementById('publish-card').style.display = 'block';
-  document.getElementById('quiz-link').value = '⏳ Acortando enlace…';
-  document.getElementById('publish-card').scrollIntoView({ behavior: 'smooth' });
-
-  const finalUrl = await shortenUrl(longUrl);
-  document.getElementById('quiz-link').value = finalUrl;
-
+  document.getElementById('quiz-link').value = quizUrl;
   if (password) {
     document.getElementById('pw-active-banner').style.display = 'block';
     document.getElementById('pw-active-text').textContent = password;
   } else {
     document.getElementById('pw-active-banner').style.display = 'none';
   }
-  showToast(password ? '🔒 Control publicado con contraseña' : '🚀 Enlace listo — cópialo y compártelo');
+  document.getElementById('publish-card').scrollIntoView({ behavior: 'smooth' });
+  showToast(password ? '🔒 Control publicado con contraseña' : '🚀 Control publicado — copia el enlace y compártelo');
   startLivePanel(title, cls);
 }
 
@@ -2252,12 +2172,6 @@ function loadStudentView() {
   const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
   if (sessionStorage.getItem(submitKey)) {
     document.getElementById('already-submitted-screen').classList.remove('hidden');
-    return;
-  }
-  // Comprobar ventana horaria programada
-  const scheduleAccess = checkScheduleAccess(currentQuiz);
-  if (scheduleAccess !== 'open') {
-    showScheduledScreen(currentQuiz);
     return;
   }
   // If quiz has a password and it comes from URL (shared link), show password screen first
@@ -2852,95 +2766,6 @@ function launchConfetti() {
 }
 
 // ══════════════════════════════════════════════
-//  MODO PROGRAMADO
-// ══════════════════════════════════════════════
-function toggleSchedule() {
-  const enabled = document.getElementById('schedule-enabled').checked;
-  const fields = document.getElementById('schedule-fields');
-  fields.classList.toggle('open', enabled);
-  if (enabled) updateScheduleStatus();
-}
-
-function getScheduleConfig() {
-  if (!document.getElementById('schedule-enabled')?.checked) return null;
-  const open  = document.getElementById('schedule-open').value;
-  const close = document.getElementById('schedule-close').value;
-  return { open: open || null, close: close || null };
-}
-
-function updateScheduleStatus() {
-  const cfg = getScheduleConfig();
-  const el = document.getElementById('schedule-status');
-  if (!cfg) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  const now = Date.now();
-  const openTs  = cfg.open  ? new Date(cfg.open).getTime()  : null;
-  const closeTs = cfg.close ? new Date(cfg.close).getTime() : null;
-  if (openTs && now < openTs) {
-    el.className = 'waiting';
-    el.textContent = `⏳ Apertura: ${new Date(openTs).toLocaleString('es-ES')}`;
-  } else if (closeTs && now > closeTs) {
-    el.className = 'closed';
-    el.textContent = `🔒 Cerrado desde: ${new Date(closeTs).toLocaleString('es-ES')}`;
-  } else {
-    el.className = 'open';
-    const parts = [];
-    if (openTs)  parts.push(`Abierto desde ${new Date(openTs).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
-    if (closeTs) parts.push(`Cierra a las ${new Date(closeTs).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
-    el.textContent = '✅ ' + (parts.join(' · ') || 'Sin restricción de horario');
-  }
-}
-
-// Comprueba si el control está dentro de ventana horaria (para la vista alumno)
-function checkScheduleAccess(quiz) {
-  if (!quiz.schedule) return 'open'; // sin programación → siempre abierto
-  const now = Date.now();
-  const openTs  = quiz.schedule.open  ? new Date(quiz.schedule.open).getTime()  : null;
-  const closeTs = quiz.schedule.close ? new Date(quiz.schedule.close).getTime() : null;
-  if (openTs  && now < openTs)  return 'waiting';
-  if (closeTs && now > closeTs) return 'closed';
-  return 'open';
-}
-
-let scheduleCountdownInterval = null;
-function showScheduledScreen(quiz) {
-  document.getElementById('no-quiz-state').style.display = 'none';
-  document.getElementById('quiz-student-container').style.display = 'none';
-  const screen = document.getElementById('quiz-scheduled-screen');
-  screen.style.display = 'block';
-  const openTs = quiz.schedule?.open ? new Date(quiz.schedule.open).getTime() : null;
-  const closeTs = quiz.schedule?.close ? new Date(quiz.schedule.close).getTime() : null;
-  const now = Date.now();
-
-  if (closeTs && now > closeTs) {
-    document.getElementById('qs-title').textContent = quiz.title || 'Control';
-    document.getElementById('qs-sub').textContent = 'Este control ya está cerrado.';
-    document.getElementById('qs-countdown').textContent = '🔒';
-    return;
-  }
-  document.getElementById('qs-title').textContent = quiz.title || 'Control';
-  document.getElementById('qs-sub').textContent = 'Este control estará disponible a partir de:';
-  clearInterval(scheduleCountdownInterval);
-  function tick() {
-    const remaining = openTs - Date.now();
-    if (remaining <= 0) {
-      clearInterval(scheduleCountdownInterval);
-      loadStudentView(); // reintentar
-      return;
-    }
-    const h = Math.floor(remaining / 3600000);
-    const m = Math.floor((remaining % 3600000) / 60000);
-    const s = Math.floor((remaining % 60000) / 1000);
-    const label = h > 0
-      ? `${h}h ${m.toString().padStart(2,'0')}min`
-      : `${m}:${s.toString().padStart(2,'0')}`;
-    document.getElementById('qs-countdown').textContent = label;
-  }
-  tick();
-  scheduleCountdownInterval = setInterval(tick, 1000);
-}
-
-// ══════════════════════════════════════════════
 //  INFORME POST-CONTROL
 // ══════════════════════════════════════════════
 async function openReport() {
@@ -3118,6 +2943,25 @@ function stopLivePanel() {
   livePollingInterval = null;
   document.getElementById('live-panel').classList.remove('visible');
   liveActiveQuizTitle = null;
+}
+
+function closeLiveControl() {
+  if (!confirm('¿Cerrar el seguimiento?\n\nEl enlace seguirá funcionando para quien lo tenga. Para impedir el acceso fuera de horario, usa la opción "Programar cierre" al publicar.')) return;
+  // Detener polling
+  clearInterval(livePollingInterval);
+  livePollingInterval = null;
+  // Actualizar UI del panel: ocultar botón cerrar, mostrar botón informe, quitar punto pulsante
+  document.querySelector('.live-dot').style.background = '#9ca3af';
+  document.querySelector('.live-dot').style.animation = 'none';
+  document.querySelector('.live-dot').style.boxShadow = 'none';
+  document.querySelector('.live-title').textContent = '🔒 Control cerrado';
+  document.getElementById('live-last-update').textContent = 'Seguimiento detenido · ' + new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  // Mostrar botón informe final, ocultar botón cerrar
+  document.querySelector('.live-btn-stop').style.display = 'none';
+  document.getElementById('live-report-btn').style.display = 'inline-flex';
+  showToast('🔒 Control cerrado — ya puedes ver el informe final');
+  // Hacer una última consulta para tener los datos más frescos
+  fetchLiveScores();
 }
 
 async function fetchLiveScores() {
@@ -3321,27 +3165,21 @@ function loadBankItemIntoEditor(id) {
   showToast('✏️ Control cargado en el editor');
 }
 
-async function publishBankItem(id) {
+function publishBankItem(id) {
   const quiz = loadBank().find(q => q.id === id);
   if (!quiz) return;
 
   currentQuiz = quiz;
   const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
   const base = window.location.href.split('?')[0];
-  const longUrl = base + '?quiz=' + encoded;
+  const quizUrl = base + '?quiz=' + encoded;
 
   const linkDiv   = document.getElementById('bank-link-' + id);
   const linkInput = document.getElementById('bank-link-input-' + id);
   const pwBanner  = document.getElementById('bank-pw-' + id);
   if (linkDiv) {
-    linkInput.value = '⏳ Acortando enlace…';
+    linkInput.value = quizUrl;
     linkDiv.classList.add('visible');
-  }
-
-  const finalUrl = await shortenUrl(longUrl);
-
-  if (linkDiv) {
-    linkInput.value = finalUrl;
     if (quiz.password) {
       pwBanner.style.display = 'block';
       pwBanner.querySelector('span').textContent = quiz.password;
@@ -3349,7 +3187,7 @@ async function publishBankItem(id) {
       pwBanner.style.display = 'none';
     }
   }
-  showToast(quiz.password ? '🔒 Control publicado con contraseña' : '🚀 Enlace listo — cópialo y compártelo');
+  showToast(quiz.password ? '🔒 Control publicado con contraseña' : '🚀 Enlace generado — cópialo y compártelo');
   startLivePanel(quiz.title, quiz.class || '');
 }
 
@@ -3421,6 +3259,10 @@ function renderBank() {
         </div>
         <div id="bank-pw-${quiz.id}" style="display:none;margin-top:8px;background:#d1fae5;border:1.5px solid #10b981;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#065f46;font-weight:700">
           🔒 Contraseña: <span style="letter-spacing:2px"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <a href="https://docs.google.com/spreadsheets/d/1espPZNRe6ouZl0E8CIQY63woya65gRUPcIvbJiNBBuQ/edit" target="_blank" class="sheets-btn" style="font-size:0.82rem;padding:6px 14px">📊 Abrir Sheets</a>
+          <button class="btn btn-primary btn-sm" onclick="openReport()" style="background:#7c3aed;font-size:0.82rem">📋 Ver informe</button>
         </div>
       </div>`;
     list.appendChild(item);
