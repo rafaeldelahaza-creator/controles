@@ -2739,6 +2739,7 @@ function submitQuiz() {
 
     if (correct) earnedPoints += q.points;
     review.push({ text: q.text, correct, partial: false, studentAnswer, feedback });
+  });
 
   // Nota siempre sobre 10, independientemente de cómo la IA haya repartido los puntos
   const rawScore = totalPoints > 0 ? (earnedPoints / totalPoints) * 10 : 0;
