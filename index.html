@@ -2726,14 +2726,19 @@ function submitQuiz() {
     } else if (q.type === 'order') {
       const items = [...document.querySelectorAll(`#order-list-${i} .order-item`)].map(el => el.dataset.text);
       const expected = q.correctOrder || q.items;
-      correct = JSON.stringify(items) === JSON.stringify(expected);
+      const posCorrect = items.filter((el, idx) => el === expected[idx]).length;
+      correct = posCorrect === expected.length;
+      const partial = !correct && posCorrect > 0;
       studentAnswer = items.join(' → ');
-      feedback = correct ? 'Orden correcto' : `Correcto: ${expected.join(' → ')}`;
+      feedback = correct ? 'Orden correcto' : `${posCorrect}/${expected.length} en posición correcta · Correcto: ${expected.join(' → ')}`;
+      if (correct) earnedPoints += q.points;
+      else if (partial) earnedPoints += q.points * (posCorrect / expected.length);
+      review.push({ text: q.text, correct, partial, studentAnswer, feedback });
+      return;
     }
 
     if (correct) earnedPoints += q.points;
     review.push({ text: q.text, correct, partial: false, studentAnswer, feedback });
-  });
 
   // Nota siempre sobre 10, independientemente de cómo la IA haya repartido los puntos
   const rawScore = totalPoints > 0 ? (earnedPoints / totalPoints) * 10 : 0;
@@ -3176,6 +3181,24 @@ function saveToBank() {
   saveBank(bank);
   renderBank();
   showToast('💾 Control guardado en el banco');
+
+  // Respaldo automático cada 7 días
+  const BACKUP_KEY = 'lastBankBackup';
+  const lastBackup = parseInt(localStorage.getItem(BACKUP_KEY) || '0');
+  const daysSince = (Date.now() - lastBackup) / (1000 * 60 * 60 * 24);
+  if (daysSince >= 7) {
+    const json = JSON.stringify(bank, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g, '-');
+    a.href = url;
+    a.download = `banco_controles_${fecha}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    localStorage.setItem(BACKUP_KEY, Date.now().toString());
+    showToast('📦 Respaldo automático descargado (cada 7 días)');
+  }
 }
 
 function deleteBankItem(id) {
