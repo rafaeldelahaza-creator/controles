@@ -2334,10 +2334,39 @@ function selectTF(qi, val, btn) {
 function setupDragDrop(qi) {
   const list = document.getElementById(`order-list-${qi}`);
   let dragEl = null;
+
   list.querySelectorAll('.order-item').forEach(item => {
+    // ── Mouse / Desktop ──
     item.addEventListener('dragstart', () => { dragEl = item; item.classList.add('dragging'); });
-    item.addEventListener('dragend', () => { item.classList.remove('dragging'); updateOrderNums(qi); });
-    item.addEventListener('dragover', e => { e.preventDefault(); const after = getDragAfter(list, e.clientY); if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl); });
+    item.addEventListener('dragend',   () => { item.classList.remove('dragging'); updateOrderNums(qi); });
+    item.addEventListener('dragover',  e => { e.preventDefault(); const after = getDragAfter(list, e.clientY); if (after) list.insertBefore(dragEl, after); else list.appendChild(dragEl); });
+
+    // ── Touch / Tablet ──
+    item.addEventListener('touchstart', e => {
+      dragEl = item;
+      item.classList.add('dragging');
+    }, { passive: true });
+
+    item.addEventListener('touchmove', e => {
+      e.preventDefault(); // evita scroll mientras arrastra
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (!target) return;
+      const afterItem = target.closest('.order-item');
+      if (afterItem && afterItem !== dragEl) {
+        const box = afterItem.getBoundingClientRect();
+        const midY = box.top + box.height / 2;
+        if (touch.clientY < midY) {
+          list.insertBefore(dragEl, afterItem);
+        } else {
+          list.insertBefore(dragEl, afterItem.nextSibling);
+        }
+      }
+    }, { passive: false });
+
+    item.addEventListener('touchend', () => {
+      if (dragEl) { dragEl.classList.remove('dragging'); updateOrderNums(qi); dragEl = null; }
+    }, { passive: true });
   });
 }
 
@@ -2428,12 +2457,32 @@ function normalizeAnswer(text) {
     .replace(/m(?=[bp])/g, 'n');     // m/n ante b/p: tambien=tanbien, campo=canpo
 }
 
+// Singulariza una cadena ya normalizada: "metros cuadrados" → "metro cuadrado"
+function singularize(str) {
+  return str
+    .split(' ')
+    .map(w => {
+      if (w.length <= 3) return w;           // palabras cortas: sin cambios
+      if (w.endsWith('ces')) return w.slice(0, -3) + 'z'; // veloces→veloce? no, solo 'z' no común
+      if (w.endsWith('es') && w.length > 4) return w.slice(0, -2); // metros→metro, cuadrados->cuadrad (handled below)
+      if (w.endsWith('s')  && w.length > 3) return w.slice(0, -1);  // cuadrados→cuadrado
+      return w;
+    })
+    .join(' ');
+}
+
 function matchShortAnswer(studentRaw, acceptedList) {
   const studentNorm = normalizeAnswer(studentRaw);
   if (!studentNorm) return false;
+  const studentSing = singularize(studentNorm);
   for (const ans of acceptedList) {
     const ansNorm = normalizeAnswer(ans);
+    const ansSing = singularize(ansNorm);
+    // Comparación directa (con y sin pluralizar)
     if (fuzzyMatch(studentNorm, ansNorm)) return true;
+    if (fuzzyMatch(studentSing, ansSing)) return true;
+    if (fuzzyMatch(studentNorm, ansSing)) return true;
+    if (fuzzyMatch(studentSing, ansNorm)) return true;
     // Coincidencia por palabra completa: "tabique interventricular" contiene "tabique" como palabra
     if (ansNorm && ansNorm.length >= 4) {
       const wordRe = new RegExp('(?:^|\\s)' + ansNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
@@ -2442,6 +2491,11 @@ function matchShortAnswer(studentRaw, acceptedList) {
     if (studentNorm && studentNorm.length >= 4) {
       const wordReRev = new RegExp('(?:^|\\s)' + studentNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
       if (wordReRev.test(ansNorm)) return true;
+    }
+    // Coincidencia singular vs singular (para frases compuestas como "metro cuadrado" / "metros cuadrados")
+    if (ansSing && ansSing.length >= 4) {
+      const wordReSing = new RegExp('(?:^|\\s)' + ansSing.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
+      if (wordReSing.test(studentSing)) return true;
     }
   }
   return false;
