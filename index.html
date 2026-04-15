@@ -1704,7 +1704,7 @@ Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipo
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         messages: [{ role: 'user', content: messageContent }]
       })
@@ -1861,7 +1861,7 @@ ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 800,
         messages: [{ role: 'user', content: prompt }]
       })
