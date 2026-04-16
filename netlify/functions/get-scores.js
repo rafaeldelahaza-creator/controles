@@ -103,6 +103,41 @@ function buildQuestionStats(rows, quizTitle) {
     .sort((a, b) => a.pct - b.pct); // peores primero
 }
 
+// Extrae las respuestas individuales de cada alumno/a para el control dado
+// Devuelve: [{ name, answers: [{ question, answer, result }] }]
+function buildStudentAnswers(rows, quizTitle) {
+  const students = [];
+
+  for (const row of rows) {
+    if ((row[1] || '').trim() !== quizTitle) continue;
+
+    const name = (row[0] || '').trim();
+    if (!name) continue;
+
+    const answers = [];
+    let col = 5;
+    let qNum = 1;
+    while (col + 2 <= row.length) {
+      const question = (row[col]     || '').trim();
+      const answer   = (row[col + 1] || '').trim();
+      const result   = (row[col + 2] || '').trim().toLowerCase();
+      col += 3;
+      if (!question) continue;
+
+      answers.push({
+        num: qNum++,
+        question,
+        answer,
+        result  // 'sí'/'si', 'no', 'parcial'
+      });
+    }
+
+    students.push({ name, answers });
+  }
+
+  return students;
+}
+
 exports.handler = async function(event) {
   if (event.httpMethod !== 'GET') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -140,17 +175,19 @@ exports.handler = async function(event) {
         blurCount:   parseInt(r[7]) || 0
       }));
 
-    // 2) Hoja de respuestas → stats por pregunta
+    // 2) Hoja de respuestas → stats por pregunta + detalle por alumno/a
     const clsHint = clsParam || (submissions[0]?.cls || '');
     let respSheet = null;
     if      (clsHint.includes('5')) respSheet = 'Respuestas 5°';
     else if (clsHint.includes('6')) respSheet = 'Respuestas 6°';
 
-    let questionStats = [];
+    let questionStats  = [];
+    let studentAnswers = [];
     if (respSheet) {
       // BX cubre hasta 15 preguntas × 3 cols + 5 cols iniciales = col 50
       const respRows = await readSheet(token, sheetId, respSheet, 'A2:BX');
-      questionStats = buildQuestionStats(respRows, quizTitle);
+      questionStats  = buildQuestionStats(respRows, quizTitle);
+      studentAnswers = buildStudentAnswers(respRows, quizTitle);
     }
 
     return {
@@ -159,7 +196,7 @@ exports.handler = async function(event) {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({ ok: true, submissions, questionStats })
+      body: JSON.stringify({ ok: true, submissions, questionStats, studentAnswers })
     };
 
   } catch (err) {
