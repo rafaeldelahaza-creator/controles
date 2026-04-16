@@ -578,6 +578,36 @@
 
   .report-footer { display: flex; gap: 10px; padding: 16px 28px; border-top: 1.5px solid var(--border); flex-wrap: wrap; }
 
+  /* ── RESPUESTAS POR ALUMNO/A ── */
+  .student-accordion { margin-bottom: 6px; border: 1.5px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .student-accordion-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px; background: #f8f9ff; cursor: pointer;
+    user-select: none; transition: background 0.15s;
+  }
+  .student-accordion-header:hover { background: #eef2ff; }
+  .student-accordion-header .acc-name { flex: 1; font-weight: 800; font-size: 0.92rem; }
+  .student-accordion-header .acc-score {
+    padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 0.82rem;
+  }
+  .acc-score.high { background: #d1fae5; color: #065f46; }
+  .acc-score.mid  { background: #fef3c7; color: #92400e; }
+  .acc-score.low  { background: #fee2e2; color: #991b1b; }
+  .student-accordion-header .acc-arrow { color: var(--muted); font-size: 0.8rem; transition: transform 0.2s; }
+  .student-accordion.open .acc-arrow { transform: rotate(180deg); }
+  .student-accordion-body { display: none; border-top: 1.5px solid var(--border); }
+  .student-accordion.open .student-accordion-body { display: block; }
+  .student-answer-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 14px; border-bottom: 1px solid var(--border);
+    font-size: 0.84rem;
+  }
+  .student-answer-row:last-child { border-bottom: none; }
+  .sa-num { min-width: 22px; font-weight: 800; color: var(--muted); font-size: 0.78rem; padding-top: 2px; }
+  .sa-question { flex: 1; color: var(--muted); font-size: 0.82rem; }
+  .sa-answer { flex: 1.2; font-weight: 700; color: var(--text); }
+  .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
+
   /* ── NOTES TABLE ── */
   .notes-table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
@@ -1383,6 +1413,10 @@
           <thead><tr><th>Alumno/a</th><th>Clase</th><th>Nota</th><th>Hora</th><th>Anti-copia</th></tr></thead>
           <tbody id="report-student-body"></tbody>
         </table>
+      </div>
+      <div id="report-answers-section" style="display:none">
+        <div class="report-section-title">📝 Respuestas del alumnado</div>
+        <div id="report-answers-list"></div>
       </div>
     </div>
     <div class="report-footer">
@@ -2852,13 +2886,15 @@ async function openReport() {
   document.getElementById('report-stats').innerHTML = '';
   document.getElementById('report-questions').innerHTML = '';
   document.getElementById('report-student-body').innerHTML = '';
+  document.getElementById('report-answers-section').style.display = 'none';
+  document.getElementById('report-answers-list').innerHTML = '';
 
   try {
     const url = '/.netlify/functions/get-scores?quiz=' + encodeURIComponent(reportTitle)
               + (reportClass ? '&cls=' + encodeURIComponent(reportClass) : '');
     const res = await fetch(url);
     const data = await res.json();
-    renderReport(data.submissions || [], data.questionStats || [], reportTitle);
+    renderReport(data.submissions || [], data.questionStats || [], reportTitle, data.studentAnswers || []);
   } catch(e) {
     document.getElementById('report-meta').textContent = '❌ Error al cargar datos de Sheets.';
   }
@@ -2868,7 +2904,7 @@ function closeReport() {
   document.getElementById('report-modal').classList.remove('open');
 }
 
-function renderReport(submissions, questionStats, reportTitle) {
+function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
   const quizTitle = reportTitle || liveActiveQuizTitle || lastClosedQuizTitle || '–';
   const total = submissions.length;
   if (total === 0) {
@@ -2949,6 +2985,47 @@ function renderReport(submissions, questionStats, reportTitle) {
       <td style="${r.tabSwitches > 0 ? 'color:#ef4444' : 'color:#10b981'};font-weight:700">${anti}</td>
     </tr>`;
   }).join('');
+
+  // ── Respuestas por alumno/a (acordeón) ──
+  const answersSection = document.getElementById('report-answers-section');
+  const answersList    = document.getElementById('report-answers-list');
+  if (studentAnswers && studentAnswers.length > 0) {
+    answersSection.style.display = '';
+    // Ordenar igual que submissions (por nota desc)
+    const scoreMap = {};
+    submissions.forEach(s => { scoreMap[s.name] = s.score; });
+    const sortedAnswers = [...studentAnswers].sort((a, b) =>
+      (scoreMap[b.name] || 0) - (scoreMap[a.name] || 0)
+    );
+    answersList.innerHTML = sortedAnswers.map((st, idx) => {
+      const score = scoreMap[st.name] ?? '–';
+      const pillCls = score >= 7 ? 'high' : score >= 5 ? 'mid' : 'low';
+      const rows = st.answers.map(a => {
+        const icon = (a.result === 'sí' || a.result === 'si') ? '✅'
+                   : a.result === 'parcial' ? '🟡' : '❌';
+        return `<div class="student-answer-row">
+          <div class="sa-num">${a.num}</div>
+          <div class="sa-question">${escHtml(a.question.substring(0, 80))}${a.question.length > 80 ? '…' : ''}</div>
+          <div class="sa-answer">${escHtml(a.answer || '–')}</div>
+          <div class="sa-result">${icon}</div>
+        </div>`;
+      }).join('');
+      return `<div class="student-accordion" id="acc-${idx}">
+        <div class="student-accordion-header" onclick="toggleAccordion('acc-${idx}')">
+          <div class="acc-name">${escHtml(st.name)}</div>
+          <span class="acc-score ${pillCls}">${score}</span>
+          <span class="acc-arrow">▼</span>
+        </div>
+        <div class="student-accordion-body">${rows}</div>
+      </div>`;
+    }).join('');
+  } else {
+    answersSection.style.display = 'none';
+  }
+}
+
+function toggleAccordion(id) {
+  document.getElementById(id).classList.toggle('open');
 }
 
 function downloadReportPDF() {
@@ -2986,6 +3063,18 @@ function downloadReportPDF() {
       .report-footer { display: none; }
       .score-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 0.82rem; }
       .high { background: #d1fae5; color: #065f46; } .mid-pill { background: #fef3c7; color: #92400e; } .low { background: #fee2e2; color: #991b1b; }
+      .student-accordion { margin-bottom: 6px; border: 1.5px solid #e0e7ff; border-radius: 10px; overflow: hidden; }
+      .student-accordion-header { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: #f8f9ff; }
+      .acc-name { flex: 1; font-weight: 800; font-size: 0.92rem; }
+      .acc-score { padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 0.82rem; }
+      .acc-arrow { display: none; }
+      .student-accordion-body { display: block; border-top: 1.5px solid #e0e7ff; }
+      .student-answer-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 14px; border-bottom: 1px solid #e0e7ff; font-size: 0.84rem; }
+      .student-answer-row:last-child { border-bottom: none; }
+      .sa-num { min-width: 22px; font-weight: 800; color: #6b7280; font-size: 0.78rem; padding-top: 2px; }
+      .sa-question { flex: 1; color: #6b7280; font-size: 0.82rem; }
+      .sa-answer { flex: 1.2; font-weight: 700; }
+      .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
     </style>
   </head><body>${content}</body></html>`;
 
