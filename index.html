@@ -915,6 +915,59 @@
   .file-chip-item img { max-height: 60px; border-radius: 6px; border: 1px solid var(--border); }
   .file-chips-count { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
 
+  /* ── LANGUAGE CHIP SECTION ── */
+  .lang-section-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.8rem; font-weight: 800; color: #b45309;
+    background: #fef3c7; border: 1.5px solid #fcd34d;
+    border-radius: 10px; padding: 5px 12px;
+    margin-bottom: 6px; width: fit-content;
+  }
+  .type-chip.lang { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+  .type-chip.lang.selected { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+
+  /* ── VOCAB (test ampliado) student view ── */
+  .options-list.vocab-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 540px) { .options-list.vocab-list { grid-template-columns: 1fr; } }
+
+  /* ── TRANSLATE student view ── */
+  .translate-grid {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .translate-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;
+  }
+  .translate-term {
+    font-weight: 800; font-size: 1rem; padding: 10px 14px;
+    background: #eef2ff; border-radius: 10px; color: var(--primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .translate-input {
+    width: 100%; padding: 10px 14px; border: 2px solid var(--border);
+    border-radius: 10px; font-family: 'Nunito', sans-serif; font-size: 1rem;
+    font-weight: 700; background: #f8f9ff; color: var(--text);
+    outline: none; margin-bottom: 0; transition: border 0.2s;
+  }
+  .translate-input:focus { border-color: var(--primary-light); background: #fff; }
+  @media (max-width: 540px) { .translate-row { grid-template-columns: 1fr; } }
+
+  /* ── EMOJI student view ── */
+  .emoji-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px;
+  }
+  .emoji-item {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: #f8f9ff; border: 2px solid var(--border); border-radius: 12px; padding: 14px 10px;
+  }
+  .emoji-icon { font-size: 2rem; line-height: 1; }
+  .emoji-input {
+    width: 100%; padding: 7px 10px; border: 2px solid var(--border);
+    border-radius: 8px; font-family: 'Nunito', sans-serif; font-size: 0.95rem;
+    font-weight: 700; text-align: center; background: #fff; color: var(--text);
+    outline: none; margin-bottom: 0; transition: border 0.2s;
+  }
+  .emoji-input:focus { border-color: var(--primary-light); }
+
   @media (max-width: 600px) {
     header { padding: 14px 16px; flex-wrap: wrap; }
     .view, #results-view { padding: 16px; }
@@ -1196,6 +1249,12 @@
       <div class="type-chip selected" data-type="short">💬 Respuesta corta</div>
       <div class="type-chip selected" data-type="order">🔢 Ordenar</div>
     </div>
+    <div class="lang-section-label">🇫🇷 Solo para idiomas</div>
+    <div class="type-grid" id="type-chips-lang">
+      <div class="type-chip lang" data-type="vocab">🔠 Test ampliado</div>
+      <div class="type-chip lang" data-type="translate">🔄 Traducción directa</div>
+      <div class="type-chip lang" data-type="emoji">😀 Emoji → palabra</div>
+    </div>
     <button class="btn btn-primary" onclick="generateWithAI()" id="ai-btn">
       <span id="ai-btn-text">✦ Generar control con IA</span>
     </button>
@@ -1232,6 +1291,12 @@
       <button class="btn btn-accent btn-sm" onclick="addQuestion('match')">+ Relacionar</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('short')">+ Respuesta corta</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('order')">+ Ordenar</button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:8px;border-top:1.5px dashed #fcd34d">
+      <span style="font-size:0.78rem;font-weight:800;color:#b45309;align-self:center">🇫🇷 Idiomas:</span>
+      <button class="btn btn-sm" onclick="addQuestion('vocab')" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d">+ Test ampliado</button>
+      <button class="btn btn-sm" onclick="addQuestion('translate')" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d">+ Traducción</button>
+      <button class="btn btn-sm" onclick="addQuestion('emoji')" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d">+ Emoji→palabra</button>
     </div>
     <hr style="margin:20px 0;border:none;border-top:1.5px solid var(--border)">
     <button class="btn btn-green" onclick="publishQuiz()" style="margin-right:10px">🚀 Publicar control</button>
@@ -1463,6 +1528,7 @@ let timerSeconds = 0;
 let submissions = [];
 let studentName = '';
 let studentClass = '';
+let bankEditingId = null; // ID del item del banco cargado en el editor (null = control nuevo)
 
 // ── Archivos cargados para IA ──
 let uploadedFiles = []; // Array de { type, mediaType, base64, name } | { type:'text', text, name }
@@ -1633,7 +1699,17 @@ async function generateWithAI() {
     dificil: `NIVEL DE DIFICULTAD: DIFÍCIL. Las preguntas deben requerir comprensión profunda, relación entre conceptos y capacidad de razonamiento. Incluye preguntas de aplicación ("¿Por qué…?", "¿Qué pasaría si…?", "¿En qué se diferencia…?"). Los distractores del test deben ser muy similares a la respuesta correcta. Usa vocabulario preciso y técnico del tema.`
   }[difficulty];
 
-  const typeNames = { test: 'tipo test (4 opciones a,b,c,d)', tf: 'verdadero/falso', fill: 'completar huecos (usa ___ para el hueco)', match: 'relacionar columnas (4 pares)', short: 'respuesta corta (1-2 palabras)', order: 'ordenar elementos (4-5 items)' };
+  const typeNames = {
+    test: 'tipo test (4 opciones a,b,c,d)',
+    tf: 'verdadero/falso',
+    fill: 'completar huecos (usa ___ para el hueco)',
+    match: 'relacionar columnas (4 pares)',
+    short: 'respuesta corta (1-2 palabras)',
+    order: 'ordenar elementos (4-5 items)',
+    vocab: '🇫🇷 test ampliado de vocabulario (6-8 opciones, SOLO para idiomas: pregunta una palabra y pone como opciones otras palabras de la misma lista del material)',
+    translate: '🇫🇷 traducción directa (SOLO para idiomas: lista de 4-6 pares término→traducción, incluye campo "direction": "fr_es" o "es_fr" y array "pairs" con objetos {term, answer})',
+    emoji: '🇫🇷 emoji→palabra (SOLO para idiomas: 4-6 emojis que representen palabras del vocabulario del material, el alumno escribe la palabra en el idioma extranjero, array "items" con objetos {emoji, answer})'
+  };
   const typeDescriptions = types.map(t => typeNames[t]).filter(Boolean).join(', ');
 
   const imageInstructions = hasVisualFiles ? `
@@ -1649,6 +1725,12 @@ ${difficultyInstructions}
 
 Usa estos tipos de preguntas (distribúyelos equilibradamente): ${typeDescriptions}.
 ${imageInstructions}
+
+RESTRICCIÓN CRÍTICA — MATERIAL:
+- Basa todas las preguntas exclusivamente en los conceptos, términos, reglas y vocabulario específico que aparezcan en el material proporcionado.
+- VOCABULARIO ESPECÍFICO (listas de palabras, fechas, nombres propios, fórmulas, términos técnicos): usa SOLO los que estén en el material. Si el material tiene 8 palabras de vocabulario en francés, solo usa esas 8, nunca añadas otras del mismo campo semántico.
+- GRAMÁTICA Y CONCEPTOS (reglas, estructuras, categorías gramaticales): puedes variar los ejemplos concretos que ilustran la regla. Si el material explica los determinantes con "este lápiz", puedes preguntar sobre determinantes usando "esa mesa" u otro sustantivo diferente. Lo que no puedes hacer es preguntar sobre un tipo de determinante que no aparezca en el material.
+- Si el material es insuficiente para generar ${n} preguntas distintas, genera menos preguntas (las que el material permita) y avísalo en el campo "title" añadiendo " (material limitado)".
 
 PUNTUACIÓN — MUY IMPORTANTE:
 - El campo "points" de cada pregunta representa su valor en la nota final sobre 10.
@@ -1709,6 +1791,37 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
       "items": ["Primero", "Segundo", "Tercero", "Cuarto"],
       "correctOrder": ["Primero", "Segundo", "Tercero", "Cuarto"],
       "points": 0.5
+    },
+    {
+      "id": 7,
+      "type": "vocab",
+      "text": "¿Qué significa 'le chat'?",
+      "options": ["a) el perro", "b) el gato", "c) el pájaro", "d) el pez", "e) el ratón", "f) el conejo"],
+      "correct": "b) el gato",
+      "points": 1
+    },
+    {
+      "id": 8,
+      "type": "translate",
+      "text": "Traduce las siguientes palabras del francés al español:",
+      "direction": "fr_es",
+      "pairs": [
+        {"term": "le pain", "answer": "el pan"},
+        {"term": "la pomme", "answer": "la manzana"},
+        {"term": "le lait", "answer": "la leche"}
+      ],
+      "points": 2
+    },
+    {
+      "id": 9,
+      "type": "emoji",
+      "text": "Escribe en francés la palabra que representa cada imagen:",
+      "items": [
+        {"emoji": "🍎", "answer": "la pomme"},
+        {"emoji": "🐱", "answer": "le chat"},
+        {"emoji": "🏠", "answer": "la maison"}
+      ],
+      "points": 1.5
     }
   ]
 }
@@ -1754,6 +1867,7 @@ Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipo
     const clean = text.replace(/```json|```/g, '').trim();
     const quiz = JSON.parse(clean);
     loadQuizIntoEditor(quiz);
+    bankEditingId = null; // es un control nuevo, no proviene del banco
     document.getElementById('editor-card').style.display = 'block';
     document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
     showToast('✅ Control generado correctamente');
@@ -1837,7 +1951,7 @@ function selectRegenType(i, type) {
 function getRegenType(i) {
   // Lee qué botón tiene la clase 'sel' en el panel
   const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
-  const typeMap = {'📋 Test':'test','✅ V/F':'tf','✏️ Huecos':'fill','🔗 Relacionar':'match','💬 Corta':'short','🔢 Ordenar':'order'};
+  const typeMap = {'📋 Test':'test','✅ V/F':'tf','✏️ Huecos':'fill','🔗 Relacionar':'match','💬 Corta':'short','🔢 Ordenar':'order','🇫🇷 Test ampliado':'vocab','🇫🇷 Traducción':'translate','🇫🇷 Emoji→palabra':'emoji'};
   let sel = null;
   btns.forEach(b => { if (b.classList.contains('sel')) sel = typeMap[b.textContent.trim()] || Object.values(typeMap).find(v => b.textContent.includes(v)); });
   // Fallback: busca por texto
@@ -1878,9 +1992,13 @@ ${existingTexts || '(Ninguna todavía)'}
 Necesito UNA SOLA pregunta nueva de tipo "${typeLabels[type] || type}".
 IMPORTANTE:
 - No debe repetir ninguna de las preguntas ya existentes
-- Debe ser coherente con el tema del resto de preguntas
 - Debe estar en español
-${material ? `\nMaterial de referencia:\n${material.substring(0, 3000)}` : ''}
+${material ? `
+MATERIAL DE REFERENCIA (obligatorio):
+${material.substring(0, 3000)}
+
+RESTRICCIÓN CRÍTICA: Basa la pregunta en los conceptos, términos y vocabulario específico del material. Para listas de vocabulario (palabras en otro idioma, nombres, fechas, términos técnicos), usa SOLO los que aparezcan en el material. Para gramática o conceptos con reglas, puedes variar los ejemplos concretos que ilustran la regla, pero no inventes tipos o categorías que no estén en el material.` : `
+ATENCIÓN: No se ha proporcionado material. Genera una pregunta coherente con las ya existentes, sin inventar contenido que no aparezca ya en las preguntas del control.`}
 
 Responde SOLO con el JSON de la pregunta, sin explicaciones, sin bloques de código, sin markdown. Formato exacto:
 ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","b) opción2","c) opción3","d) opción4"],"correct":"a) opción1","points":1}' :
@@ -1888,6 +2006,9 @@ ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","
   type === 'fill' ? '{"type":"fill","text":"La ___ es importante.","blanks":["respuesta"],"points":1}' :
   type === 'match' ? '{"type":"match","text":"Relaciona:","leftItems":["A","B","C","D"],"rightItems":["1","2","3","4"],"correctPairs":{"A":"1","B":"2","C":"3","D":"4"},"points":2}' :
   type === 'short' ? '{"type":"short","text":"¿Pregunta?","correct":"respuesta","acceptedAnswers":["respuesta"],"points":1}' :
+  type === 'vocab' ? '{"type":"vocab","text":"¿Qué significa \'mot\'?","options":["a) opción1","b) opción2","c) opción3","d) opción4","e) opción5","f) opción6"],"correct":"b) opción2","points":1}' :
+  type === 'translate' ? '{"type":"translate","text":"Traduce las siguientes palabras:","direction":"fr_es","pairs":[{"term":"mot","answer":"palabra"},{"term":"mot2","answer":"palabra2"}],"points":2}' :
+  type === 'emoji' ? '{"type":"emoji","text":"Escribe en francés la palabra que representa cada imagen:","items":[{"emoji":"🍎","answer":"la pomme"},{"emoji":"🐱","answer":"le chat"}],"points":1.5}' :
   '{"type":"order","text":"Ordena:","items":["1","2","3"],"correctOrder":["1","2","3"],"points":2}'}`;
 
   try {
@@ -1925,7 +2046,7 @@ function buildEditorBlock(q, i) {
   div.className = 'q-block';
   div.dataset.idx = i;
 
-  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar' };
+  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra' };
   let inner = `
     <button class="del-q" onclick="deleteQuestion(${i})" title="Eliminar pregunta">✕</button>
     <button class="regen-q" onclick="toggleRegenPanel(${i})" title="Regenerar esta pregunta con IA">🔄</button>
@@ -1982,6 +2103,45 @@ function buildEditorBlock(q, i) {
   } else if (q.type === 'order') {
     inner += `<label>Orden correcto (uno por línea)</label>
     <textarea style="min-height:80px" oninput="editorQuestions[${i}].correctOrder=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);editorQuestions[${i}].items=[...editorQuestions[${i}].correctOrder]">${escHtml((q.correctOrder||q.items||[]).join('\n'))}</textarea>`;
+
+  } else if (q.type === 'vocab') {
+    inner += `<label>Opciones (marca la correcta) — puedes añadir hasta 8</label>`;
+    (q.options || ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) ']).forEach((opt, oi) => {
+      inner += `<div class="option-row">
+        <input type="radio" name="correct-${i}" class="correct-radio" ${q.correct === opt ? 'checked' : ''} onchange="editorQuestions[${i}].correct=editorQuestions[${i}].options[${oi}]">
+        <span class="correct-label">✓</span>
+        <input type="text" value="${escHtml(opt)}" oninput="editorQuestions[${i}].options[${oi}]=this.value;updateCorrectIfChecked(${i},${oi},this.value)" placeholder="Opción ${oi + 1}">
+      </div>`;
+    });
+    const nOpts = (q.options||[]).length;
+    if (nOpts < 8) inner += `<button type="button" onclick="addVocabOption(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir opción</button>`;
+
+  } else if (q.type === 'translate') {
+    const dir = q.direction || 'fr_es';
+    inner += `<label>Dirección de traducción</label>
+    <select onchange="editorQuestions[${i}].direction=this.value;renderEditor()" style="margin-bottom:10px">
+      <option value="fr_es" ${dir==='fr_es'?'selected':''}>🇫🇷 Francés → Español</option>
+      <option value="es_fr" ${dir==='es_fr'?'selected':''}>🇪🇸 Español → Francés</option>
+    </select>
+    <label>Pares (${dir==='fr_es'?'francés → español':'español → francés'})</label>`;
+    (q.pairs || []).forEach((pair, pi) => {
+      inner += `<div class="option-row">
+        <input type="text" value="${escHtml(pair.term||'')}" placeholder="${dir==='fr_es'?'Palabra en francés':'Palabra en español'}" oninput="editorQuestions[${i}].pairs[${pi}].term=this.value" style="flex:1">
+        <span style="font-weight:800;color:var(--primary)">→</span>
+        <input type="text" value="${escHtml(pair.answer||'')}" placeholder="${dir==='fr_es'?'Traducción al español':'Traducción al francés'}" oninput="editorQuestions[${i}].pairs[${pi}].answer=this.value" style="flex:1">
+      </div>`;
+    });
+    inner += `<button type="button" onclick="addTranslatePair(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir par</button>`;
+
+  } else if (q.type === 'emoji') {
+    inner += `<label>Elementos (emoji + palabra correcta en francés)</label>`;
+    (q.items || []).forEach((item, ei) => {
+      inner += `<div class="option-row">
+        <input type="text" value="${escHtml(item.emoji||'')}" placeholder="Emoji" oninput="editorQuestions[${i}].items[${ei}].emoji=this.value" style="width:60px;flex:none;text-align:center;font-size:1.3rem">
+        <input type="text" value="${escHtml(item.answer||'')}" placeholder="Palabra en francés (ej: le chat)" oninput="editorQuestions[${i}].items[${ei}].answer=this.value" style="flex:1">
+      </div>`;
+    });
+    inner += `<button type="button" onclick="addEmojiItem(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir emoji</button>`;
   }
 
   // Panel regenerar pregunta con IA
@@ -1989,7 +2149,7 @@ function buildEditorBlock(q, i) {
     <div class="regen-panel" id="regen-panel-${i}">
       <label>🔄 Regenerar esta pregunta — elige el tipo nuevo:</label>
       <div class="regen-type-row" id="regen-types-${i}">
-        ${['test','tf','fill','match','short','order'].map(t =>
+        ${['test','tf','fill','match','short','order','vocab','translate','emoji'].map(t =>
           `<button class="regen-type-btn${t === q.type ? ' sel' : ''}" onclick="selectRegenType(${i},'${t}')">${typeLabels[t]}</button>`
         ).join('')}
       </div>
@@ -2005,6 +2165,27 @@ function buildEditorBlock(q, i) {
 function updateCorrectIfChecked(qi, oi, val) {
   const radios = document.querySelectorAll(`input[name="correct-${qi}"]`);
   if (radios[oi] && radios[oi].checked) editorQuestions[qi].correct = val;
+}
+
+function addVocabOption(qi) {
+  const q = editorQuestions[qi];
+  if (!q.options) q.options = [];
+  if (q.options.length >= 8) return;
+  const letter = String.fromCharCode(97 + q.options.length);
+  q.options.push(`${letter}) `);
+  renderEditor();
+}
+
+function addTranslatePair(qi) {
+  if (!editorQuestions[qi].pairs) editorQuestions[qi].pairs = [];
+  editorQuestions[qi].pairs.push({ term: '', answer: '' });
+  renderEditor();
+}
+
+function addEmojiItem(qi) {
+  if (!editorQuestions[qi].items) editorQuestions[qi].items = [];
+  editorQuestions[qi].items.push({ emoji: '', answer: '' });
+  renderEditor();
 }
 
 function updateMatchPair(qi, pi, side, val) {
@@ -2034,7 +2215,10 @@ function addQuestion(type) {
     fill: { type: 'fill', text: '___ es la respuesta.', blanks: ['respuesta'], points: 1 },
     match: { type: 'match', text: 'Relaciona:', leftItems: ['A', 'B', 'C', 'D'], rightItems: ['1', '2', '3', '4'], correctPairs: { A: '1', B: '2', C: '3', D: '4' }, points: 2 },
     short: { type: 'short', text: '¿…?', correct: '', acceptedAnswers: [''], points: 1 },
-    order: { type: 'order', text: 'Ordena:', items: ['Primero', 'Segundo', 'Tercero'], correctOrder: ['Primero', 'Segundo', 'Tercero'], points: 2 }
+    order: { type: 'order', text: 'Ordena:', items: ['Primero', 'Segundo', 'Tercero'], correctOrder: ['Primero', 'Segundo', 'Tercero'], points: 2 },
+    vocab: { type: 'vocab', text: '¿Qué significa…?', options: ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) '], correct: 'a) ', points: 1 },
+    translate: { type: 'translate', text: 'Traduce las siguientes palabras:', direction: 'fr_es', pairs: [{ term: '', answer: '' }, { term: '', answer: '' }, { term: '', answer: '' }], points: 2 },
+    emoji: { type: 'emoji', text: 'Escribe en francés la palabra que representa cada imagen:', items: [{ emoji: '🍎', answer: '' }, { emoji: '🐱', answer: '' }, { emoji: '🏠', answer: '' }], points: 2 }
   };
   editorQuestions.push({ id: Date.now(), ...defaults[type] });
   document.getElementById('editor-card').style.display = 'block';
@@ -2044,6 +2228,7 @@ function addQuestion(type) {
 function clearEditor() {
   if (!confirm('¿Borrar todas las preguntas y el control publicado?')) return;
   editorQuestions = [];
+  bankEditingId = null;
   currentQuiz = null;
   document.getElementById('quiz-title-input').value = '';
   document.getElementById('quiz-class-input').value = '';
@@ -2099,7 +2284,7 @@ function previewQuiz() {
   questions.forEach((q, i) => {
     const card = document.createElement('div');
     card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar' };
+    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     const pvTotalPoints = questions.reduce((s, qq) => s + (qq.points || 0), 0);
     const pvWeight = pvTotalPoints > 0 ? Math.round((q.points / pvTotalPoints) * 100) / 10 : q.points;
@@ -2138,6 +2323,22 @@ function previewQuiz() {
     } else if (q.type === 'order') {
       const items = q.items.map((item, ii) => `<li class="order-item" style="cursor:default"><span class="order-num">${ii + 1}</span><span>${escHtml(item)}</span></li>`).join('');
       wrap.innerHTML = `<ul class="order-list">${items}</ul>`;
+    } else if (q.type === 'vocab') {
+      const opts = q.options.map((opt, oi) => `<li><input type="radio" id="pv-opt-${i}-${oi}" name="pv-q${i}"><label for="pv-opt-${i}-${oi}">${escHtml(opt)}</label></li>`).join('');
+      wrap.innerHTML = `<ul class="options-list vocab-list">${opts}</ul>`;
+    } else if (q.type === 'translate') {
+      const dir = q.direction || 'fr_es';
+      let html = `<div style="font-size:0.8rem;color:var(--muted);font-weight:700;margin-bottom:8px">${dir==='fr_es'?'🇫🇷→🇪🇸':'🇪🇸→🇫🇷'}</div><div class="translate-grid">`;
+      (q.pairs||[]).forEach(pair => {
+        html += `<div class="translate-row"><div class="translate-term">📝 ${escHtml(pair.term)}</div><input class="translate-input" type="text" placeholder="Traducción…"></div>`;
+      });
+      wrap.innerHTML = html + '</div>';
+    } else if (q.type === 'emoji') {
+      let html = '<div class="emoji-grid">';
+      (q.items||[]).forEach(item => {
+        html += `<div class="emoji-item"><span class="emoji-icon">${escHtml(item.emoji)}</span><input class="emoji-input" type="text" placeholder="En francés…"></div>`;
+      });
+      wrap.innerHTML = html + '</div>';
     }
   });
 
@@ -2305,7 +2506,7 @@ function renderStudentQuestions() {
     const copy = JSON.parse(JSON.stringify(q));
     if (copy.type === 'order') copy.items = shuffleArray([...copy.items]);
     if (copy.type === 'match') copy.rightItems = shuffleArray([...copy.rightItems]);
-    if (copy.type === 'test') copy.options = shuffleArray([...copy.options]);
+    if (copy.type === 'test' || copy.type === 'vocab') copy.options = shuffleArray([...copy.options]);
     return copy;
   }));
   currentQuiz._rendered = shuffledQuestions;
@@ -2315,7 +2516,7 @@ function renderStudentQuestions() {
     const sqWeight = sqTotalPoints > 0 ? Math.round((q.points / sqTotalPoints) * 100) / 10 : q.points;
     const card = document.createElement('div');
     card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar' };
+    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${sqWeight} pt${sqWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
     container.appendChild(card);
@@ -2356,6 +2557,35 @@ function renderStudentAnswer(q, i) {
     const items = q.items.map((item, ii) => `<li class="order-item" draggable="true" data-idx="${ii}" data-text="${escHtml(item)}"><span class="drag-handle">⠿</span><span class="order-num" id="onum-${i}-${ii}">${ii + 1}</span><span>${escHtml(item)}</span></li>`).join('');
     wrap.innerHTML = `<ul class="order-list" id="order-list-${i}">${items}</ul>`;
     setupDragDrop(i);
+
+  } else if (q.type === 'vocab') {
+    const opts = q.options.map((opt, oi) => `<li><input type="radio" id="opt-${i}-${oi}" name="q${i}" value="${escHtml(opt)}"><label for="opt-${i}-${oi}">${escHtml(opt)}</label></li>`).join('');
+    wrap.innerHTML = `<ul class="options-list vocab-list">${opts}</ul>`;
+
+  } else if (q.type === 'translate') {
+    const dir = q.direction || 'fr_es';
+    const dirLabel = dir === 'fr_es' ? '🇫🇷→🇪🇸' : '🇪🇸→🇫🇷';
+    const placeholder = dir === 'fr_es' ? 'Traducción al español…' : 'Traducción al francés…';
+    let html = `<div style="font-size:0.8rem;color:var(--muted);font-weight:700;margin-bottom:8px">${dirLabel}</div><div class="translate-grid">`;
+    (q.pairs || []).forEach((pair, pi) => {
+      html += `<div class="translate-row">
+        <div class="translate-term">📝 ${escHtml(pair.term)}</div>
+        <input class="translate-input" type="text" id="tr-${i}-${pi}" placeholder="${placeholder}" autocomplete="off">
+      </div>`;
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+
+  } else if (q.type === 'emoji') {
+    let html = '<div class="emoji-grid">';
+    (q.items || []).forEach((item, ei) => {
+      html += `<div class="emoji-item">
+        <span class="emoji-icon">${escHtml(item.emoji)}</span>
+        <input class="emoji-input" type="text" id="em-${i}-${ei}" placeholder="En francés…" autocomplete="off">
+      </div>`;
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
   }
 }
 
@@ -2588,7 +2818,7 @@ const CLASES = {
     "PADILLA RODRÍGUEZ, RAFAEL",
     "PEDROSA VALLEJO, PAULA",
     "PORTILLO RODRÍGUEZ, EDWARD",
-    "PRIEGO CLAVIJO, INMACULADA",
+    "PRIETO CLAVIJO, INMACULADA",
     "ROMERO DELGADO, ARANTXA",
     "SÁNCHEZ MORALES, ZAIDA",
     "SEGURA HERNÁNDEZ, ALBANIA",
@@ -2647,6 +2877,14 @@ function getBlankQuestions() {
       empty = sels.every(s => !s || !s.value);
     } else if (q.type === 'order') {
       empty = false; // order always has a value
+    } else if (q.type === 'vocab') {
+      empty = !document.querySelector(`input[name="q${i}"]:checked`);
+    } else if (q.type === 'translate') {
+      const inputs = document.querySelectorAll(`#sq-answer-${i} .translate-input`);
+      empty = [...inputs].every(el => !el.value.trim());
+    } else if (q.type === 'emoji') {
+      const inputs = document.querySelectorAll(`#sq-answer-${i} .emoji-input`);
+      empty = [...inputs].every(el => !el.value.trim());
     }
     if (empty) blanks.push(i + 1);
   });
@@ -2768,6 +3006,52 @@ function submitQuiz() {
       if (correct) earnedPoints += q.points;
       else if (partial) earnedPoints += q.points * (posCorrect / expected.length);
       review.push({ text: q.text, correct, partial, studentAnswer, feedback });
+      return;
+
+    } else if (q.type === 'vocab') {
+      const sel = document.querySelector(`input[name="q${i}"]:checked`);
+      studentAnswer = sel ? sel.value : '';
+      correct = studentAnswer === q.correct;
+      feedback = correct ? 'Correcto' : `Correcto: ${q.correct}`;
+
+    } else if (q.type === 'translate') {
+      const pairs = q.pairs || [];
+      let pairsCorrect = 0;
+      const pairResults = [];
+      pairs.forEach((pair, pi) => {
+        const input = document.getElementById(`tr-${i}-${pi}`);
+        const raw = input ? input.value.trim() : '';
+        const ok = matchShortAnswer(raw, [pair.answer]);
+        if (ok) pairsCorrect++;
+        pairResults.push(`${pair.term}→${raw || '–'}${ok ? '✅' : '❌'}`);
+      });
+      correct = pairsCorrect === pairs.length;
+      const partialTr = pairsCorrect > 0 && !correct;
+      studentAnswer = pairResults.join(' | ');
+      if (correct) earnedPoints += q.points;
+      else if (partialTr) earnedPoints += q.points * (pairsCorrect / pairs.length);
+      feedback = correct ? 'Todo correcto' : `${pairsCorrect}/${pairs.length} correctas · Respuestas: ${pairs.map(p => `${p.term}→${p.answer}`).join(', ')}`;
+      review.push({ text: q.text, correct, partial: partialTr, studentAnswer, feedback });
+      return;
+
+    } else if (q.type === 'emoji') {
+      const items = q.items || [];
+      let emojiCorrect = 0;
+      const emojiResults = [];
+      items.forEach((item, ei) => {
+        const input = document.getElementById(`em-${i}-${ei}`);
+        const raw = input ? input.value.trim() : '';
+        const ok = matchShortAnswer(raw, [item.answer]);
+        if (ok) emojiCorrect++;
+        emojiResults.push(`${item.emoji}→${raw || '–'}${ok ? '✅' : '❌'}`);
+      });
+      correct = emojiCorrect === items.length;
+      const partialEm = emojiCorrect > 0 && !correct;
+      studentAnswer = emojiResults.join(' | ');
+      if (correct) earnedPoints += q.points;
+      else if (partialEm) earnedPoints += q.points * (emojiCorrect / items.length);
+      feedback = correct ? 'Todo correcto' : `${emojiCorrect}/${items.length} correctas · Respuestas: ${items.map(it => `${it.emoji}→${it.answer}`).join(', ')}`;
+      review.push({ text: q.text, correct, partial: partialEm, studentAnswer, feedback });
       return;
     }
 
@@ -3256,21 +3540,47 @@ function saveToBank() {
   const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
   const password = (document.getElementById('quiz-password-input').value || '').trim();
 
-  const quiz = {
-    id: Date.now(),
-    title,
-    class: cls,
-    timeMinutes: timeMin,
-    questions: JSON.parse(JSON.stringify(editorQuestions)),
-    password: password || '',
-    savedAt: new Date().toLocaleDateString('es-ES')
-  };
-
   const bank = loadBank();
-  bank.unshift(quiz); // más reciente primero
-  saveBank(bank);
-  renderBank();
-  showToast('💾 Control guardado en el banco');
+
+  if (bankEditingId !== null) {
+    // Actualizar el item existente en el banco
+    const idx = bank.findIndex(q => q.id === bankEditingId);
+    if (idx !== -1) {
+      bank[idx] = {
+        ...bank[idx],
+        title,
+        class: cls,
+        timeMinutes: timeMin,
+        questions: JSON.parse(JSON.stringify(editorQuestions)),
+        password: password || '',
+        savedAt: new Date().toLocaleDateString('es-ES')
+      };
+      saveBank(bank);
+      renderBank();
+      showToast('💾 Control actualizado en el banco');
+    } else {
+      // Ya no existe (fue borrado), guardar como nuevo
+      bankEditingId = null;
+      saveToBank();
+      return;
+    }
+  } else {
+    // Control nuevo: insertar al principio
+    const quiz = {
+      id: Date.now(),
+      title,
+      class: cls,
+      timeMinutes: timeMin,
+      questions: JSON.parse(JSON.stringify(editorQuestions)),
+      password: password || '',
+      savedAt: new Date().toLocaleDateString('es-ES')
+    };
+    bank.unshift(quiz);
+    bankEditingId = quiz.id; // el editor ahora apunta a este nuevo item
+    saveBank(bank);
+    renderBank();
+    showToast('💾 Control guardado en el banco');
+  }
 
   // Respaldo automático cada 7 días
   const BACKUP_KEY = 'lastBankBackup';
@@ -3354,6 +3664,7 @@ function importBank(event) {
 function loadBankItemIntoEditor(id) {
   const quiz = loadBank().find(q => q.id === id);
   if (!quiz) return;
+  bankEditingId = id;
   loadQuizIntoEditor(quiz);
   document.getElementById('editor-card').style.display = 'block';
   document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
@@ -3363,6 +3674,15 @@ function loadBankItemIntoEditor(id) {
 function publishBankItem(id) {
   const quiz = loadBank().find(q => q.id === id);
   if (!quiz) return;
+
+  // Avisar si hay cambios en el editor sin guardar para este mismo control
+  if (bankEditingId === id && editorQuestions.length > 0) {
+    const bankedQ = JSON.stringify(quiz.questions);
+    const editorQ = JSON.stringify(editorQuestions);
+    if (bankedQ !== editorQ) {
+      showToast('⚠️ Tienes cambios sin guardar. Pulsa 💾 primero o se publicará la versión anterior.');
+    }
+  }
 
   currentQuiz = quiz;
   const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
