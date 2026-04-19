@@ -2735,34 +2735,36 @@ function singularize(str) {
     .join(' ');
 }
 
+// Devuelve { match: true/false, exact: true/false, correctAnswer: string }
 function matchShortAnswer(studentRaw, acceptedList) {
   const studentNorm = normalizeAnswer(studentRaw);
-  if (!studentNorm) return false;
+  if (!studentNorm) return { match: false, exact: false, correctAnswer: acceptedList[0] || '' };
   const studentSing = singularize(studentNorm);
   for (const ans of acceptedList) {
     const ansNorm = normalizeAnswer(ans);
     const ansSing = singularize(ansNorm);
-    // Comparación directa (con y sin pluralizar)
-    if (fuzzyMatch(studentNorm, ansNorm)) return true;
-    if (fuzzyMatch(studentSing, ansSing)) return true;
-    if (fuzzyMatch(studentNorm, ansSing)) return true;
-    if (fuzzyMatch(studentSing, ansNorm)) return true;
-    // Coincidencia por palabra completa: "tabique interventricular" contiene "tabique" como palabra
+    // Coincidencia exacta (normalizada)
+    if (studentNorm === ansNorm || studentSing === ansSing || studentNorm === ansSing || studentSing === ansNorm) {
+      return { match: true, exact: true, correctAnswer: ans };
+    }
+    // Coincidencia por palabra completa
     if (ansNorm && ansNorm.length >= 4) {
       const wordRe = new RegExp('(?:^|\\s)' + ansNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
-      if (wordRe.test(studentNorm)) return true;
-    }
-    if (studentNorm && studentNorm.length >= 4) {
+      if (wordRe.test(studentNorm)) return { match: true, exact: true, correctAnswer: ans };
       const wordReRev = new RegExp('(?:^|\\s)' + studentNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
-      if (wordReRev.test(ansNorm)) return true;
+      if (studentNorm.length >= 4 && wordReRev.test(ansNorm)) return { match: true, exact: true, correctAnswer: ans };
     }
-    // Coincidencia singular vs singular (para frases compuestas como "metro cuadrado" / "metros cuadrados")
     if (ansSing && ansSing.length >= 4) {
       const wordReSing = new RegExp('(?:^|\\s)' + ansSing.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
-      if (wordReSing.test(studentSing)) return true;
+      if (wordReSing.test(studentSing)) return { match: true, exact: true, correctAnswer: ans };
     }
+    // Coincidencia fuzzy (1 error tipográfico)
+    if (fuzzyMatch(studentNorm, ansNorm)) return { match: true, exact: false, correctAnswer: ans };
+    if (fuzzyMatch(studentSing, ansSing)) return { match: true, exact: false, correctAnswer: ans };
+    if (fuzzyMatch(studentNorm, ansSing)) return { match: true, exact: false, correctAnswer: ans };
+    if (fuzzyMatch(studentSing, ansNorm)) return { match: true, exact: false, correctAnswer: ans };
   }
-  return false;
+  return { match: false, exact: false, correctAnswer: acceptedList[0] || '' };
 }
 
 // ══════════════════════════════════════════════
@@ -2992,8 +2994,13 @@ function submitQuiz() {
     } else if (q.type === 'short') {
       studentAnswer = (document.getElementById(`short-${i}`)?.value || '').trim();
       const acceptedList = (q.acceptedAnswers || [q.correct]).filter(Boolean);
-      correct = matchShortAnswer(studentAnswer, acceptedList);
-      feedback = correct ? 'Correcto' : `Respuesta: ${acceptedList[0] || q.correct}`;
+      const shortResult = matchShortAnswer(studentAnswer, acceptedList);
+      correct = shortResult.match;
+      feedback = !correct
+        ? `Respuesta: ${acceptedList[0] || q.correct}`
+        : (!shortResult.exact
+            ? `✅ Correcto (revisa ortografía: la respuesta correcta es "${shortResult.correctAnswer}")`
+            : 'Correcto');
 
     } else if (q.type === 'order') {
       const items = [...document.querySelectorAll(`#order-list-${i} .order-item`)].map(el => el.dataset.text);
@@ -3018,19 +3025,23 @@ function submitQuiz() {
       const pairs = q.pairs || [];
       let pairsCorrect = 0;
       const pairResults = [];
+      const wrongCorrections = [];
       pairs.forEach((pair, pi) => {
         const input = document.getElementById(`tr-${i}-${pi}`);
         const raw = input ? input.value.trim() : '';
-        const ok = matchShortAnswer(raw, [pair.answer]);
-        if (ok) pairsCorrect++;
-        pairResults.push(`${pair.term}→${raw || '–'}${ok ? '✅' : '❌'}`);
+        const trResult = matchShortAnswer(raw, [pair.answer]);
+        if (trResult.match) pairsCorrect++;
+        const icon = trResult.match ? '✅' : '❌';
+        const fuzzyNote = trResult.match && !trResult.exact ? ` (ortografía: ${trResult.correctAnswer})` : '';
+        pairResults.push(`${pair.term}→${raw || '–'}${icon}${fuzzyNote}`);
+        if (!trResult.match) wrongCorrections.push(`${pair.term}→${pair.answer}`);
       });
       correct = pairsCorrect === pairs.length;
       const partialTr = pairsCorrect > 0 && !correct;
       studentAnswer = pairResults.join(' | ');
       if (correct) earnedPoints += q.points;
       else if (partialTr) earnedPoints += q.points * (pairsCorrect / pairs.length);
-      feedback = correct ? 'Todo correcto' : `${pairsCorrect}/${pairs.length} correctas · Respuestas: ${pairs.map(p => `${p.term}→${p.answer}`).join(', ')}`;
+      feedback = correct ? 'Todo correcto' : (wrongCorrections.length > 0 ? `Correcto: ${wrongCorrections.join(' | ')}` : `${pairsCorrect}/${pairs.length} correctas`);
       review.push({ text: q.text, correct, partial: partialTr, studentAnswer, feedback });
       return;
 
@@ -3038,19 +3049,23 @@ function submitQuiz() {
       const items = q.items || [];
       let emojiCorrect = 0;
       const emojiResults = [];
+      const wrongCorrections = [];
       items.forEach((item, ei) => {
         const input = document.getElementById(`em-${i}-${ei}`);
         const raw = input ? input.value.trim() : '';
-        const ok = matchShortAnswer(raw, [item.answer]);
-        if (ok) emojiCorrect++;
-        emojiResults.push(`${item.emoji}→${raw || '–'}${ok ? '✅' : '❌'}`);
+        const emResult = matchShortAnswer(raw, [item.answer]);
+        if (emResult.match) emojiCorrect++;
+        const icon = emResult.match ? '✅' : '❌';
+        const fuzzyNote = emResult.match && !emResult.exact ? ` (ortografía: ${emResult.correctAnswer})` : '';
+        emojiResults.push(`${item.emoji}→${raw || '–'}${icon}${fuzzyNote}`);
+        if (!emResult.match) wrongCorrections.push(`${item.emoji}→${item.answer}`);
       });
       correct = emojiCorrect === items.length;
       const partialEm = emojiCorrect > 0 && !correct;
       studentAnswer = emojiResults.join(' | ');
       if (correct) earnedPoints += q.points;
       else if (partialEm) earnedPoints += q.points * (emojiCorrect / items.length);
-      feedback = correct ? 'Todo correcto' : `${emojiCorrect}/${items.length} correctas · Respuestas: ${items.map(it => `${it.emoji}→${it.answer}`).join(', ')}`;
+      feedback = correct ? 'Todo correcto' : (wrongCorrections.length > 0 ? `Correcto: ${wrongCorrections.join(' | ')}` : `${emojiCorrect}/${items.length} correctas`);
       review.push({ text: q.text, correct, partial: partialEm, studentAnswer, feedback });
       return;
     }
