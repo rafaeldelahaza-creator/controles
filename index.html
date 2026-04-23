@@ -3317,12 +3317,20 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
       const rows = st.answers.map(a => {
         const icon = (a.result === 'sí' || a.result === 'si') ? '✅'
                    : a.result === 'parcial' ? '🟡' : '❌';
+        // pts/maxPts vienen del backend (Sheets). Fallback: desde currentQuiz si es control recién hecho
+        const qIdx = (a.num || 1) - 1;
+        const quizQ = currentQuiz && currentQuiz.questions && currentQuiz.questions[qIdx];
+        const maxPts = a.maxPts !== undefined ? a.maxPts : (quizQ ? quizQ.points : undefined);
+        const pts    = a.pts    !== undefined ? a.pts    : undefined;
+        const ptsHtml = pts !== undefined && maxPts !== undefined
+          ? `<span style="color:${pts===maxPts?'#10b981':pts>0?'#f59e0b':'#ef4444'};font-weight:800">${pts}/${maxPts}</span>`
+          : (maxPts !== undefined ? `<span style="color:#9ca3af">–/${maxPts}</span>` : '');
         return `<div class="student-answer-row">
           <div class="sa-num">${a.num}</div>
           <div class="sa-question">${escHtml(a.question.substring(0, 80))}${a.question.length > 80 ? '…' : ''}</div>
           <div class="sa-answer">${escHtml(a.answer || '–')}</div>
           <div class="sa-result">${icon}</div>
-          <div class="sa-pts">${a.pts !== undefined ? (a.pts + '/' + (a.maxPts || '?')) : ''}</div>
+          <div class="sa-pts">${ptsHtml}</div>
         </div>`;
       }).join('');
       return `<div class="student-accordion" id="acc-${idx}">
