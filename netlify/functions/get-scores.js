@@ -69,8 +69,8 @@ function readSheet(token, sheetId, sheetName, range) {
 // Formato nuevo:   P | R | ✓ | pts | maxPts  (5 cols)
 function detectColStride(row) {
   // A partir de col 5, si col 8 parece un número asumimos stride=5, si no stride=3
-  const val = row[8];
-  if (val !== undefined && val !== '' && !isNaN(parseFloat(val))) return 5;
+  const val = (row[8] || '').toString().replace(',', '.');
+  if (val !== '' && !isNaN(parseFloat(val))) return 5;
   return 3;
 }
 
@@ -134,8 +134,8 @@ function buildStudentAnswers(rows, quizTitle) {
       const question = (row[col]     || '').trim();
       const answer   = (row[col + 1] || '').trim();
       const result   = (row[col + 2] || '').trim().toLowerCase();
-      const pts      = stride === 5 ? parseFloat(row[col + 3]) : undefined;
-      const maxPts   = stride === 5 ? parseFloat(row[col + 4]) : undefined;
+      const pts      = stride === 5 ? parseFloat((row[col + 3] || '').toString().replace(',', '.')) : undefined;
+      const maxPts   = stride === 5 ? parseFloat((row[col + 4] || '').toString().replace(',', '.')) : undefined;
       col += stride;
       if (!question) continue;
 
@@ -185,7 +185,7 @@ exports.handler = async function(event) {
       .map(r => ({
         name:        (r[0] || '').trim(),
         cls:         (r[1] || '').trim(),
-        score:       parseFloat(r[3]) || 0,
+        score:       parseFloat((r[3] || '').toString().replace(',', '.')) || 0,
         date:        r[4] || '',
         time:        r[5] || '',
         tabSwitches: parseInt(r[6]) || 0,
