@@ -107,8 +107,9 @@ exports.handler = async function(event) {
         row.push(r.text          || '–');
         row.push(r.studentAnswer || '–');
         row.push(r.correct ? 'Sí' : r.partial ? 'Parcial' : 'No');
-        row.push(r.pts !== undefined ? r.pts : '');   // puntos obtenidos en esta pregunta
-        row.push(r.maxPts !== undefined ? r.maxPts : ''); // puntos máximos de esta pregunta
+        row.push(r.pts    !== undefined ? r.pts    : '');
+        row.push(r.maxPts !== undefined ? r.maxPts : '');
+        row.push(r.feedback || '–');  // respuesta correcta / feedback
       });
       await appendToSheet(token, sheetId, respuestasSheet, [row]);
     }
