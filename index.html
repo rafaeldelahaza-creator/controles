@@ -3316,9 +3316,11 @@ async function syncRecalcScores() {
     if (data.ok) {
       showToast(`✅ ${toSync.length} nota${toSync.length !== 1 ? 's' : ''} actualizadas en Sheets`);
       btn.textContent = '✅ Notas actualizadas';
+      btn.disabled = false; // permitir nuevas sincronizaciones
       lastReportSubmissions.forEach(s => { if (s.scoreOriginal !== undefined) delete s.scoreOriginal; });
-      // Quitar clase modified de todos los inputs
       document.querySelectorAll('.pts-edit-input.modified').forEach(inp => inp.classList.remove('modified'));
+      // Restaurar texto del botón tras 2 segundos
+      setTimeout(() => { btn.textContent = '🔄 Actualizar notas en Sheets'; }, 2000);
     } else {
       throw new Error(data.error || 'Error desconocido');
     }
