@@ -607,6 +607,7 @@
   .sa-question { flex: 1; color: var(--muted); font-size: 0.82rem; }
   .sa-answer { flex: 1.2; font-weight: 700; color: var(--text); }
   .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
+  .sa-pts { min-width: 48px; text-align: right; font-size: 0.78rem; font-weight: 800; color: var(--muted); }
 
   /* ── NOTES TABLE ── */
   .notes-table-wrap { overflow-x: auto; }
@@ -2312,8 +2313,11 @@ function previewQuiz() {
       wrap.innerHTML = html;
     } else if (q.type === 'match') {
       let html = '<div class="match-grid">';
-      q.leftItems.forEach((left, li) => {
-        const opts = q.rightItems.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
+      const pvPairs = q.correctPairs || {};
+      const pvLefts = Object.keys(pvPairs);
+      const pvRights = Object.values(pvPairs);
+      pvLefts.forEach((left) => {
+        const opts = pvRights.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
         html += `<div class="match-left">${escHtml(left)}</div><select class="match-select"><option value="">— elige —</option>${opts}</select>`;
       });
       html += '</div>';
@@ -2505,7 +2509,13 @@ function renderStudentQuestions() {
   const shuffledQuestions = shuffleArray(currentQuiz.questions.map(q => {
     const copy = JSON.parse(JSON.stringify(q));
     if (copy.type === 'order') copy.items = shuffleArray([...copy.items]);
-    if (copy.type === 'match') copy.rightItems = shuffleArray([...copy.rightItems]);
+    if (copy.type === 'match') {
+      const vals = shuffleArray(Object.values(copy.correctPairs));
+      const keys = Object.keys(copy.correctPairs);
+      // Rebuild correctPairs with same keys but shuffled values (for display only — scoring still uses original correctPairs)
+      // We store shuffled rights separately for the dropdown options
+      copy._shuffledRights = vals;
+    }
     if (copy.type === 'test' || copy.type === 'vocab') copy.options = shuffleArray([...copy.options]);
     return copy;
   }));
@@ -2545,8 +2555,11 @@ function renderStudentAnswer(q, i) {
     wrap.innerHTML = html;
   } else if (q.type === 'match') {
     let html = '<div class="match-grid">';
-    q.leftItems.forEach((left, li) => {
-      const opts = q.rightItems.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
+    const sqPairs = q.correctPairs || {};
+    const sqLefts = Object.keys(sqPairs);
+    const sqRights = q._shuffledRights || shuffleArray(Object.values(sqPairs));
+    sqLefts.forEach((left, li) => {
+      const opts = sqRights.map(r => `<option value="${escHtml(r)}">${escHtml(r)}</option>`).join('');
       html += `<div class="match-left">${escHtml(left)}</div><select class="match-select" id="match-${i}-${li}"><option value="">— elige —</option>${opts}</select>`;
     });
     html += '</div>';
@@ -2932,6 +2945,7 @@ function submitQuiz() {
   questions.forEach((q, i) => {
     let studentAnswer = '';
     let correct = false;
+    let prevEarned = earnedPoints;
     let feedback = '';
 
     if (q.type === 'test') {
@@ -2964,14 +2978,15 @@ function submitQuiz() {
       if (matches === expected.length) { earnedPoints += q.points; }
       else if (matches > 0) { earnedPoints += (q.points * matches / expected.length); }
       feedback = `Respuesta: ${q.blanks.join(', ')}`;
-      review.push({ text: q.text, correct: matches === expected.length, partial: matches > 0 && matches < expected.length, studentAnswer, feedback });
+      review.push({ text: q.text, correct: matches === expected.length, partial: matches > 0 && matches < expected.length, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
 
     } else if (q.type === 'match') {
       let matchCount = 0;
       const studentPairs = [];
       const wrongCorrections = [];
-      q.leftItems.forEach((left, li) => {
+      const matchLefts = Object.keys(q.correctPairs || {});
+      matchLefts.forEach((left, li) => {
         const sel = document.getElementById(`match-${i}-${li}`);
         const chosen = sel ? sel.value : '–';
         const correctVal = q.correctPairs[left];
@@ -2980,15 +2995,15 @@ function submitQuiz() {
         else wrongCorrections.push(`${left} → ${correctVal}`);
         studentPairs.push(`${left} → ${chosen || '–'}`);
       });
-      correct = matchCount === q.leftItems.length;
-      if (matchCount > 0) earnedPoints += (q.points * matchCount / q.leftItems.length);
+      correct = matchCount === matchLefts.length;
+      if (matchCount > 0) earnedPoints += (q.points * matchCount / matchLefts.length);
       const studentAnswer = studentPairs.join(' | ');
       feedback = correct
         ? 'Todo correcto'
         : (wrongCorrections.length > 0
             ? `Correcto: ${wrongCorrections.join(' | ')}`
-            : `${matchCount}/${q.leftItems.length} pares correctos`);
-      review.push({ text: q.text, correct, partial: matchCount > 0 && !correct, studentAnswer, feedback });
+            : `${matchCount}/${matchLefts.length} pares correctos`);
+      review.push({ text: q.text, correct, partial: matchCount > 0 && !correct, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
 
     } else if (q.type === 'short') {
@@ -3012,7 +3027,7 @@ function submitQuiz() {
       feedback = correct ? 'Orden correcto' : `${posCorrect}/${expected.length} en posición correcta · Correcto: ${expected.join(' → ')}`;
       if (correct) earnedPoints += q.points;
       else if (partial) earnedPoints += q.points * (posCorrect / expected.length);
-      review.push({ text: q.text, correct, partial, studentAnswer, feedback });
+      review.push({ text: q.text, correct, partial, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
 
     } else if (q.type === 'vocab') {
@@ -3042,7 +3057,7 @@ function submitQuiz() {
       if (correct) earnedPoints += q.points;
       else if (partialTr) earnedPoints += q.points * (pairsCorrect / pairs.length);
       feedback = correct ? 'Todo correcto' : (wrongCorrections.length > 0 ? `Correcto: ${wrongCorrections.join(' | ')}` : `${pairsCorrect}/${pairs.length} correctas`);
-      review.push({ text: q.text, correct, partial: partialTr, studentAnswer, feedback });
+      review.push({ text: q.text, correct, partial: partialTr, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
 
     } else if (q.type === 'emoji') {
@@ -3066,12 +3081,12 @@ function submitQuiz() {
       if (correct) earnedPoints += q.points;
       else if (partialEm) earnedPoints += q.points * (emojiCorrect / items.length);
       feedback = correct ? 'Todo correcto' : (wrongCorrections.length > 0 ? `Correcto: ${wrongCorrections.join(' | ')}` : `${emojiCorrect}/${items.length} correctas`);
-      review.push({ text: q.text, correct, partial: partialEm, studentAnswer, feedback });
+      review.push({ text: q.text, correct, partial: partialEm, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
     }
 
     if (correct) earnedPoints += q.points;
-    review.push({ text: q.text, correct, partial: false, studentAnswer, feedback });
+    review.push({ text: q.text, correct, partial: false, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
   });
 
   // Nota siempre sobre 10, independientemente de cómo la IA haya repartido los puntos
@@ -3307,6 +3322,7 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
           <div class="sa-question">${escHtml(a.question.substring(0, 80))}${a.question.length > 80 ? '…' : ''}</div>
           <div class="sa-answer">${escHtml(a.answer || '–')}</div>
           <div class="sa-result">${icon}</div>
+          <div class="sa-pts">${a.pts !== undefined ? (a.pts + '/' + (a.maxPts || '?')) : ''}</div>
         </div>`;
       }).join('');
       return `<div class="student-accordion" id="acc-${idx}">
@@ -3374,6 +3390,7 @@ function downloadReportPDF() {
       .sa-question { flex: 1; color: #6b7280; font-size: 0.82rem; }
       .sa-answer { flex: 1.2; font-weight: 700; }
       .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
+      .sa-pts { min-width: 48px; text-align: right; font-size: 0.78rem; font-weight: 800; color: #6b7280; }
     </style>
   </head><body>${content}</body></html>`;
 
