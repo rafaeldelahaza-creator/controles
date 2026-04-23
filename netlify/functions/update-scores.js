@@ -170,9 +170,13 @@ exports.handler = async function(event) {
         if (stride < 5) continue; // sin columnas de pts, no actualizar
 
         for (const ans of upd.answers) {
-          // col pts = 5 (inicio preguntas) + (num-1)*stride + 3
-          const ptsColIdx = 5 + (ans.num - 1) * stride + 3;
-          await updateCell(token, sheetId, respSheet, rowIdx, ptsColIdx, ans.pts);
+          // col pts    = 5 + (num-1)*stride + 3
+          // col result = 5 + (num-1)*stride + 2
+          const baseCol    = 5 + (ans.num - 1) * stride;
+          await updateCell(token, sheetId, respSheet, rowIdx, baseCol + 3, ans.pts);
+          if (ans.result) {
+            await updateCell(token, sheetId, respSheet, rowIdx, baseCol + 2, ans.result);
+          }
         }
       }
     }
