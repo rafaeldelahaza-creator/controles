@@ -3241,6 +3241,8 @@ function onPtsEdit(input) {
     input.style.color       = newColor;
     input.style.background  = newBg;
   }
+  // Guardar el resultado nuevo para sincronizar con Sheets
+  input.dataset.result = val === maxPts ? 'Sí' : val > 0 ? 'Parcial' : 'No';
 
   // Actualizar lastReportSubmissions con el nuevo pts para poder sincronizar
   const sub = lastReportSubmissions.find(s => s.name === studentName);
@@ -3296,7 +3298,11 @@ async function syncRecalcScores() {
       const answers = [];
       inputs.forEach(inp => {
         const v = parseFloat(inp.value);
-        if (!isNaN(v)) answers.push({ num: parseInt(inp.dataset.qnum), pts: v });
+        if (!isNaN(v)) answers.push({
+          num:    parseInt(inp.dataset.qnum),
+          pts:    v,
+          result: inp.dataset.result || (v === parseFloat(inp.dataset.maxpts) ? 'Sí' : v > 0 ? 'Parcial' : 'No')
+        });
       });
       return { name: s.name, cls: s.cls, score: s.score, answers };
     });
