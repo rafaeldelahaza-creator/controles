@@ -3416,8 +3416,14 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
         const icon = (a.result === 'sí' || a.result === 'si') ? '✅'
                    : a.result === 'parcial' ? '🟡' : '❌';
         const qIdx = (a.num || 1) - 1;
-        const quizQ = currentQuiz && currentQuiz.questions && currentQuiz.questions[qIdx];
-        const maxPts = a.maxPts !== undefined ? a.maxPts : (quizQ ? quizQ.points : undefined);
+        // Buscar la pregunta por texto en currentQuiz (más fiable que por índice)
+        const quizQuestions = currentQuiz && currentQuiz.questions;
+        const quizQ = quizQuestions
+          ? (quizQuestions.find(q => q.text && a.question && q.text.substring(0,60) === a.question.substring(0,60))
+             || quizQuestions[qIdx])
+          : undefined;
+        const maxPts = a.maxPts !== undefined ? a.maxPts
+                     : (quizQ ? quizQ.points : 10);
         const pts    = a.pts !== undefined ? a.pts : undefined;
 
         // Color del input según puntuación
