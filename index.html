@@ -3230,6 +3230,18 @@ function onPtsEdit(input) {
   if (val > maxPts) { val = maxPts; input.value = maxPts; }
   input.classList.add('modified');
 
+  // Actualizar icono y color de la fila en tiempo real
+  const row = input.closest('.student-answer-row');
+  if (row) {
+    const iconEl  = row.querySelector('.sa-result');
+    if (iconEl) iconEl.textContent = val === maxPts ? '✅' : val > 0 ? '🟡' : '❌';
+    const newColor = val === maxPts ? '#10b981' : val > 0 ? '#f59e0b' : '#ef4444';
+    const newBg    = val === maxPts ? '#f0fdf4'  : val > 0 ? '#fffbeb'  : '#fef2f2';
+    input.style.borderColor = newColor;
+    input.style.color       = newColor;
+    input.style.background  = newBg;
+  }
+
   // Actualizar lastReportSubmissions con el nuevo pts para poder sincronizar
   const sub = lastReportSubmissions.find(s => s.name === studentName);
   if (!sub) return;
