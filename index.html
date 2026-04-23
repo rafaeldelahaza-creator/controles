@@ -605,9 +605,14 @@
   .student-answer-row:last-child { border-bottom: none; }
   .sa-num { min-width: 22px; font-weight: 800; color: var(--muted); font-size: 0.78rem; padding-top: 2px; }
   .sa-question { flex: 1; color: var(--muted); font-size: 0.82rem; }
-  .sa-answer { flex: 1.2; font-weight: 700; color: var(--text); }
+  .sa-answers-col { flex: 1.2; display: flex; flex-direction: column; gap: 2px; }
+  .sa-answer { font-weight: 700; color: var(--text); }
+  .sa-correct { font-size: 0.78rem; color: #10b981; font-weight: 600; }
   .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
   .sa-pts { min-width: 48px; text-align: right; font-size: 0.78rem; font-weight: 800; color: var(--muted); }
+  .pts-edit-input { color: var(--primary); background: #f0f4ff; outline: none; }
+  .pts-edit-input:focus { border-color: var(--primary) !important; background: #fff; }
+  .pts-edit-input.modified { border-color: #f59e0b !important; background: #fffbeb; }
 
   /* ── NOTES TABLE ── */
   .notes-table-wrap { overflow-x: auto; }
@@ -3215,9 +3220,50 @@ async function openReport() {
   }
 }
 
+function onPtsEdit(input) {
+  const studentName = input.dataset.student;
+  const maxPts = parseFloat(input.dataset.maxpts);
+  let val = parseFloat(input.value);
+
+  // Validar rango
+  if (isNaN(val) || val < 0) val = 0;
+  if (val > maxPts) { val = maxPts; input.value = maxPts; }
+  input.classList.add('modified');
+
+  // Actualizar lastReportSubmissions con el nuevo pts para poder sincronizar
+  const sub = lastReportSubmissions.find(s => s.name === studentName);
+  if (!sub) return;
+  if (sub.scoreOriginal === undefined) sub.scoreOriginal = sub.score;
+
+  // Recalcular nota sumando todos los inputs del alumno
+  const allInputs = document.querySelectorAll(`.pts-edit-input[data-student="${CSS.escape(studentName)}"]`);
+  let earnedSum = 0;
+  let maxSum = 0;
+  let allFilled = true;
+  allInputs.forEach(inp => {
+    const v = parseFloat(inp.value);
+    const m = parseFloat(inp.dataset.maxpts);
+    if (isNaN(v)) { allFilled = false; return; }
+    earnedSum += v;
+    maxSum    += m;
+  });
+
+  if (!allFilled || maxSum === 0) return;
+
+  const newScore = Math.round((earnedSum / maxSum) * 10 * 10) / 10;
+  sub.score = newScore;
+
+  // Actualizar el badge de nota en la cabecera del acordeón
+  const key = studentName.replace(/\s/g, '_');
+  const badge = document.getElementById(`acc-score-${key}`);
+  if (badge) {
+    badge.textContent = newScore;
+    badge.className = `acc-score ${newScore >= 7 ? 'high' : newScore >= 5 ? 'mid' : 'low'}`;
+  }
+}
+
 async function syncRecalcScores() {
   const btn = document.getElementById('sync-scores-btn');
-  // Solo sincronizar alumnos cuya nota recalculada difiere de la original
   const toSync = lastReportSubmissions.filter(s =>
     s.scoreOriginal !== undefined && s.score !== s.scoreOriginal
   );
@@ -3231,17 +3277,30 @@ async function syncRecalcScores() {
   btn.textContent = '⏳ Actualizando…';
   try {
     const quizTitle = liveActiveQuizTitle || lastClosedQuizTitle;
+
+    // Recoger los pts editados de los inputs del DOM por alumno
+    const updatesWithAnswers = toSync.map(s => {
+      const inputs = document.querySelectorAll(`.pts-edit-input[data-student="${CSS.escape(s.name)}"]`);
+      const answers = [];
+      inputs.forEach(inp => {
+        const v = parseFloat(inp.value);
+        if (!isNaN(v)) answers.push({ num: parseInt(inp.dataset.qnum), pts: v });
+      });
+      return { name: s.name, cls: s.cls, score: s.score, answers };
+    });
+
     const res = await fetch('/.netlify/functions/update-scores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quiz: quizTitle, updates: toSync.map(s => ({ name: s.name, cls: s.cls, score: s.score })) })
+      body: JSON.stringify({ quiz: quizTitle, updates: updatesWithAnswers })
     });
     const data = await res.json();
     if (data.ok) {
       showToast(`✅ ${toSync.length} nota${toSync.length !== 1 ? 's' : ''} actualizadas en Sheets`);
       btn.textContent = '✅ Notas actualizadas';
-      // Marcar como sincronizadas
       lastReportSubmissions.forEach(s => { if (s.scoreOriginal !== undefined) delete s.scoreOriginal; });
+      // Quitar clase modified de todos los inputs
+      document.querySelectorAll('.pts-edit-input.modified').forEach(inp => inp.classList.remove('modified'));
     } else {
       throw new Error(data.error || 'Error desconocido');
     }
@@ -3356,26 +3415,49 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
       const rows = st.answers.map(a => {
         const icon = (a.result === 'sí' || a.result === 'si') ? '✅'
                    : a.result === 'parcial' ? '🟡' : '❌';
-        // pts/maxPts vienen del backend (Sheets). Fallback: desde currentQuiz si es control recién hecho
         const qIdx = (a.num || 1) - 1;
         const quizQ = currentQuiz && currentQuiz.questions && currentQuiz.questions[qIdx];
         const maxPts = a.maxPts !== undefined ? a.maxPts : (quizQ ? quizQ.points : undefined);
-        const pts    = a.pts    !== undefined ? a.pts    : undefined;
-        const ptsHtml = pts !== undefined && maxPts !== undefined
-          ? `<span style="color:${pts===maxPts?'#10b981':pts>0?'#f59e0b':'#ef4444'};font-weight:800">${pts}/${maxPts}</span>`
-          : (maxPts !== undefined ? `<span style="color:#9ca3af">–/${maxPts}</span>` : '');
+        const pts    = a.pts !== undefined ? a.pts : undefined;
+
+        // Color del input según puntuación
+        const inputColor = pts === undefined ? '#6b7280'
+          : pts === maxPts ? '#10b981'
+          : pts > 0       ? '#f59e0b'
+          : '#ef4444';
+
+        const ptsInput = maxPts !== undefined
+          ? `<input class="pts-edit-input"
+               type="number" min="0" max="${maxPts}" step="0.25"
+               value="${pts !== undefined ? pts : ''}"
+               placeholder="–"
+               data-student="${escHtml(st.name)}"
+               data-qnum="${a.num}"
+               data-maxpts="${maxPts}"
+               oninput="onPtsEdit(this)"
+               style="width:44px;border:1.5px solid ${inputColor};border-radius:6px;padding:2px 4px;font-size:0.82rem;font-weight:800;text-align:center;color:${inputColor};background:${pts===maxPts?'#f0fdf4':pts>0?'#fffbeb':'#fef2f2'}">/<span style="color:var(--muted);font-size:0.78rem">${maxPts}</span>`
+          : '';
+
+        // Respuesta correcta desde feedback
+        const correctHtml = a.feedback && a.feedback !== 'Correcto' && a.feedback !== 'Todo correcto' && a.feedback !== 'Orden correcto'
+          ? `<div class="sa-correct">✔ ${escHtml(a.feedback)}</div>`
+          : '';
+
         return `<div class="student-answer-row">
           <div class="sa-num">${a.num}</div>
           <div class="sa-question">${escHtml(a.question.substring(0, 80))}${a.question.length > 80 ? '…' : ''}</div>
-          <div class="sa-answer">${escHtml(a.answer || '–')}</div>
+          <div class="sa-answers-col">
+            <div class="sa-answer">${escHtml(a.answer || '–')}</div>
+            ${correctHtml}
+          </div>
           <div class="sa-result">${icon}</div>
-          <div class="sa-pts">${ptsHtml}</div>
+          <div class="sa-pts">${ptsInput}</div>
         </div>`;
       }).join('');
       return `<div class="student-accordion" id="acc-${idx}">
         <div class="student-accordion-header" onclick="toggleAccordion('acc-${idx}')">
           <div class="acc-name">${escHtml(st.name)}</div>
-          <span class="acc-score ${pillCls}">${score}</span>
+          <span class="acc-score ${pillCls}" id="acc-score-${escHtml(st.name).replace(/\s/g,'_')}">${score}</span>
           <span class="acc-arrow">▼</span>
         </div>
         <div class="student-accordion-body">${rows}</div>
