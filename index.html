@@ -1488,6 +1488,7 @@
     <div class="report-footer">
       <button class="btn btn-primary btn-sm" onclick="downloadReportPDF()" style="background:#7c3aed">⬇️ Descargar informe</button>
       <a href="https://docs.google.com/spreadsheets/d/1espPZNRe6ouZl0E8CIQY63woya65gRUPcIvbJiNBBuQ/edit" target="_blank" class="sheets-btn" style="font-size:0.85rem">📊 Abrir Sheets</a>
+      <button class="btn btn-primary btn-sm" id="sync-scores-btn" onclick="syncRecalcScores()" style="background:#059669">🔄 Actualizar notas en Sheets</button>
       <button class="btn btn-sm" onclick="closeReport()" style="background:#f3f4f6;color:var(--text);margin-left:auto">Cerrar</button>
     </div>
   </div>
@@ -3214,11 +3215,49 @@ async function openReport() {
   }
 }
 
+async function syncRecalcScores() {
+  const btn = document.getElementById('sync-scores-btn');
+  // Solo sincronizar alumnos cuya nota recalculada difiere de la original
+  const toSync = lastReportSubmissions.filter(s =>
+    s.scoreOriginal !== undefined && s.score !== s.scoreOriginal
+  );
+  if (toSync.length === 0) {
+    showToast('✅ Las notas de Sheets ya están al día');
+    return;
+  }
+  if (!confirm(`¿Actualizar la nota de ${toSync.length} alumno${toSync.length !== 1 ? 's' : ''} en Hoja 1?\n\n${toSync.map(s => `${s.name}: ${s.scoreOriginal} → ${s.score}`).join('\n')}`)) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Actualizando…';
+  try {
+    const quizTitle = liveActiveQuizTitle || lastClosedQuizTitle;
+    const res = await fetch('/.netlify/functions/update-scores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quiz: quizTitle, updates: toSync.map(s => ({ name: s.name, cls: s.cls, score: s.score })) })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`✅ ${toSync.length} nota${toSync.length !== 1 ? 's' : ''} actualizadas en Sheets`);
+      btn.textContent = '✅ Notas actualizadas';
+      // Marcar como sincronizadas
+      lastReportSubmissions.forEach(s => { if (s.scoreOriginal !== undefined) delete s.scoreOriginal; });
+    } else {
+      throw new Error(data.error || 'Error desconocido');
+    }
+  } catch(err) {
+    showToast('❌ Error al actualizar: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = '🔄 Actualizar notas en Sheets';
+  }
+}
+
 function closeReport() {
   document.getElementById('report-modal').classList.remove('open');
 }
 
 function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
+  lastReportSubmissions = submissions; // guardar para sincronización con Sheets
   const quizTitle = reportTitle || liveActiveQuizTitle || lastClosedQuizTitle || '–';
   const total = submissions.length;
   if (total === 0) {
@@ -3421,6 +3460,7 @@ let liveActiveQuizTitle = null;
 let liveActiveQuizClass = null;
 let lastClosedQuizTitle = null;
 let lastClosedQuizClass = null;
+let lastReportSubmissions = []; // para sincronizar notas recalculadas con Sheets
 
 function startLivePanel(quizTitle, quizClass) {
   liveActiveQuizTitle = quizTitle;
