@@ -64,19 +64,31 @@ function readSheet(token, sheetId, sheetName, range) {
   });
 }
 
+// Detecta si la fila usa el formato nuevo (5 cols/pregunta) o el antiguo (3 cols/pregunta)
+// Formato antiguo: P | R | ✓  (3 cols)
+// Formato nuevo:   P | R | ✓ | pts | maxPts  (5 cols)
+function detectColStride(row) {
+  // A partir de col 5, si col 8 parece un número asumimos stride=5, si no stride=3
+  const val = row[8];
+  if (val !== undefined && val !== '' && !isNaN(parseFloat(val))) return 5;
+  return 3;
+}
+
 // Agrupa por texto de pregunta (ignora el orden shuffle de cada alumno)
-// Estructura fila: Alumno|Control|Fecha|Hora|Nota | P1texto|R1alumno|✓1 | P2texto|R2alumno|✓2 | ...
+// Estructura fila antigua: Alumno|Control|Fecha|Hora|Nota | P1texto|R1alumno|✓1 | P2texto|R2alumno|✓2 | ...
+// Estructura fila nueva:   Alumno|Control|Fecha|Hora|Nota | P1texto|R1alumno|✓1|pts1|max1 | ...
 function buildQuestionStats(rows, quizTitle) {
   const statsMap = {};
 
   for (const row of rows) {
     if ((row[1] || '').trim() !== quizTitle) continue;
+    const stride = detectColStride(row);
 
     let col = 5;
     while (col + 2 <= row.length) {
       const texto     = (row[col]     || '').trim();
       const resultado = (row[col + 2] || '').trim().toLowerCase();
-      col += 3;
+      col += stride;
       if (!texto) continue;
 
       const key = texto.substring(0, 80).toLowerCase();
@@ -100,11 +112,11 @@ function buildQuestionStats(rows, quizTitle) {
       total:   q.total,
       pct:     Math.round(((q.si + q.parcial * 0.5) / q.total) * 100)
     }))
-    .sort((a, b) => a.pct - b.pct); // peores primero
+    .sort((a, b) => a.pct - b.pct);
 }
 
 // Extrae las respuestas individuales de cada alumno/a para el control dado
-// Devuelve: [{ name, answers: [{ question, answer, result }] }]
+// Devuelve: [{ name, answers: [{ question, answer, result, pts, maxPts }] }]
 function buildStudentAnswers(rows, quizTitle) {
   const students = [];
 
@@ -114,6 +126,7 @@ function buildStudentAnswers(rows, quizTitle) {
     const name = (row[0] || '').trim();
     if (!name) continue;
 
+    const stride = detectColStride(row);
     const answers = [];
     let col = 5;
     let qNum = 1;
@@ -121,14 +134,18 @@ function buildStudentAnswers(rows, quizTitle) {
       const question = (row[col]     || '').trim();
       const answer   = (row[col + 1] || '').trim();
       const result   = (row[col + 2] || '').trim().toLowerCase();
-      col += 3;
+      const pts      = stride === 5 ? parseFloat(row[col + 3]) : undefined;
+      const maxPts   = stride === 5 ? parseFloat(row[col + 4]) : undefined;
+      col += stride;
       if (!question) continue;
 
       answers.push({
         num: qNum++,
         question,
         answer,
-        result  // 'sí'/'si', 'no', 'parcial'
+        result,
+        ...(isNaN(pts)    ? {} : { pts }),
+        ...(isNaN(maxPts) ? {} : { maxPts })
       });
     }
 
@@ -184,8 +201,8 @@ exports.handler = async function(event) {
     let questionStats  = [];
     let studentAnswers = [];
     if (respSheet) {
-      // BX cubre hasta 15 preguntas × 3 cols + 5 cols iniciales = col 50
-      const respRows = await readSheet(token, sheetId, respSheet, 'A2:BX');
+      // CB cubre hasta 15 preguntas × 5 cols + 5 cols iniciales = col 80
+      const respRows = await readSheet(token, sheetId, respSheet, 'A2:CB');
       questionStats  = buildQuestionStats(respRows, quizTitle);
       studentAnswers = buildStudentAnswers(respRows, quizTitle);
     }
