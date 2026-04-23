@@ -152,6 +152,18 @@ function buildStudentAnswers(rows, quizTitle) {
     students.push({ name, answers });
   }
 
+  // Añadir nota recalculada a cada alumno si tiene pts/maxPts
+  for (const st of students) {
+    const withPts = st.answers.filter(a => a.pts !== undefined && a.maxPts !== undefined);
+    if (withPts.length > 0 && withPts.length === st.answers.length) {
+      const totalPts    = withPts.reduce((s, a) => s + a.maxPts, 0);
+      const earnedPts   = withPts.reduce((s, a) => s + a.pts,    0);
+      st.recalcScore = totalPts > 0
+        ? Math.round((earnedPts / totalPts) * 10 * 10) / 10
+        : null;
+    }
+  }
+
   return students;
 }
 
@@ -205,6 +217,20 @@ exports.handler = async function(event) {
       const respRows = await readSheet(token, sheetId, respSheet, 'A2:CB');
       questionStats  = buildQuestionStats(respRows, quizTitle);
       studentAnswers = buildStudentAnswers(respRows, quizTitle);
+
+      // Reemplazar nota original por nota recalculada desde pts si está disponible
+      const recalcMap = {};
+      studentAnswers.forEach(st => {
+        if (st.recalcScore !== null && st.recalcScore !== undefined) {
+          recalcMap[st.name] = st.recalcScore;
+        }
+      });
+      submissions.forEach(s => {
+        if (recalcMap[s.name] !== undefined) {
+          s.scoreOriginal = s.score;          // guardamos la original por si acaso
+          s.score         = recalcMap[s.name];
+        }
+      });
     }
 
     return {
