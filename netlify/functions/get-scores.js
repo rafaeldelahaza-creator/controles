@@ -64,13 +64,22 @@ function readSheet(token, sheetId, sheetName, range) {
   });
 }
 
-// Detecta si la fila usa el formato nuevo (5 cols/pregunta) o el antiguo (3 cols/pregunta)
-// Formato antiguo: P | R | ✓  (3 cols)
-// Formato nuevo:   P | R | ✓ | pts | maxPts  (5 cols)
+// Formato antiguo:  P | R | ✓              (stride 3)
+// Formato medio:    P | R | ✓ | pts | max   (stride 5)
+// Formato nuevo:    P | R | ✓ | pts | max | feedback  (stride 6)
 function detectColStride(row) {
-  // A partir de col 5, si col 8 parece un número asumimos stride=5, si no stride=3
-  const val = (row[8] || '').toString().replace(',', '.');
-  if (val !== '' && !isNaN(parseFloat(val))) return 5;
+  // col 8 (0-based) = 4ª col desde inicio de preguntas (col 5)
+  // Si es número → tiene pts → stride >= 5
+  // Si col 10 existe y no parece número → stride 6 (feedback en col 10)
+  const col8 = (row[8] || '').toString().replace(',', '.');
+  if (!isNaN(parseFloat(col8)) && col8 !== '') {
+    // tiene pts — ¿tiene feedback en col 10?
+    const col10 = row[10];
+    if (col10 !== undefined && isNaN(parseFloat((col10 || '').toString().replace(',', '.')))) {
+      return 6; // texto en col 10 → es feedback
+    }
+    return 5;
+  }
   return 3;
 }
 
@@ -88,8 +97,7 @@ function buildQuestionStats(rows, quizTitle) {
     while (col + 2 <= row.length) {
       const texto     = (row[col]     || '').trim();
       const resultado = (row[col + 2] || '').trim().toLowerCase();
-      col += stride;
-      if (!texto) continue;
+      col += stride;      if (!texto) continue;
 
       const key = texto.substring(0, 80).toLowerCase();
       if (!statsMap[key]) {
@@ -134,8 +142,9 @@ function buildStudentAnswers(rows, quizTitle) {
       const question = (row[col]     || '').trim();
       const answer   = (row[col + 1] || '').trim();
       const result   = (row[col + 2] || '').trim().toLowerCase();
-      const pts      = stride === 5 ? parseFloat((row[col + 3] || '').toString().replace(',', '.')) : undefined;
-      const maxPts   = stride === 5 ? parseFloat((row[col + 4] || '').toString().replace(',', '.')) : undefined;
+      const pts      = stride >= 5 ? parseFloat((row[col + 3] || '').toString().replace(',', '.')) : undefined;
+      const maxPts   = stride >= 5 ? parseFloat((row[col + 4] || '').toString().replace(',', '.')) : undefined;
+      const feedback = stride >= 6 ? (row[col + 5] || '').trim() : undefined;
       col += stride;
       if (!question) continue;
 
@@ -145,7 +154,8 @@ function buildStudentAnswers(rows, quizTitle) {
         answer,
         result,
         ...(isNaN(pts)    ? {} : { pts }),
-        ...(isNaN(maxPts) ? {} : { maxPts })
+        ...(isNaN(maxPts) ? {} : { maxPts }),
+        ...(feedback !== undefined ? { feedback } : {})
       });
     }
 
@@ -213,8 +223,8 @@ exports.handler = async function(event) {
     let questionStats  = [];
     let studentAnswers = [];
     if (respSheet) {
-      // CB cubre hasta 15 preguntas × 5 cols + 5 cols iniciales = col 80
-      const respRows = await readSheet(token, sheetId, respSheet, 'A2:CB');
+      // CN cubre hasta 15 preguntas × 6 cols + 5 cols iniciales = col 95
+      const respRows = await readSheet(token, sheetId, respSheet, 'A2:CN');
       questionStats  = buildQuestionStats(respRows, quizTitle);
       studentAnswers = buildStudentAnswers(respRows, quizTitle);
 
