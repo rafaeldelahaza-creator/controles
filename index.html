@@ -1714,7 +1714,7 @@ async function generateWithAI() {
     short: 'respuesta corta (1-2 palabras)',
     order: 'ordenar elementos (4-5 items)',
     vocab: '🇫🇷 test ampliado de vocabulario (6-8 opciones, SOLO para idiomas: pregunta una palabra y pone como opciones otras palabras de la misma lista del material)',
-    translate: '🇫🇷 traducción directa (SOLO para idiomas: lista de 4-6 pares término→traducción, incluye campo "direction": "fr_es" o "es_fr" y array "pairs" con objetos {term, answer})',
+    translate: '🇫🇷 traducción directa (SOLO para idiomas: lista de 4-6 pares término→traducción, incluye campo "direction": "fr_es" o "es_fr" y array "pairs" con objetos {term, answer, acceptedAnswers}. El campo "acceptedAnswers" es un array con todas las traducciones válidas del término: incluye variantes con distintos pronombres, artículos, orden de palabras y expresiones equivalentes. Ejemplo: "j\'adore le riz" → acceptedAnswers: ["me encanta el arroz", "adoro el arroz", "a mí me encanta el arroz", "yo adoro el arroz"]. Para vocabulario suelto como "le chat" → acceptedAnswers: ["el gato", "gato"]. Sé generoso: incluye al menos 3-4 variantes por par cuando el término es una frase o expresión)',
     emoji: '🇫🇷 emoji→palabra (SOLO para idiomas: 4-6 emojis que representen palabras del vocabulario del material, el alumno escribe la palabra en el idioma extranjero, array "items" con objetos {emoji, answer})'
   };
   const typeDescriptions = types.map(t => typeNames[t]).filter(Boolean).join(', ');
@@ -1726,55 +1726,31 @@ INSTRUCCIONES PARA USO DE IMÁGENES:
 - NUNCA repitas la respuesta en la imagen si el alumno puede leerla directamente allí.
 - Si decides incluir una imagen, copia el campo "image" con el índice del archivo (0, 1, 2...) correspondiente.` : '';
 
-  const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en el material adjunto${material ? ' y el texto proporcionado' : ''}.
-
-${difficultyInstructions}
-
-Usa estos tipos de preguntas (distribúyelos equilibradamente): ${typeDescriptions}.
-${imageInstructions}
-
-RESTRICCIÓN CRÍTICA — MATERIAL:
-- Basa todas las preguntas exclusivamente en los conceptos, términos, reglas y vocabulario específico que aparezcan en el material proporcionado.
-- VOCABULARIO ESPECÍFICO (listas de palabras, fechas, nombres propios, fórmulas, términos técnicos): usa SOLO los que estén en el material. Si el material tiene 8 palabras de vocabulario en francés, solo usa esas 8, nunca añadas otras del mismo campo semántico.
-- GRAMÁTICA Y CONCEPTOS (reglas, estructuras, categorías gramaticales): puedes variar los ejemplos concretos que ilustran la regla. Si el material explica los determinantes con "este lápiz", puedes preguntar sobre determinantes usando "esa mesa" u otro sustantivo diferente. Lo que no puedes hacer es preguntar sobre un tipo de determinante que no aparezca en el material.
-- Si el material es insuficiente para generar ${n} preguntas distintas, genera menos preguntas (las que el material permita) y avísalo en el campo "title" añadiendo " (material limitado)".
-
-PUNTUACIÓN — MUY IMPORTANTE:
-- El campo "points" de cada pregunta representa su valor en la nota final sobre 10.
-- La suma de todos los "points" debe ser EXACTAMENTE 10. Sin excepción.
-- Asigna más puntos a preguntas más complejas (match, order, short) y menos a las más sencillas (tf, test simple).
-- Usa valores con hasta 1 decimal (ej: 1.5, 2.5) para ajustar con precisión.
-- Antes de responder, verifica mentalmente que la suma da 10.
-
-Responde SOLO con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown):
-{
-  "title": "Control de ${subject}",
-  "subject": "${subject}",
-  "timeMinutes": ${timeLimit},
-  "questions": [
-    {
+  // Build example JSON with ONLY the selected types
+  const allExamples = {
+    test: `    {
       "id": 1,
       "type": "test",
       "text": "¿Pregunta?",
       "options": ["a) opción1", "b) opción2", "c) opción3", "d) opción4"],
       "correct": "a) opción1",
       "points": 2
-    },
-    {
+    }`,
+    tf: `    {
       "id": 2,
       "type": "tf",
       "text": "Afirmación verdadera o falsa.",
       "correct": "verdadero",
       "points": 1
-    },
-    {
+    }`,
+    fill: `    {
       "id": 3,
       "type": "fill",
       "text": "La capital de España es ___.",
       "blanks": ["Madrid"],
       "points": 2
-    },
-    {
+    }`,
+    match: `    {
       "id": 4,
       "type": "match",
       "text": "Relaciona cada elemento con su descripción:",
@@ -1782,44 +1758,44 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
       "rightItems": ["Descripción 1", "Descripción 2", "Descripción 3", "Descripción 4"],
       "correctPairs": {"Elemento A": "Descripción 1", "Elemento B": "Descripción 2", "Elemento C": "Descripción 3", "Elemento D": "Descripción 4"},
       "points": 3
-    },
-    {
+    }`,
+    short: `    {
       "id": 5,
       "type": "short",
       "text": "¿Cómo se llama...?",
       "correct": "respuesta",
       "acceptedAnswers": ["respuesta", "respuesta alternativa"],
       "points": 1.5
-    },
-    {
+    }`,
+    order: `    {
       "id": 6,
       "type": "order",
       "text": "Ordena los siguientes elementos:",
       "items": ["Primero", "Segundo", "Tercero", "Cuarto"],
       "correctOrder": ["Primero", "Segundo", "Tercero", "Cuarto"],
       "points": 0.5
-    },
-    {
+    }`,
+    vocab: `    {
       "id": 7,
       "type": "vocab",
       "text": "¿Qué significa 'le chat'?",
       "options": ["a) el perro", "b) el gato", "c) el pájaro", "d) el pez", "e) el ratón", "f) el conejo"],
       "correct": "b) el gato",
       "points": 1
-    },
-    {
+    }`,
+    translate: `    {
       "id": 8,
       "type": "translate",
       "text": "Traduce las siguientes palabras del francés al español:",
       "direction": "fr_es",
       "pairs": [
-        {"term": "le pain", "answer": "el pan"},
-        {"term": "la pomme", "answer": "la manzana"},
-        {"term": "le lait", "answer": "la leche"}
+        {"term": "j'adore le riz", "answer": "me encanta el arroz", "acceptedAnswers": ["me encanta el arroz", "adoro el arroz", "a mí me encanta el arroz", "yo adoro el arroz", "me encanta arroz"]},
+        {"term": "le pain", "answer": "el pan", "acceptedAnswers": ["el pan", "pan"]},
+        {"term": "la pomme", "answer": "la manzana", "acceptedAnswers": ["la manzana", "manzana"]}
       ],
       "points": 2
-    },
-    {
+    }`,
+    emoji: `    {
       "id": 9,
       "type": "emoji",
       "text": "Escribe en francés la palabra que representa cada imagen:",
@@ -1829,11 +1805,43 @@ Responde SOLO con un JSON válido con esta estructura exacta (sin texto adiciona
         {"emoji": "🏠", "answer": "la maison"}
       ],
       "points": 1.5
-    }
+    }`
+  };
+  const selectedExamples = types.map(t => allExamples[t]).filter(Boolean).join(',\n');
+
+  const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en el material adjunto${material ? ' y el texto proporcionado' : ''}.
+
+${difficultyInstructions}
+
+TIPOS DE PREGUNTAS PERMITIDOS — USA ÚNICAMENTE ESTOS (ni uno más, ni uno menos):
+${typeDescriptions}
+PROHIBIDO usar cualquier tipo que no esté en esa lista. Si solo hay un tipo seleccionado, todas las preguntas deben ser de ese tipo.
+${imageInstructions}
+
+RESTRICCIÓN CRÍTICA — MATERIAL:
+- Basa todas las preguntas en los conceptos, estructuras, reglas y vocabulario que aparezcan en el material proporcionado.
+- VOCABULARIO / LISTAS (palabras sueltas, alimentos, animales, objetos, nombres propios, fechas, fórmulas, términos técnicos): usa SOLO los que estén explícitamente en el material. Si el material tiene 10 palabras de vocabulario en francés, solo usa esas 10; nunca añadas otras del mismo campo semántico aunque sean parecidas.
+- ESTRUCTURAS GRAMATICALES Y EXPRESIONES (j'aime / j'adore / je n'aime pas, determinantes, conjugaciones, estructuras de frase…): la estructura debe aparecer en el material, pero PUEDES combinarla libremente con cualquier término de vocabulario que sí esté en el material. Ejemplo: si el material enseña "j'adore" con "le riz" y también lista otros alimentos como "le pain" y "la pomme", puedes generar preguntas con "j'adore le pain" o "j'aime la pomme" aunque no aparezcan exactamente así en el texto. Lo que NO puedes hacer es usar alimentos u otras palabras que no estén en ninguna parte del material.
+- Si el material es insuficiente para generar ${n} preguntas distintas, genera menos preguntas (las que el material permita) y avísalo en el campo "title" añadiendo " (material limitado)".
+
+PUNTUACIÓN — MUY IMPORTANTE:
+- El campo "points" de cada pregunta representa su valor en la nota final sobre 10.
+- La suma de todos los "points" debe ser EXACTAMENTE 10. Sin excepción.
+- Asigna más puntos a preguntas más complejas (match, order, short) y menos a las más sencillas (tf, test simple).
+- Usa valores con hasta 1 decimal (ej: 1.5, 2.5) para ajustar con precisión.
+- Antes de responder, verifica mentalmente que la suma da 10.
+
+Responde SOLO con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown). El array "questions" debe contener ÚNICAMENTE preguntas de los tipos permitidos indicados arriba:
+{
+  "title": "Control de ${subject}",
+  "subject": "${subject}",
+  "timeMinutes": ${timeLimit},
+  "questions": [
+${selectedExamples}
   ]
 }
 
-Genera exactamente ${n} preguntas reales basadas en el material. Adapta los tipos a lo que tenga sentido con ese contenido. Recuerda: los "points" deben sumar exactamente 10.`;
+Genera exactamente ${n} preguntas reales basadas en el material. Usa SOLO los tipos de pregunta listados en "TIPOS DE PREGUNTAS PERMITIDOS". Recuerda: los "points" deben sumar exactamente 10.`;
 
   // Build multimodal message content
   let messageContent = [];
@@ -1992,20 +2000,25 @@ async function regenQuestion(i) {
   const typeLabels = { test: 'test (4 opciones, una correcta)', tf: 'verdadero/falso', fill: 'completar huecos', match: 'relacionar columnas (4 pares)', short: 'respuesta corta', order: 'ordenar elementos' };
 
   const prompt = `Eres un generador de preguntas para un examen de primaria (5º-6º) de ${subject}.
+${material ? `
+MATERIAL DE REFERENCIA (FUENTE ÚNICA Y OBLIGATORIA):
+${material.substring(0, 3000)}
 
-Ya existen estas preguntas en el control:
+REGLAS SOBRE EL MATERIAL:
+- VOCABULARIO / LISTAS (palabras sueltas, alimentos, animales, objetos, nombres, fechas…): usa SOLO los que aparezcan en el material. No añadas sinónimos ni palabras del mismo campo semántico que no estén en el texto.
+- ESTRUCTURAS GRAMATICALES (j'aime / j'adore / je n'aime pas, conjugaciones, determinantes…): la estructura debe aparecer en el material, pero PUEDES combinarla con cualquier término de vocabulario que sí esté en el material, aunque esa combinación exacta no aparezca. Ejemplo: si el material enseña "j'adore" y lista varios alimentos, puedes crear frases con esos alimentos aunque el ejemplo del texto solo use uno.
+- Nunca uses términos, palabras o conceptos que no estén en ninguna parte del material.
+` : `
+ATENCIÓN: No se ha proporcionado material. Genera una pregunta coherente con las ya existentes, sin inventar contenido.`}
+Ya existen estas preguntas en el control (no repitas ninguna):
 ${existingTexts || '(Ninguna todavía)'}
 
 Necesito UNA SOLA pregunta nueva de tipo "${typeLabels[type] || type}".
 IMPORTANTE:
 - No debe repetir ninguna de las preguntas ya existentes
+- SOLO usa contenido que aparezca en el material de referencia
+- Si no encuentras contenido nuevo, elige un aspecto diferente del mismo texto
 - Debe estar en español
-${material ? `
-MATERIAL DE REFERENCIA (obligatorio):
-${material.substring(0, 3000)}
-
-RESTRICCIÓN CRÍTICA: Basa la pregunta en los conceptos, términos y vocabulario específico del material. Para listas de vocabulario (palabras en otro idioma, nombres, fechas, términos técnicos), usa SOLO los que aparezcan en el material. Para gramática o conceptos con reglas, puedes variar los ejemplos concretos que ilustran la regla, pero no inventes tipos o categorías que no estén en el material.` : `
-ATENCIÓN: No se ha proporcionado material. Genera una pregunta coherente con las ya existentes, sin inventar contenido que no aparezca ya en las preguntas del control.`}
 
 Responde SOLO con el JSON de la pregunta, sin explicaciones, sin bloques de código, sin markdown. Formato exacto:
 ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","b) opción2","c) opción3","d) opción4"],"correct":"a) opción1","points":1}' :
@@ -2014,7 +2027,7 @@ ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","
   type === 'match' ? '{"type":"match","text":"Relaciona:","leftItems":["A","B","C","D"],"rightItems":["1","2","3","4"],"correctPairs":{"A":"1","B":"2","C":"3","D":"4"},"points":2}' :
   type === 'short' ? '{"type":"short","text":"¿Pregunta?","correct":"respuesta","acceptedAnswers":["respuesta"],"points":1}' :
   type === 'vocab' ? '{"type":"vocab","text":"¿Qué significa \'mot\'?","options":["a) opción1","b) opción2","c) opción3","d) opción4","e) opción5","f) opción6"],"correct":"b) opción2","points":1}' :
-  type === 'translate' ? '{"type":"translate","text":"Traduce las siguientes palabras:","direction":"fr_es","pairs":[{"term":"mot","answer":"palabra"},{"term":"mot2","answer":"palabra2"}],"points":2}' :
+  type === 'translate' ? '{"type":"translate","text":"Traduce las siguientes palabras:","direction":"fr_es","pairs":[{"term":"j\'aime le chat","answer":"me gusta el gato","acceptedAnswers":["me gusta el gato","me gusta gato","a mí me gusta el gato","yo quiero el gato"]},{"term":"le pain","answer":"el pan","acceptedAnswers":["el pan","pan"]}],"points":2}' :
   type === 'emoji' ? '{"type":"emoji","text":"Escribe en francés la palabra que representa cada imagen:","items":[{"emoji":"🍎","answer":"la pomme"},{"emoji":"🐱","answer":"le chat"}],"points":1.5}' :
   '{"type":"order","text":"Ordena:","items":["1","2","3"],"correctOrder":["1","2","3"],"points":2}'}`;
 
@@ -2132,10 +2145,18 @@ function buildEditorBlock(q, i) {
     </select>
     <label>Pares (${dir==='fr_es'?'francés → español':'español → francés'})</label>`;
     (q.pairs || []).forEach((pair, pi) => {
-      inner += `<div class="option-row">
-        <input type="text" value="${escHtml(pair.term||'')}" placeholder="${dir==='fr_es'?'Palabra en francés':'Palabra en español'}" oninput="editorQuestions[${i}].pairs[${pi}].term=this.value" style="flex:1">
-        <span style="font-weight:800;color:var(--primary)">→</span>
-        <input type="text" value="${escHtml(pair.answer||'')}" placeholder="${dir==='fr_es'?'Traducción al español':'Traducción al francés'}" oninput="editorQuestions[${i}].pairs[${pi}].answer=this.value" style="flex:1">
+      const accepted = (pair.acceptedAnswers && pair.acceptedAnswers.length > 0) ? pair.acceptedAnswers : [pair.answer || ''];
+      inner += `<div style="background:#f8f9ff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+        <div class="option-row" style="margin-bottom:6px">
+          <input type="text" value="${escHtml(pair.term||'')}" placeholder="${dir==='fr_es'?'Expresión en francés':'Expresión en español'}" oninput="editorQuestions[${i}].pairs[${pi}].term=this.value" style="flex:1;margin-bottom:0">
+          <span style="font-weight:800;color:var(--primary)">→</span>
+          <input type="text" value="${escHtml(pair.answer||'')}" placeholder="Traducción principal" oninput="editorQuestions[${i}].pairs[${pi}].answer=this.value;if(!editorQuestions[${i}].pairs[${pi}].acceptedAnswers||editorQuestions[${i}].pairs[${pi}].acceptedAnswers.length===0)editorQuestions[${i}].pairs[${pi}].acceptedAnswers=[this.value]" style="flex:1;margin-bottom:0">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">✅ También válido:</span>
+          <input type="text" value="${escHtml(accepted.join(' | '))}" placeholder="ej: me encanta el arroz | adoro el arroz | a mí me encanta el arroz" oninput="editorQuestions[${i}].pairs[${pi}].acceptedAnswers=this.value.split('|').map(s=>s.trim()).filter(Boolean);if(this.value.split('|').length>0)editorQuestions[${i}].pairs[${pi}].answer=editorQuestions[${i}].pairs[${pi}].acceptedAnswers[0]||editorQuestions[${i}].pairs[${pi}].answer" style="flex:1;font-size:0.82rem;padding:6px 10px;margin-bottom:0;border-color:#d1fae5">
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:3px">Separa las variantes con <strong>|</strong> — la primera es la que se muestra como corrección</div>
       </div>`;
     });
     inner += `<button type="button" onclick="addTranslatePair(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir par</button>`;
@@ -2185,7 +2206,7 @@ function addVocabOption(qi) {
 
 function addTranslatePair(qi) {
   if (!editorQuestions[qi].pairs) editorQuestions[qi].pairs = [];
-  editorQuestions[qi].pairs.push({ term: '', answer: '' });
+  editorQuestions[qi].pairs.push({ term: '', answer: '', acceptedAnswers: [] });
   renderEditor();
 }
 
@@ -3050,7 +3071,8 @@ function submitQuiz() {
       pairs.forEach((pair, pi) => {
         const input = document.getElementById(`tr-${i}-${pi}`);
         const raw = input ? input.value.trim() : '';
-        const trResult = matchShortAnswer(raw, [pair.answer]);
+        const accepted = (pair.acceptedAnswers && pair.acceptedAnswers.length > 0) ? pair.acceptedAnswers : [pair.answer];
+        const trResult = matchShortAnswer(raw, accepted);
         if (trResult.match) pairsCorrect++;
         const icon = trResult.match ? '✅' : '❌';
         const fuzzyNote = trResult.match && !trResult.exact ? ` (ortografía: ${trResult.correctAnswer})` : '';
