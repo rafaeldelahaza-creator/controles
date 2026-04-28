@@ -3197,15 +3197,16 @@ function submitQuiz() {
 
 CRITERIOS — aplica estos sin excepción:
 - CORRECTO: el alumno transmite el significado correcto aunque use palabras distintas. Acepta SIN DUDAR:
-  · Cualquier variante pronominal equivalente: "me gusta" = "a mí me gusta" = "yo adoro" = "me encanta" = "me chifla"
-  · Negación equivalente: "no me gusta" = "no me apetece" = "no me gusta nada"
-  · Singular/plural con mismo significado: "la fruta" = "las frutas" = "los frutos"
-  · Artículo distinto o ausente: "el arroz" = "arroz" = "un arroz"
-  · Errores gramaticales típicos de primaria SIN cambio de significado: "ella no le gusta la fruta" es CORRECTO aunque debería ser "a ella no le gusta la fruta"
-  · Sinónimos obvios: "amar" = "adorar" = "encantar" = "querer mucho"
-  · Faltas leves: "arros", "frúta", "encanta" mal acentuado
-- PARCIAL: el alumno demuestra comprensión parcial — acierta el verbo pero falla el complemento, o acierta la estructura pero omite un elemento clave.
-- INCORRECTO: respuesta vacía, completamente equivocada o sin relación con lo pedido.
+  · Variantes pronominales: "me gusta" = "a mí me gusta" = "yo adoro" = "me encanta"
+  · Negación equivalente: "no me gusta" = "no me apetece"
+  · Singular/plural con mismo significado: "la fruta" = "las frutas"
+  · Artículo distinto o ausente: "el arroz" = "arroz"
+  · Errores gramaticales de primaria sin cambio de significado: "ella no le gusta la fruta" = "a ella no le gusta la fruta"
+  · Sinónimos claros: "amar" = "adorar" = "encantar"
+  · Faltas leves de ortografía que no cambian el significado
+  · DEFINICIONES CON LAS PROPIAS PALABRAS: si el alumno explica el concepto correctamente aunque no use las palabras exactas de la definición oficial, es CORRECTO. Ej: "¿Qué es la materia?" → "todo lo que existe y ocupa espacio" = "las cosas que nos rodean" = "lo que podemos tocar" son todas correctas aunque difieran de la definición del libro.
+- PARCIAL: capta la idea principal pero le falta un elemento importante, o la definición es demasiado incompleta o solo da ejemplos sin explicar el concepto.
+- INCORRECTO: respuesta vacía, completamente equivocada o sin ninguna relación con lo pedido.
 
 REGLA DE ORO: ante la duda, sube el veredicto un nivel (wrong→partial, partial→correct).
 
@@ -3217,9 +3218,9 @@ ${aiItems.map((p, n) => {
   return n+1 + '. [' + p.type + '] "' + (p.question||p.term) + '"\n   Respuesta correcta: ' + p.correctAnswer + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"';
 }).join('\n\n')}
 
-Responde SOLO con JSON array. "feedback" = frase corta y clara para el alumno (en español):
-- CORRECTO: "Correcto. [motivo breve]. La respuesta oficial era: [respuesta correcta]."
-- PARCIAL: "Casi bien. [qué falla]. La respuesta correcta era: [respuesta correcta]."
+Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alumno (máximo 15 palabras, sin explicaciones elaboradas):
+- CORRECTO: "Correcto. La respuesta era: [respuesta correcta]."
+- PARCIAL: "Casi. La respuesta correcta era: [respuesta correcta]."
 - INCORRECTO: "Incorrecto. La respuesta correcta era: [respuesta correcta]."
 [{"itemIdx": <posición en este array 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos para este ítem>, "feedback": "..."}]`;
 
