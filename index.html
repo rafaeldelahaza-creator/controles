@@ -3077,7 +3077,7 @@ function submitQuiz() {
       const pairs = q.pairs || [];
       let pairsCorrect = 0;
       const pairResults = [];
-      const wrongCorrections = [];
+      const pairDetails = []; // store per-pair info for AI review
       pairs.forEach((pair, pi) => {
         const input = document.getElementById(`tr-${i}-${pi}`);
         const raw = input ? input.value.trim() : '';
@@ -3085,17 +3085,17 @@ function submitQuiz() {
         const trResult = matchShortAnswer(raw, accepted);
         if (trResult.match) pairsCorrect++;
         const icon = trResult.match ? '✅' : '❌';
-        const fuzzyNote = trResult.match && !trResult.exact ? ` (ortografía: ${trResult.correctAnswer})` : '';
-        pairResults.push(`${pair.term}→${raw || '–'}${icon}${fuzzyNote}`);
-        if (!trResult.match) wrongCorrections.push(`${pair.term}→${pair.answer}`);
+        const fuzzyNote = trResult.match && !trResult.exact ? ` (revisa ortografía: ${trResult.correctAnswer})` : '';
+        pairResults.push(`${pair.term} → ${raw || '–'} ${icon}${fuzzyNote}`);
+        pairDetails.push({ term: pair.term, correctAnswer: pair.answer, studentAnswer: raw, matched: trResult.match });
       });
       correct = pairsCorrect === pairs.length;
       const partialTr = pairsCorrect > 0 && !correct;
       studentAnswer = pairResults.join(' | ');
       if (correct) earnedPoints += q.points;
       else if (partialTr) earnedPoints += q.points * (pairsCorrect / pairs.length);
-      feedback = correct ? 'Todo correcto' : (wrongCorrections.length > 0 ? `Correcto: ${wrongCorrections.join(' | ')}` : `${pairsCorrect}/${pairs.length} correctas`);
-      review.push({ text: q.text, correct, partial: partialTr, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
+      feedback = correct ? 'Todo correcto' : `${pairsCorrect}/${pairs.length} correctas`;
+      review.push({ text: q.text, correct, partial: partialTr, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points, pairDetails });
       return;
 
     } else if (q.type === 'emoji') {
@@ -3158,47 +3158,70 @@ function submitQuiz() {
     if (openToReview.length > 0) {
       try {
         const subject = currentQuiz.subject || currentQuiz.title || 'la asignatura';
-        const payload = openToReview.map(({ q, i, r }) => ({
-          idx: i,
-          type: q.type,
-          question: q.text,
-          correctAnswer: q.type === 'translate'
-            ? (q.pairs || []).map(p => `${p.term} → ${p.answer}`).join(', ')
-            : q.type === 'fill'
-              ? (q.blanks || []).join(', ')
-              : (q.acceptedAnswers || [q.correct]).join(' / '),
-          studentAnswer: r.studentAnswer,
-          maxPoints: q.points,
-          currentPoints: r.pts
-        }));
+        // Build items: for translate, expand each failed pair as a separate item
+        const aiItems = [];
+        openToReview.forEach(({ q, i, r }) => {
+          if (q.type === 'translate') {
+            (r.pairDetails || []).forEach((pd, pi) => {
+              if (!pd.matched) {
+                aiItems.push({
+                  idx: i,
+                  pairIdx: pi,
+                  type: 'translate_pair',
+                  term: pd.term,
+                  correctAnswer: pd.correctAnswer,
+                  acceptedAnswers: (q.pairs[pi].acceptedAnswers || [pd.correctAnswer]).join(' / '),
+                  studentAnswer: pd.studentAnswer,
+                  maxPoints: q.points,
+                  totalPairs: (q.pairs || []).length
+                });
+              }
+            });
+          } else {
+            aiItems.push({
+              idx: i,
+              pairIdx: null,
+              type: q.type,
+              question: q.text,
+              correctAnswer: q.type === 'fill'
+                ? (q.blanks || []).join(', ')
+                : (q.acceptedAnswers || [q.correct]).join(' / '),
+              studentAnswer: r.studentAnswer,
+              maxPoints: q.points,
+              totalPairs: 1
+            });
+          }
+        });
 
-        const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa las respuestas de un alumno con criterio MUY flexible y generoso, propio de primaria.
+        const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa cada respuesta con criterio MUY generoso y flexible, propio de primaria.
 
-CRITERIOS DE EVALUACIÓN — LEE CON ATENCIÓN:
-- ✅ CORRECTO (puntos completos): la respuesta transmite el mismo significado que la correcta. Acepta SIN DUDAR:
-  · Variantes pronominales: "me gusta / a mí me gusta / me encanta / yo adoro"
-  · Singular/plural intercambiables si el sentido es el mismo: "la fruta / las frutas", "el arroz / los arroces"
-  · Artículos distintos o ausentes: "el arroz / arroz / un arroz"
-  · Errores gramaticales típicos de primaria que no afectan al significado: "ella no le gusta" en vez de "a ella no le gusta"
-  · Sinónimos claros del mismo campo semántico: "me encanta / adoro / me chifla"
-  · Pequeñas faltas de ortografía que no cambian el significado: "arros", "frúta"
-  · Diferente orden de palabras con mismo significado
-- 🟡 PARCIAL (mitad de puntos): entiende la idea principal pero falta un elemento importante (ej: traduce bien el verbo pero omite el complemento, o acierta la negación pero falla el objeto).
-- ❌ INCORRECTO (0 puntos): la respuesta es incorrecta, vacía, inventada, o no guarda ninguna relación con lo pedido.
+CRITERIOS — aplica estos sin excepción:
+- CORRECTO: el alumno transmite el significado correcto aunque use palabras distintas. Acepta SIN DUDAR:
+  · Cualquier variante pronominal equivalente: "me gusta" = "a mí me gusta" = "yo adoro" = "me encanta" = "me chifla"
+  · Negación equivalente: "no me gusta" = "no me apetece" = "no me gusta nada"
+  · Singular/plural con mismo significado: "la fruta" = "las frutas" = "los frutos"
+  · Artículo distinto o ausente: "el arroz" = "arroz" = "un arroz"
+  · Errores gramaticales típicos de primaria SIN cambio de significado: "ella no le gusta la fruta" es CORRECTO aunque debería ser "a ella no le gusta la fruta"
+  · Sinónimos obvios: "amar" = "adorar" = "encantar" = "querer mucho"
+  · Faltas leves: "arros", "frúta", "encanta" mal acentuado
+- PARCIAL: el alumno demuestra comprensión parcial — acierta el verbo pero falla el complemento, o acierta la estructura pero omite un elemento clave.
+- INCORRECTO: respuesta vacía, completamente equivocada o sin relación con lo pedido.
 
-REGLA DE ORO: En caso de duda entre CORRECTO y PARCIAL, elige CORRECTO. Entre PARCIAL e INCORRECTO, elige PARCIAL. Es mejor ser generoso que injusto con un alumno de primaria.
+REGLA DE ORO: ante la duda, sube el veredicto un nivel (wrong→partial, partial→correct).
 
-PREGUNTAS A EVALUAR:
-${payload.map((p, n) => `${n + 1}. [${p.type}] Pregunta: "${p.question}"
-   Respuesta correcta: ${p.correctAnswer}
-   Respuesta del alumno: "${p.studentAnswer}"
-   Puntos máximos: ${p.maxPoints}`).join('\n\n')}
+ÍTEMS A EVALUAR:
+${aiItems.map((p, n) => {
+  if (p.type === 'translate_pair') {
+    return n+1 + '. Traducción de: "' + p.term + '"\n   Respuesta correcta: ' + p.correctAnswer + (p.acceptedAnswers !== p.correctAnswer ? ' (también válido: ' + p.acceptedAnswers + ')' : '') + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"';
+  }
+  return n+1 + '. [' + p.type + '] "' + (p.question||p.term) + '"\n   Respuesta correcta: ' + p.correctAnswer + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"';
+}).join('\n\n')}
 
-Responde SOLO con un JSON array, sin texto adicional, sin markdown. El campo "feedback" debe ser una frase clara para el alumno:
-- Si es CORRECTO: explica brevemente por qué se acepta su respuesta aunque difiera de la oficial. Ej: "Correcto. Tu respuesta tiene el mismo significado aunque uses una expresión diferente. La respuesta oficial era: A él le gusta el arroz."
-- Si es PARCIAL: explica qué parte está bien y qué falta o falla. Ej: "Casi. Entiendes la idea pero falta precisión. La respuesta correcta era: Ella no le gustan las frutas."
-- Si es INCORRECTO: indica la respuesta correcta. Ej: "Incorrecto. La respuesta correcta era: Me encantan las frutas."
-[{"idx": <número de índice original>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos a asignar>, "feedback": "<feedback detallado para el alumno>"}]`;
+Responde SOLO con JSON array. "feedback" = frase corta y clara para el alumno (en español):
+- CORRECTO: "Correcto. [motivo breve]. La respuesta oficial era: [respuesta correcta]."
+- PARCIAL: "Casi bien. [qué falla]. La respuesta correcta era: [respuesta correcta]."
+- INCORRECTO: "Incorrecto. La respuesta correcta era: [respuesta correcta]."
+[{"itemIdx": <posición en este array 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos para este ítem>, "feedback": "..."}]`;
 
         const resp = await fetch('/.netlify/functions/generate', {
           method: 'POST',
@@ -3215,32 +3238,68 @@ Responde SOLO con un JSON array, sin texto adicional, sin markdown. El campo "fe
           const clean = text.replace(/```json|```/g, '').trim();
           const aiResults = JSON.parse(clean);
 
-          aiResults.forEach(ar => {
-            const origR = updatedReview[ar.idx];
-            if (!origR) return;
-            const oldPts = origR.pts || 0;
-            const newPts = Math.min(ar.pts, origR.maxPts);
-            if (newPts > oldPts) {
-              updatedEarned += (newPts - oldPts);
-              // Construir feedback detallado para el alumno
-              const origCorrect = origR.feedback && origR.feedback !== 'Correcto'
-                ? origR.feedback.replace(/^Correcto:\s*/i, '').replace(/^Respuesta:\s*/i, '')
-                : null;
-              let detailedFeedback = ar.feedback;
-              if (origCorrect) {
-                if (ar.verdict === 'correct') {
-                  detailedFeedback = `${ar.feedback} (la respuesta correcta era: ${origCorrect})`;
-                } else if (ar.verdict === 'partial') {
-                  detailedFeedback = `${ar.feedback} (respuesta correcta: ${origCorrect})`;
-                }
+          // Reconstruct per-question results from per-item AI verdicts
+          // Group items back by question idx
+          const byIdx = {};
+          aiItems.forEach((item, n) => {
+            const ar = aiResults.find(r => r.itemIdx === n);
+            if (!ar) return;
+            if (!byIdx[item.idx]) byIdx[item.idx] = { items: [], q: openToReview.find(x => x.i === item.idx) };
+            byIdx[item.idx].items.push({ item, ar });
+          });
+
+          Object.entries(byIdx).forEach(([idxStr, { items, q: qEntry }]) => {
+            const idx = parseInt(idxStr);
+            const origR = updatedReview[idx];
+            if (!origR || !qEntry) return;
+
+            if (qEntry.q.type === 'translate') {
+              // Recalculate translate score: previously matched pairs + newly AI-corrected ones
+              const totalPairs = (qEntry.q.pairs || []).length;
+              const alreadyCorrect = (qEntry.r.pairDetails || []).filter(pd => pd.matched).length;
+              const aiCorrect = items.filter(x => x.ar.verdict === 'correct').length;
+              const aiPartial = items.filter(x => x.ar.verdict === 'partial').length;
+              const newPairsCorrect = alreadyCorrect + aiCorrect + (aiPartial * 0.5);
+              const newPts = Math.min((qEntry.q.points * newPairsCorrect / totalPairs), qEntry.q.points);
+              const oldPts = origR.pts || 0;
+              if (newPts > oldPts) {
+                updatedEarned += (newPts - oldPts);
+                // Build updated pair results display
+                const updatedPairResults = (qEntry.r.pairDetails || []).map((pd, pi) => {
+                  if (pd.matched) return `${pd.term} → ${pd.studentAnswer} ✅`;
+                  const aiItem = items.find(x => x.item.pairIdx === pi);
+                  if (!aiItem) return `${pd.term} → ${pd.studentAnswer || '–'} ❌`;
+                  const icon = aiItem.ar.verdict === 'correct' ? '✅' : aiItem.ar.verdict === 'partial' ? '🟡' : '❌';
+                  return `${pd.term} → ${pd.studentAnswer || '–'} ${icon}`;
+                });
+                const feedbacks = items.map(x => x.ar.feedback).filter(Boolean);
+                const allCorrect = newPairsCorrect >= totalPairs;
+                const anyCorrect = newPairsCorrect > 0;
+                updatedReview[idx] = {
+                  ...origR,
+                  correct: allCorrect,
+                  partial: anyCorrect && !allCorrect,
+                  pts: Math.round(newPts * 10) / 10,
+                  studentAnswer: updatedPairResults.join(' | '),
+                  feedback: feedbacks.join(' | ')
+                };
               }
-              updatedReview[ar.idx] = {
-                ...origR,
-                correct: ar.verdict === 'correct',
-                partial: ar.verdict === 'partial',
-                pts: Math.round(newPts * 10) / 10,
-                feedback: detailedFeedback
-              };
+            } else {
+              // short / fill: single item
+              const ar = items[0]?.ar;
+              if (!ar) return;
+              const newPts = Math.min(ar.pts || 0, origR.maxPts);
+              const oldPts = origR.pts || 0;
+              if (newPts > oldPts) {
+                updatedEarned += (newPts - oldPts);
+                updatedReview[idx] = {
+                  ...origR,
+                  correct: ar.verdict === 'correct',
+                  partial: ar.verdict === 'partial',
+                  pts: Math.round(newPts * 10) / 10,
+                  feedback: ar.feedback
+                };
+              }
             }
           });
 
