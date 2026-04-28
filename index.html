@@ -1253,6 +1253,7 @@
       <div class="type-chip selected" data-type="fill">✏️ Completar huecos</div>
       <div class="type-chip selected" data-type="match">🔗 Relacionar</div>
       <div class="type-chip selected" data-type="short">💬 Respuesta corta</div>
+      <div class="type-chip" data-type="definition">📖 Definición</div>
       <div class="type-chip selected" data-type="order">🔢 Ordenar</div>
     </div>
     <div class="lang-section-label">🇫🇷 Solo para idiomas</div>
@@ -1296,6 +1297,7 @@
       <button class="btn btn-accent btn-sm" onclick="addQuestion('fill')">+ Huecos</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('match')">+ Relacionar</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('short')">+ Respuesta corta</button>
+      <button class="btn btn-accent btn-sm" onclick="addQuestion('definition')">+ Definición</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('order')">+ Ordenar</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:8px;border-top:1.5px dashed #fcd34d">
@@ -1722,6 +1724,7 @@ async function generateWithAI() {
     fill: 'completar huecos (usa ___ para el hueco)',
     match: 'relacionar columnas (4 pares)',
     short: 'respuesta corta (1-2 palabras)',
+    definition: 'definición breve (1-2 frases donde el alumno explica un concepto con sus propias palabras, ej: ¿Qué es la fotosíntesis? ¿Qué es la materia?)',
     order: 'ordenar elementos (4-5 items)',
     vocab: '🇫🇷 test ampliado de vocabulario (6-8 opciones, SOLO para idiomas: pregunta una palabra y pone como opciones otras palabras de la misma lista del material)',
     translate: '🇫🇷 traducción directa (SOLO para idiomas: lista de 4-6 pares término→traducción, incluye campo "direction": "fr_es" o "es_fr" y array "pairs" con objetos {term, answer, acceptedAnswers}. El campo "acceptedAnswers" es un array con todas las traducciones válidas del término: incluye variantes con distintos pronombres, artículos, orden de palabras y expresiones equivalentes. Ejemplo: "j\'adore le riz" → acceptedAnswers: ["me encanta el arroz", "adoro el arroz", "a mí me encanta el arroz", "yo adoro el arroz"]. Para vocabulario suelto como "le chat" → acceptedAnswers: ["el gato", "gato"]. Sé generoso: incluye al menos 3-4 variantes por par cuando el término es una frase o expresión)',
@@ -1776,6 +1779,14 @@ INSTRUCCIONES PARA USO DE IMÁGENES:
       "correct": "respuesta",
       "acceptedAnswers": ["respuesta", "respuesta alternativa"],
       "points": 1.5
+    }`,
+    definition: `    {
+      "id": 10,
+      "type": "definition",
+      "text": "¿Qué es la materia?",
+      "correct": "Todo lo que nos rodea, ocupa espacio y tiene masa.",
+      "acceptedAnswers": ["todo lo que nos rodea", "lo que ocupa espacio y tiene masa", "todo lo que existe y podemos percibir"],
+      "points": 2
     }`,
     order: `    {
       "id": 6,
@@ -1976,7 +1987,7 @@ function selectRegenType(i, type) {
 function getRegenType(i) {
   // Lee qué botón tiene la clase 'sel' en el panel
   const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
-  const typeMap = {'📋 Test':'test','✅ V/F':'tf','✏️ Huecos':'fill','🔗 Relacionar':'match','💬 Corta':'short','🔢 Ordenar':'order','🇫🇷 Test ampliado':'vocab','🇫🇷 Traducción':'translate','🇫🇷 Emoji→palabra':'emoji'};
+  const typeMap = {'📋 Test':'test','✅ V/F':'tf','✏️ Huecos':'fill','🔗 Relacionar':'match','💬 Corta':'short','🔢 Ordenar':'order','🇫🇷 Test ampliado':'vocab','🇫🇷 Traducción':'translate','🇫🇷 Emoji→palabra':'emoji','📖 Definición':'definition'};
   let sel = null;
   btns.forEach(b => { if (b.classList.contains('sel')) sel = typeMap[b.textContent.trim()] || Object.values(typeMap).find(v => b.textContent.includes(v)); });
   // Fallback: busca por texto
@@ -1984,7 +1995,7 @@ function getRegenType(i) {
     btns.forEach(b => {
       if (b.classList.contains('sel')) {
         const txt = b.textContent.trim();
-        for (const [k, v] of Object.entries({'Test':'test','V/F':'tf','Huecos':'fill','Relacionar':'match','Corta':'short','Ordenar':'order'})) {
+        for (const [k, v] of Object.entries({'Test':'test','V/F':'tf','Huecos':'fill','Relacionar':'match','Corta':'short','Ordenar':'order','Definición':'definition'})) {
           if (txt.includes(k)) sel = v;
         }
       }
@@ -2007,7 +2018,7 @@ async function regenQuestion(i) {
   // Material disponible
   const material = document.getElementById('material-input').value.trim();
   const subject = document.getElementById('subject-input').value || 'la asignatura';
-  const typeLabels = { test: 'test (4 opciones, una correcta)', tf: 'verdadero/falso', fill: 'completar huecos', match: 'relacionar columnas (4 pares)', short: 'respuesta corta', order: 'ordenar elementos' };
+  const typeLabels = { test: 'test (4 opciones, una correcta)', tf: 'verdadero/falso', fill: 'completar huecos', match: 'relacionar columnas (4 pares)', short: 'respuesta corta (1-2 palabras)', order: 'ordenar elementos', definition: 'definición breve con las propias palabras del alumno (1-2 frases)' };
 
   const prompt = `Eres un generador de preguntas para un examen de primaria (5º-6º) de ${subject}.
 ${material ? `
@@ -2036,6 +2047,7 @@ ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","
   type === 'fill' ? '{"type":"fill","text":"La ___ es importante.","blanks":["respuesta"],"points":1}' :
   type === 'match' ? '{"type":"match","text":"Relaciona:","leftItems":["A","B","C","D"],"rightItems":["1","2","3","4"],"correctPairs":{"A":"1","B":"2","C":"3","D":"4"},"points":2}' :
   type === 'short' ? '{"type":"short","text":"¿Pregunta?","correct":"respuesta","acceptedAnswers":["respuesta"],"points":1}' :
+  type === 'definition' ? '{"type":"definition","text":"¿Qué es...?","correct":"Definición completa del concepto.","acceptedAnswers":["definición alternativa válida","otra forma de explicarlo"],"points":2}' :
   type === 'vocab' ? '{"type":"vocab","text":"¿Qué significa \'mot\'?","options":["a) opción1","b) opción2","c) opción3","d) opción4","e) opción5","f) opción6"],"correct":"b) opción2","points":1}' :
   type === 'translate' ? '{"type":"translate","text":"Traduce las siguientes palabras:","direction":"fr_es","pairs":[{"term":"j\'aime le chat","answer":"me gusta el gato","acceptedAnswers":["me gusta el gato","me gusta gato","a mí me gusta el gato","yo quiero el gato"]},{"term":"le pain","answer":"el pan","acceptedAnswers":["el pan","pan"]}],"points":2}' :
   type === 'emoji' ? '{"type":"emoji","text":"Escribe en francés la palabra que representa cada imagen:","items":[{"emoji":"🍎","answer":"la pomme"},{"emoji":"🐱","answer":"le chat"}],"points":1.5}' :
@@ -2076,7 +2088,7 @@ function buildEditorBlock(q, i) {
   div.className = 'q-block';
   div.dataset.idx = i;
 
-  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra' };
+  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición' };
   let inner = `
     <button class="del-q" onclick="deleteQuestion(${i})" title="Eliminar pregunta">✕</button>
     <button class="regen-q" onclick="toggleRegenPanel(${i})" title="Regenerar esta pregunta con IA">🔄</button>
@@ -2130,7 +2142,12 @@ function buildEditorBlock(q, i) {
   } else if (q.type === 'short') {
     inner += `<label>Respuesta aceptada (separa alternativas con |)</label>
     <input type="text" value="${escHtml((q.acceptedAnswers||[q.correct||'']).join('|'))}" oninput="editorQuestions[${i}].acceptedAnswers=this.value.split('|').map(s=>s.trim());editorQuestions[${i}].correct=editorQuestions[${i}].acceptedAnswers[0]">`;
-  } else if (q.type === 'order') {
+  } else if (q.type === 'definition') {
+    inner += `<label>Definición correcta (referencia del libro)</label>
+    <textarea rows="3" style="width:100%;font-family:inherit;font-size:0.9rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px" oninput="editorQuestions[${i}].correct=this.value;if(!editorQuestions[${i}].acceptedAnswers||editorQuestions[${i}].acceptedAnswers.length===0)editorQuestions[${i}].acceptedAnswers=[this.value]" placeholder="Definición oficial o del libro de texto">${escHtml(q.correct||'')}</textarea>
+    <label style="font-size:0.8rem;color:var(--muted)">Otras formas válidas de explicarlo (separa con |)</label>
+    <input type="text" value="${escHtml((q.acceptedAnswers||[q.correct||'']).filter(Boolean).join(' | '))}" placeholder="ej: lo que podemos tocar y ver | todo lo que existe | todo lo que ocupa espacio" oninput="editorQuestions[${i}].acceptedAnswers=this.value.split('|').map(s=>s.trim()).filter(Boolean)" style="font-size:0.85rem">
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:3px">La IA acepta automáticamente variantes equivalentes aunque no estén aquí</div>`;
     inner += `<label>Orden correcto (uno por línea)</label>
     <textarea style="min-height:80px" oninput="editorQuestions[${i}].correctOrder=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);editorQuestions[${i}].items=[...editorQuestions[${i}].correctOrder]">${escHtml((q.correctOrder||q.items||[]).join('\n'))}</textarea>`;
 
@@ -2253,6 +2270,7 @@ function addQuestion(type) {
     fill: { type: 'fill', text: '___ es la respuesta.', blanks: ['respuesta'], points: 1 },
     match: { type: 'match', text: 'Relaciona:', leftItems: ['A', 'B', 'C', 'D'], rightItems: ['1', '2', '3', '4'], correctPairs: { A: '1', B: '2', C: '3', D: '4' }, points: 2 },
     short: { type: 'short', text: '¿…?', correct: '', acceptedAnswers: [''], points: 1 },
+    definition: { type: 'definition', text: '¿Qué es…?', correct: '', acceptedAnswers: [''], points: 2 },
     order: { type: 'order', text: 'Ordena:', items: ['Primero', 'Segundo', 'Tercero'], correctOrder: ['Primero', 'Segundo', 'Tercero'], points: 2 },
     vocab: { type: 'vocab', text: '¿Qué significa…?', options: ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) '], correct: 'a) ', points: 1 },
     translate: { type: 'translate', text: 'Traduce las siguientes palabras:', direction: 'fr_es', pairs: [{ term: '', answer: '' }, { term: '', answer: '' }, { term: '', answer: '' }], points: 2 },
@@ -2361,6 +2379,8 @@ function previewQuiz() {
       wrap.innerHTML = html;
     } else if (q.type === 'short') {
       wrap.innerHTML = `<input class="short-input" type="text" placeholder="Escribe tu respuesta…">`;
+    } else if (q.type === 'definition') {
+      wrap.innerHTML = `<textarea class="short-input" placeholder="Explica el concepto con tus propias palabras…" rows="3" style="resize:none;width:100%;font-family:inherit;font-size:1rem;padding:10px 14px" disabled></textarea>`;
     } else if (q.type === 'order') {
       const items = q.items.map((item, ii) => `<li class="order-item" style="cursor:default"><span class="order-num">${ii + 1}</span><span>${escHtml(item)}</span></li>`).join('');
       wrap.innerHTML = `<ul class="order-list">${items}</ul>`;
@@ -3054,6 +3074,14 @@ function submitQuiz() {
             ? `✅ Correcto (revisa ortografía: la respuesta correcta es "${shortResult.correctAnswer}")`
             : 'Correcto');
 
+    } else if (q.type === 'definition') {
+      studentAnswer = (document.getElementById(`definition-${i}`)?.value || '').trim();
+      const defAccepted = (q.acceptedAnswers || [q.correct]).filter(Boolean);
+      const defResult = matchShortAnswer(studentAnswer, defAccepted);
+      correct = defResult.match;
+      // Definitions always go through AI review — mark as wrong initially if not exact match
+      feedback = !correct ? `Definición correcta: ${defAccepted[0] || q.correct}` : 'Correcto';
+
     } else if (q.type === 'order') {
       const items = [...document.querySelectorAll(`#order-list-${i} .order-item`)].map(el => el.dataset.text);
       const expected = q.correctOrder || q.items;
@@ -3178,1145 +3206,9 @@ function submitQuiz() {
               }
             });
           } else {
-            aiItems.push({
-              idx: i,
-              pairIdx: null,
-              type: q.type,
-              question: q.text,
-              correctAnswer: q.type === 'fill'
-                ? (q.blanks || []).join(', ')
-                : (q.acceptedAnswers || [q.correct]).join(' / '),
-              studentAnswer: r.studentAnswer,
-              maxPoints: q.points,
-              totalPairs: 1
-            });
-          }
-        });
-
-        const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa cada respuesta con criterio MUY generoso y flexible, propio de primaria.
-
-CRITERIOS — aplica estos sin excepción:
-- CORRECTO: el alumno transmite el significado correcto aunque use palabras distintas. Acepta SIN DUDAR:
-  · Variantes pronominales: "me gusta" = "a mí me gusta" = "yo adoro" = "me encanta"
-  · Negación equivalente: "no me gusta" = "no me apetece"
-  · Singular/plural con mismo significado: "la fruta" = "las frutas"
-  · Artículo distinto o ausente: "el arroz" = "arroz"
-  · Errores gramaticales de primaria sin cambio de significado: "ella no le gusta la fruta" = "a ella no le gusta la fruta"
-  · Sinónimos claros: "amar" = "adorar" = "encantar"
-  · Faltas leves de ortografía que no cambian el significado
-  · DEFINICIONES CON LAS PROPIAS PALABRAS: si el alumno explica el concepto correctamente aunque no use las palabras exactas de la definición oficial, es CORRECTO. Ej: "¿Qué es la materia?" → "todo lo que existe y ocupa espacio" = "las cosas que nos rodean" = "lo que podemos tocar" son todas correctas aunque difieran de la definición del libro.
-- PARCIAL: capta la idea principal pero le falta un elemento importante, o la definición es demasiado incompleta o solo da ejemplos sin explicar el concepto.
-- INCORRECTO: respuesta vacía, completamente equivocada o sin ninguna relación con lo pedido.
-
-REGLA DE ORO: ante la duda, sube el veredicto un nivel (wrong→partial, partial→correct).
-
-ÍTEMS A EVALUAR:
-${aiItems.map((p, n) => {
-  if (p.type === 'translate_pair') {
-    return n+1 + '. Traducción de: "' + p.term + '"\n   Respuesta correcta: ' + p.correctAnswer + (p.acceptedAnswers !== p.correctAnswer ? ' (también válido: ' + p.acceptedAnswers + ')' : '') + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"';
-  }
-  return n+1 + '. [' + p.type + '] "' + (p.question||p.term) + '"\n   Respuesta correcta: ' + p.correctAnswer + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"';
-}).join('\n\n')}
-
-Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alumno (máximo 15 palabras, sin explicaciones elaboradas):
-- CORRECTO: "Correcto. La respuesta era: [respuesta correcta]."
-- PARCIAL: "Casi. La respuesta correcta era: [respuesta correcta]."
-- INCORRECTO: "Incorrecto. La respuesta correcta era: [respuesta correcta]."
-[{"itemIdx": <posición en este array 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos para este ítem>, "feedback": "..."}]`;
-
-        const resp = await fetch('/.netlify/functions/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 800,
-            messages: [{ role: 'user', content: aiPrompt }]
-          })
-        });
-        const data = await resp.json();
-        if (resp.ok && data.content) {
-          const text = data.content.map(c => c.text || '').join('');
-          const clean = text.replace(/```json|```/g, '').trim();
-          const aiResults = JSON.parse(clean);
-
-          // Reconstruct per-question results from per-item AI verdicts
-          // Group items back by question idx
-          const byIdx = {};
-          aiItems.forEach((item, n) => {
-            const ar = aiResults.find(r => r.itemIdx === n);
-            if (!ar) return;
-            if (!byIdx[item.idx]) byIdx[item.idx] = { items: [], q: openToReview.find(x => x.i === item.idx) };
-            byIdx[item.idx].items.push({ item, ar });
-          });
-
-          Object.entries(byIdx).forEach(([idxStr, { items, q: qEntry }]) => {
-            const idx = parseInt(idxStr);
-            const origR = updatedReview[idx];
-            if (!origR || !qEntry) return;
-
-            if (qEntry.q.type === 'translate') {
-              // Recalculate translate score: previously matched pairs + newly AI-corrected ones
-              const totalPairs = (qEntry.q.pairs || []).length;
-              const alreadyCorrect = (qEntry.r.pairDetails || []).filter(pd => pd.matched).length;
-              const aiCorrect = items.filter(x => x.ar.verdict === 'correct').length;
-              const aiPartial = items.filter(x => x.ar.verdict === 'partial').length;
-              const newPairsCorrect = alreadyCorrect + aiCorrect + (aiPartial * 0.5);
-              const newPts = Math.min((qEntry.q.points * newPairsCorrect / totalPairs), qEntry.q.points);
-              const oldPts = origR.pts || 0;
-              if (newPts > oldPts) {
-                updatedEarned += (newPts - oldPts);
-                // Build updated pairDetails with AI verdicts merged in
-                const updatedPairDetails = (qEntry.r.pairDetails || []).map((pd, pi) => {
-                  if (pd.matched) return { ...pd, matched: true };
-                  const aiItem = items.find(x => x.item.pairIdx === pi);
-                  if (!aiItem) return pd;
-                  return { ...pd, matched: aiItem.ar.verdict === 'correct', partial: aiItem.ar.verdict === 'partial' };
-                });
-                const updatedPairResults = updatedPairDetails.map(pd => {
-                  const icon = pd.matched ? '✅' : pd.partial ? '🟡' : '❌';
-                  return `${pd.term} → ${pd.studentAnswer || '–'} ${icon}`;
-                });
-                const feedbacks = items.map(x => x.ar.feedback).filter(Boolean);
-                const allCorrect = newPairsCorrect >= totalPairs;
-                const anyCorrect = newPairsCorrect > 0;
-                updatedReview[idx] = {
-                  ...origR,
-                  correct: allCorrect,
-                  partial: anyCorrect && !allCorrect,
-                  pts: Math.round(newPts * 10) / 10,
-                  studentAnswer: updatedPairResults.join(' | '),
-                  feedback: feedbacks.join(' | '),
-                  pairDetails: updatedPairDetails
-                };
-              }
-            } else {
-              // short / fill: single item
-              const ar = items[0]?.ar;
-              if (!ar) return;
-              const newPts = Math.min(ar.pts || 0, origR.maxPts);
-              const oldPts = origR.pts || 0;
-              if (newPts > oldPts) {
-                updatedEarned += (newPts - oldPts);
-                updatedReview[idx] = {
-                  ...origR,
-                  correct: ar.verdict === 'correct',
-                  partial: ar.verdict === 'partial',
-                  pts: Math.round(newPts * 10) / 10,
-                  feedback: ar.feedback
-                };
-              }
-            }
-          });
-
-          const newRawScore = totalPoints > 0 ? (updatedEarned / totalPoints) * 10 : 0;
-          const newScore = Math.round(newRawScore * 10) / 10;
-          document.getElementById('correcting-screen').style.display = 'none';
-          showResults(newScore > score ? newScore : score, name, updatedReview, totalPoints);
-
-          fetch('/.netlify/functions/save-score', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name, cls, quiz: currentQuiz.title, score: newScore > score ? newScore : score,
-              date: today, time: timeNow,
-              tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
-              blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
-              review: updatedReview
-            })
-          }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
-          return;
-        }
-      } catch (e) {
-        console.warn('Revisión IA falló, usando corrección exacta:', e);
-      }
-    }
-
-    // Sin preguntas abiertas o si falló la IA: ocultar pantalla de corrección y mostrar resultados exactos
-    document.getElementById('correcting-screen').style.display = 'none';
-    showResults(score, name, review, totalPoints);
-    fetch('/.netlify/functions/save-score', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name, cls, quiz: currentQuiz.title, score, date: today, time: timeNow,
-        tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
-        blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
-        review
-      })
-    }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
-  };
-
-  saveAndReview();
-}
-
-function showResults(score, name, review, totalPoints) {
-  document.getElementById('student-view').style.display = 'none';
-  document.getElementById('correcting-screen').style.display = 'none';
-  const rs = document.getElementById('results-screen');
-  rs.style.display = 'block';
-
-  const circle = document.getElementById('score-circle');
-  const color = score >= 7 ? '#10b981' : score >= 5 ? '#f59e0b' : '#ef4444';
-  circle.style.background = `linear-gradient(135deg, ${color}, ${color}cc)`;
-  document.getElementById('score-num').textContent = score;
-
-  const msgs = score >= 9 ? ['¡Sobresaliente! 🌟', '¡Excelente trabajo!'] : score >= 7 ? ['¡Notable! 🎉', '¡Muy buen trabajo!'] : score >= 5 ? ['Aprobado 👍', '¡Sigue esforzándote!'] : ['Suspenso 📚', 'Necesitas repasar un poco más.'];
-  document.getElementById('score-msg').textContent = msgs[0];
-  document.getElementById('score-sub').textContent = msgs[1];
-
-  const rc = document.getElementById('review-cards');
-  rc.innerHTML = '';
-  review.forEach((r, i) => {
-    const cls2 = r.correct ? 'correct' : r.partial ? 'partial' : 'wrong';
-    const icon = r.correct ? '✅' : r.partial ? '🟡' : '❌';
-
-    // For translate: render each pair as its own mini-row
-    let bodyHtml = '';
-    if (r.pairDetails && r.pairDetails.length > 0) {
-      // Build per-pair feedback map from the feedback string (split by |)
-      const feedbackParts = (r.feedback || '').split('|').map(s => s.trim()).filter(Boolean);
-      let fbIdx = 0;
-      const pairRows = r.pairDetails.map((pd, pi) => {
-        const pairDisplay = (r.studentAnswer || '').split('|')[pi] || '';
-        // Determine verdict for this pair from the display string
-        const isOk = pairDisplay.includes('✅');
-        const isPartial = pairDisplay.includes('🟡');
-        const pairIcon = isOk ? '✅' : isPartial ? '🟡' : '❌';
-        const pairCls = isOk ? '#d1fae5' : isPartial ? '#fef3c7' : '#fee2e2';
-        const pairBorder = isOk ? '#10b981' : isPartial ? '#f59e0b' : '#ef4444';
-        const studentAns = escHtml(pd.studentAnswer || '–');
-        const correctAns = escHtml(pd.correctAnswer || '');
-        let fb = '';
-        if (!isOk) {
-          fb = feedbackParts[fbIdx] || '';
-          fbIdx++;
-        }
-        return `<div style="display:flex;align-items:flex-start;gap:8px;background:${pairCls};border:1.5px solid ${pairBorder};border-radius:8px;padding:8px 10px;margin-bottom:6px">
-          <span style="font-size:1.1rem;margin-top:1px">${pairIcon}</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.78rem;color:#6b7280;font-weight:600;margin-bottom:2px">${escHtml(pd.term)}</div>
-            <div style="font-size:0.92rem;font-weight:700;color:#1f2937">Tu respuesta: <span style="font-weight:400">${studentAns}</span></div>
-            ${!isOk ? `<div style="font-size:0.82rem;color:#374151;margin-top:3px">✏️ Correcto: <strong>${correctAns}</strong></div>` : ''}
-            ${fb ? `<div style="font-size:0.78rem;color:#6b7280;margin-top:2px;font-style:italic">${escHtml(fb)}</div>` : ''}
-          </div>
-        </div>`;
-      }).join('');
-      bodyHtml = `<div style="font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:6px">${i + 1}. ${escHtml(r.text)}</div>${pairRows}`;
-    } else {
-      // Standard question: simple layout
-      const studentAnsHtml = escHtml(r.studentAnswer || '–');
-      const correctHtml = (!r.correct && r.feedback) ? `<div style="font-size:0.82rem;margin-top:4px">✏️ Correcto: <strong>${escHtml((r.feedback.replace(/^(Correcto|Casi|Incorrecto)[^:]*:\s*/i,'').replace(/\.$/,'').trim()))}</strong></div>` : '';
-      bodyHtml = `<div class="result-q">${i + 1}. ${escHtml(r.text)}</div>
-        <div class="result-detail">Tu respuesta: <span>${studentAnsHtml}</span></div>
-        ${correctHtml}`;
-    }
-
-    rc.innerHTML += `<div class="result-card ${cls2}" id="result-card-${i}" style="flex-direction:column;align-items:stretch">
-      ${r.pairDetails && r.pairDetails.length > 0 ? '' : `<div style="display:flex;align-items:flex-start;gap:10px"><div class="result-icon">${icon}</div><div style="flex:1">${bodyHtml}</div></div>`}
-      ${r.pairDetails && r.pairDetails.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="result-icon" style="margin:0">${icon}</span><div style="flex:1">${bodyHtml}</div></div>` : ''}
-    </div>`;
-  });
-
-  if (score >= 7) launchConfetti();
-}
-
-function backToStudent() {
-  document.getElementById('results-screen').style.display = 'none';
-  studentName = '';
-  studentClass = '';
-  showView('student');
-}
-
-
-
-// ══════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════
-function escHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
-}
-
-function launchConfetti() {
-  const wrap = document.createElement('div');
-  wrap.className = 'confetti-wrap';
-  document.body.appendChild(wrap);
-  const colors = ['#f59e0b', '#4f46e5', '#10b981', '#ef4444', '#818cf8'];
-  for (let i = 0; i < 60; i++) {
-    const el = document.createElement('div');
-    el.style.cssText = `position:absolute;width:${6 + Math.random() * 8}px;height:${6 + Math.random() * 8}px;background:${colors[Math.floor(Math.random() * colors.length)]};left:${Math.random() * 100}%;top:-20px;border-radius:${Math.random() > 0.5 ? '50%' : '2px'};animation:fall ${1.5 + Math.random() * 2}s linear ${Math.random() * 1}s forwards`;
-    wrap.appendChild(el);
-  }
-  setTimeout(() => wrap.remove(), 4000);
-}
-
-// ══════════════════════════════════════════════
-//  INFORME POST-CONTROL
-// ══════════════════════════════════════════════
-async function openReport() {
-  const reportTitle = liveActiveQuizTitle || lastClosedQuizTitle;
-  const reportClass = liveActiveQuizClass || lastClosedQuizClass || (currentQuiz?.class || '');
-  if (!reportTitle) {
-    showToast('⚠️ No hay ningún control disponible para el informe');
-    return;
-  }
-  document.getElementById('report-modal').classList.add('open');
-  document.getElementById('report-meta').textContent = 'Cargando datos…';
-  document.getElementById('report-stats').innerHTML = '';
-  document.getElementById('report-questions').innerHTML = '';
-  document.getElementById('report-student-body').innerHTML = '';
-  document.getElementById('report-answers-section').style.display = 'none';
-  document.getElementById('report-answers-list').innerHTML = '';
-
-  try {
-    const url = '/.netlify/functions/get-scores?quiz=' + encodeURIComponent(reportTitle)
-              + (reportClass ? '&cls=' + encodeURIComponent(reportClass) : '');
-    const res = await fetch(url);
-    const data = await res.json();
-    renderReport(data.submissions || [], data.questionStats || [], reportTitle, data.studentAnswers || []);
-  } catch(e) {
-    document.getElementById('report-meta').textContent = '❌ Error al cargar datos de Sheets.';
-  }
-}
-
-function onPtsEdit(input) {
-  const studentName = input.dataset.student;
-  const maxPts = parseFloat(input.dataset.maxpts);
-  let val = parseFloat(input.value);
-
-  // Validar rango
-  if (isNaN(val) || val < 0) val = 0;
-  if (val > maxPts) { val = maxPts; input.value = maxPts; }
-  input.classList.add('modified');
-
-  // Actualizar icono y color de la fila en tiempo real
-  const row = input.closest('.student-answer-row');
-  if (row) {
-    const iconEl  = row.querySelector('.sa-result');
-    if (iconEl) iconEl.textContent = val === maxPts ? '✅' : val > 0 ? '🟡' : '❌';
-    const newColor = val === maxPts ? '#10b981' : val > 0 ? '#f59e0b' : '#ef4444';
-    const newBg    = val === maxPts ? '#f0fdf4'  : val > 0 ? '#fffbeb'  : '#fef2f2';
-    input.style.borderColor = newColor;
-    input.style.color       = newColor;
-    input.style.background  = newBg;
-  }
-  // Guardar el resultado nuevo para sincronizar con Sheets
-  input.dataset.result = val === maxPts ? 'Sí' : val > 0 ? 'Parcial' : 'No';
-
-  // Actualizar lastReportSubmissions con el nuevo pts para poder sincronizar
-  const sub = lastReportSubmissions.find(s => s.name === studentName);
-  if (!sub) return;
-  if (sub.scoreOriginal === undefined) sub.scoreOriginal = sub.score;
-
-  // Recalcular nota sumando todos los inputs del alumno
-  const allInputs = document.querySelectorAll(`.pts-edit-input[data-student="${CSS.escape(studentName)}"]`);
-  let earnedSum = 0;
-  let maxSum = 0;
-  let allFilled = true;
-  allInputs.forEach(inp => {
-    const v = parseFloat(inp.value);
-    const m = parseFloat(inp.dataset.maxpts);
-    if (isNaN(v)) { allFilled = false; return; }
-    earnedSum += v;
-    maxSum    += m;
-  });
-
-  if (!allFilled || maxSum === 0) return;
-
-  const newScore = Math.round((earnedSum / maxSum) * 10 * 10) / 10;
-  sub.score = newScore;
-
-  // Actualizar el badge de nota en la cabecera del acordeón
-  const key = studentName.replace(/\s/g, '_');
-  const badge = document.getElementById(`acc-score-${key}`);
-  if (badge) {
-    badge.textContent = newScore;
-    badge.className = `acc-score ${newScore >= 7 ? 'high' : newScore >= 5 ? 'mid' : 'low'}`;
-  }
-}
-
-async function syncRecalcScores() {
-  const btn = document.getElementById('sync-scores-btn');
-  const toSync = lastReportSubmissions.filter(s =>
-    s.scoreOriginal !== undefined && s.score !== s.scoreOriginal
-  );
-  if (toSync.length === 0) {
-    showToast('✅ Las notas de Sheets ya están al día');
-    return;
-  }
-  if (!confirm(`¿Actualizar la nota de ${toSync.length} alumno${toSync.length !== 1 ? 's' : ''} en Hoja 1?\n\n${toSync.map(s => `${s.name}: ${s.scoreOriginal} → ${s.score}`).join('\n')}`)) return;
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Actualizando…';
-  try {
-    const quizTitle = liveActiveQuizTitle || lastClosedQuizTitle;
-
-    // Recoger los pts editados de los inputs del DOM por alumno
-    const updatesWithAnswers = toSync.map(s => {
-      const inputs = document.querySelectorAll(`.pts-edit-input[data-student="${CSS.escape(s.name)}"]`);
-      const answers = [];
-      inputs.forEach(inp => {
-        const v = parseFloat(inp.value);
-        if (!isNaN(v)) answers.push({
-          num:    parseInt(inp.dataset.qnum),
-          pts:    v,
-          result: inp.dataset.result || (v === parseFloat(inp.dataset.maxpts) ? 'Sí' : v > 0 ? 'Parcial' : 'No')
-        });
-      });
-      return { name: s.name, cls: s.cls, score: s.score, answers };
-    });
-
-    const res = await fetch('/.netlify/functions/update-scores', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quiz: quizTitle, updates: updatesWithAnswers })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      showToast(`✅ ${toSync.length} nota${toSync.length !== 1 ? 's' : ''} actualizadas en Sheets`);
-      btn.textContent = '✅ Notas actualizadas';
-      btn.disabled = false; // permitir nuevas sincronizaciones
-      lastReportSubmissions.forEach(s => { if (s.scoreOriginal !== undefined) delete s.scoreOriginal; });
-      document.querySelectorAll('.pts-edit-input.modified').forEach(inp => inp.classList.remove('modified'));
-      // Restaurar texto del botón tras 2 segundos
-      setTimeout(() => { btn.textContent = '🔄 Actualizar notas en Sheets'; }, 2000);
-    } else {
-      throw new Error(data.error || 'Error desconocido');
-    }
-  } catch(err) {
-    showToast('❌ Error al actualizar: ' + err.message);
-    btn.disabled = false;
-    btn.textContent = '🔄 Actualizar notas en Sheets';
-  }
-}
-
-function closeReport() {
-  document.getElementById('report-modal').classList.remove('open');
-}
-
-function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
-  lastReportSubmissions = submissions; // guardar para sincronización con Sheets
-  const quizTitle = reportTitle || liveActiveQuizTitle || lastClosedQuizTitle || '–';
-  const total = submissions.length;
-  if (total === 0) {
-    document.getElementById('report-meta').textContent = 'Todavía no hay entregas para este control.';
-    return;
-  }
-  const scores = submissions.map(s => s.score);
-  const avg = Math.round((scores.reduce((a,b) => a+b, 0) / total) * 10) / 10;
-  const max = Math.max(...scores);
-  const min = Math.min(...scores);
-  const aprobados = scores.filter(s => s >= 5).length;
-  const warnings  = submissions.filter(s => s.tabSwitches > 0).length;
-  const date = submissions[0]?.date || '';
-
-  document.getElementById('report-meta').textContent = `${quizTitle} · ${date} · ${total} entregas`;
-
-  document.getElementById('report-stats').innerHTML = `
-    <div class="report-stat blue"><div class="rs-num">${total}</div><div class="rs-label">Entregas</div></div>
-    <div class="report-stat green"><div class="rs-num">${avg}</div><div class="rs-label">Nota media</div></div>
-    <div class="report-stat green"><div class="rs-num">${aprobados}</div><div class="rs-label">Aprobados</div></div>
-    <div class="report-stat red"><div class="rs-num">${total - aprobados}</div><div class="rs-label">Suspensos</div></div>
-    <div class="report-stat orange"><div class="rs-num">${max}</div><div class="rs-label">Nota máx.</div></div>
-    <div class="report-stat orange"><div class="rs-num">${min}</div><div class="rs-label">Nota mín.</div></div>
-    ${warnings > 0 ? `<div class="report-stat red"><div class="rs-num">${warnings}</div><div class="rs-label">Avisos copia</div></div>` : ''}
-  `;
-
-  // ── Rendimiento por pregunta (datos reales de Sheets) ──
-  const qContainer = document.getElementById('report-questions');
-  if (questionStats && questionStats.length > 0) {
-    // Las peores primero (ya vienen ordenadas por pct asc desde el servidor)
-    const needsReview = questionStats.filter(q => q.pct < 60);
-    let html = '';
-    if (needsReview.length > 0) {
-      html += `<div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:0.85rem;font-weight:700;color:#92400e">
-        🔁 Para repasar en clase: ${needsReview.map(q => `<em>${escHtml(q.text.substring(0,50))}${q.text.length>50?'…':''}</em>`).join(', ')}
-      </div>`;
-    }
-    html += questionStats.map(q => {
-      const barCls = q.pct >= 70 ? 'good' : q.pct >= 40 ? 'mid' : 'bad';
-      const flag   = q.pct < 40 ? ' 🔴' : q.pct < 60 ? ' 🟡' : '';
-      return `<div class="report-q-row">
-        <div class="report-q-text">${escHtml(q.text.substring(0,70))}${q.text.length>70?'…':''}${flag}</div>
-        <div class="report-q-bar-wrap"><div class="report-q-bar ${barCls}" style="width:${q.pct}%"></div></div>
-        <div class="report-q-pct" style="color:${q.pct<40?'#ef4444':q.pct<60?'#f59e0b':'#10b981'}">${q.pct}%</div>
-        <div style="font-size:0.75rem;color:var(--muted);min-width:60px;text-align:right">${q.si}✓ ${q.parcial>0?q.parcial+'½ ':''}${q.no}✗</div>
-      </div>`;
-    }).join('');
-    qContainer.innerHTML = html;
-  } else {
-    // Fallback: distribución por tramos de nota
-    const tramos = [
-      { label: '9–10', count: scores.filter(s => s >= 9).length, color: 'good' },
-      { label: '7–8',  count: scores.filter(s => s >= 7 && s < 9).length, color: 'good' },
-      { label: '5–6',  count: scores.filter(s => s >= 5 && s < 7).length, color: 'mid' },
-      { label: '< 5',  count: scores.filter(s => s < 5).length, color: 'bad' },
-    ];
-    qContainer.innerHTML = '<p style="color:var(--muted);font-size:0.82rem;margin-bottom:10px">Datos por pregunta no disponibles aún — mostrando distribución de notas:</p>'
-      + tramos.map(t => {
-        const pct = total > 0 ? Math.round((t.count / total) * 100) : 0;
-        return `<div class="report-q-row">
-          <div class="report-q-text">Nota ${t.label}</div>
-          <div class="report-q-bar-wrap"><div class="report-q-bar ${t.color}" style="width:${pct}%"></div></div>
-          <div class="report-q-pct">${t.count} alumno${t.count !== 1 ? 's' : ''}</div>
-        </div>`;
-      }).join('');
-  }
-
-  // ── Tabla alumnos ──
-  const sorted = [...submissions].sort((a, b) => b.score - a.score);
-  document.getElementById('report-student-body').innerHTML = sorted.map(r => {
-    const pillCls = r.score >= 7 ? 'high' : r.score >= 5 ? 'mid' : 'low';
-    const anti = r.tabSwitches > 0 ? `⚠️ ${r.tabSwitches}` : '✓';
-    return `<tr>
-      <td style="font-weight:700">${escHtml(r.name)}</td>
-      <td style="color:var(--muted)">${escHtml(r.cls)}</td>
-      <td><span class="score-pill ${pillCls}" style="display:inline-block;padding:2px 10px;border-radius:12px;font-weight:800;font-size:0.85rem">${r.score}</span></td>
-      <td style="color:var(--muted);font-size:0.82rem">${escHtml(r.time)}</td>
-      <td style="${r.tabSwitches > 0 ? 'color:#ef4444' : 'color:#10b981'};font-weight:700">${anti}</td>
-    </tr>`;
-  }).join('');
-
-  // ── Respuestas por alumno/a (acordeón) ──
-  const answersSection = document.getElementById('report-answers-section');
-  const answersList    = document.getElementById('report-answers-list');
-  if (studentAnswers && studentAnswers.length > 0) {
-    answersSection.style.display = '';
-    // Ordenar igual que submissions (por nota desc)
-    const scoreMap = {};
-    submissions.forEach(s => { scoreMap[s.name] = s.score; });
-    const sortedAnswers = [...studentAnswers].sort((a, b) =>
-      (scoreMap[b.name] || 0) - (scoreMap[a.name] || 0)
-    );
-    answersList.innerHTML = sortedAnswers.map((st, idx) => {
-      const score = scoreMap[st.name] ?? '–';
-      const pillCls = score >= 7 ? 'high' : score >= 5 ? 'mid' : 'low';
-      const rows = st.answers.map(a => {
-        const icon = (a.result === 'sí' || a.result === 'si') ? '✅'
-                   : a.result === 'parcial' ? '🟡' : '❌';
-        const qIdx = (a.num || 1) - 1;
-        // Buscar la pregunta por texto en currentQuiz (más fiable que por índice)
-        const quizQuestions = currentQuiz && currentQuiz.questions;
-        const quizQ = quizQuestions
-          ? (quizQuestions.find(q => q.text && a.question && q.text.substring(0,60) === a.question.substring(0,60))
-             || quizQuestions[qIdx])
-          : undefined;
-        const maxPts = a.maxPts !== undefined ? a.maxPts
-                     : (quizQ ? quizQ.points : 10);
-        const pts    = a.pts !== undefined ? a.pts : undefined;
-
-        // Color del input según puntuación
-        const inputColor = pts === undefined ? '#6b7280'
-          : pts === maxPts ? '#10b981'
-          : pts > 0       ? '#f59e0b'
-          : '#ef4444';
-
-        const ptsInput = maxPts !== undefined
-          ? `<input class="pts-edit-input"
-               type="number" min="0" max="${maxPts}" step="0.25"
-               value="${pts !== undefined ? pts : ''}"
-               placeholder="–"
-               data-student="${escHtml(st.name)}"
-               data-qnum="${a.num}"
-               data-maxpts="${maxPts}"
-               oninput="onPtsEdit(this)"
-               style="width:44px;border:1.5px solid ${inputColor};border-radius:6px;padding:2px 4px;font-size:0.82rem;font-weight:800;text-align:center;color:${inputColor};background:${pts===maxPts?'#f0fdf4':pts>0?'#fffbeb':'#fef2f2'}">/<span style="color:var(--muted);font-size:0.78rem">${maxPts}</span>`
-          : '';
-
-        // Respuesta correcta desde feedback
-        const correctHtml = a.feedback && a.feedback !== 'Correcto' && a.feedback !== 'Todo correcto' && a.feedback !== 'Orden correcto'
-          ? `<div class="sa-correct">✔ ${escHtml(a.feedback)}</div>`
-          : '';
-
-        return `<div class="student-answer-row">
-          <div class="sa-num">${a.num}</div>
-          <div class="sa-question">${escHtml(a.question.substring(0, 80))}${a.question.length > 80 ? '…' : ''}</div>
-          <div class="sa-answers-col">
-            <div class="sa-answer">${escHtml(a.answer || '–')}</div>
-            ${correctHtml}
-          </div>
-          <div class="sa-result">${icon}</div>
-          <div class="sa-pts">${ptsInput}</div>
-        </div>`;
-      }).join('');
-      return `<div class="student-accordion" id="acc-${idx}">
-        <div class="student-accordion-header" onclick="toggleAccordion('acc-${idx}')">
-          <div class="acc-name">${escHtml(st.name)}</div>
-          <span class="acc-score ${pillCls}" id="acc-score-${escHtml(st.name).replace(/\s/g,'_')}">${score}</span>
-          <span class="acc-arrow">▼</span>
-        </div>
-        <div class="student-accordion-body">${rows}</div>
-      </div>`;
-    }).join('');
-  } else {
-    answersSection.style.display = 'none';
-  }
-}
-
-function toggleAccordion(id) {
-  document.getElementById(id).classList.toggle('open');
-}
-
-function downloadReportPDF() {
-  const modal = document.getElementById('report-modal');
-  const box = modal.querySelector('.report-box');
-  const title = (liveActiveQuizTitle || lastClosedQuizTitle || 'Informe') + ' — Informe';
-  const content = box.innerHTML;
-  const html = `<!DOCTYPE html><html lang="es"><head>
-    <meta charset="UTF-8">
-    <title>${title}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
-    <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: 'Nunito', sans-serif; color: #1e1b4b; padding: 24px; max-width: 700px; margin: 0 auto; }
-      .report-header { background: #4f46e5; color: #fff; padding: 16px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 10px; }
-      .report-header h3 { font-family: 'Baloo 2', cursive; font-size: 1.2rem; }
-      .report-close { display: none; }
-      .report-body { padding: 20px 24px; border: 1px solid #e0e7ff; border-top: none; border-radius: 0 0 12px 12px; }
-      .report-meta { font-size: 0.85rem; color: #6b7280; margin-bottom: 14px; }
-      .report-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-      .report-stat { flex: 1; min-width: 80px; background: #f8f9ff; border: 1px solid #e0e7ff; border-radius: 10px; padding: 8px 12px; text-align: center; }
-      .rs-num { font-family: 'Baloo 2', cursive; font-size: 1.4rem; font-weight: 800; }
-      .rs-label { font-size: 0.7rem; color: #6b7280; font-weight: 700; }
-      .green .rs-num { color: #10b981; } .red .rs-num { color: #ef4444; } .orange .rs-num { color: #f59e0b; } .blue .rs-num { color: #4f46e5; }
-      .report-section-title { font-family: 'Baloo 2', cursive; font-size: 0.95rem; color: #4f46e5; font-weight: 800; margin: 14px 0 8px; }
-      .report-q-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; margin-bottom: 5px; border: 1px solid #e0e7ff; background: #f8f9ff; font-size: 0.85rem; }
-      .report-q-text { flex: 1; font-weight: 600; }
-      .report-q-bar-wrap { width: 70px; background: #e0e7ff; border-radius: 8px; height: 7px; overflow: hidden; }
-      .report-q-bar { height: 100%; border-radius: 8px; }
-      .good { background: #10b981; } .mid { background: #f59e0b; } .bad { background: #ef4444; }
-      .report-q-pct { font-weight: 800; font-size: 0.85rem; min-width: 40px; text-align: right; }
-      .report-student-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 8px; }
-      .report-student-table th { background: #eef2ff; color: #4f46e5; padding: 6px 10px; text-align: left; font-weight: 800; }
-      .report-student-table td { padding: 5px 10px; border-bottom: 1px solid #e0e7ff; }
-      .report-footer { display: none; }
-      .score-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 0.82rem; }
-      .high { background: #d1fae5; color: #065f46; } .mid-pill { background: #fef3c7; color: #92400e; } .low { background: #fee2e2; color: #991b1b; }
-      .student-accordion { margin-bottom: 6px; border: 1.5px solid #e0e7ff; border-radius: 10px; overflow: hidden; }
-      .student-accordion-header { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: #f8f9ff; }
-      .acc-name { flex: 1; font-weight: 800; font-size: 0.92rem; }
-      .acc-score { padding: 2px 10px; border-radius: 10px; font-weight: 800; font-size: 0.82rem; }
-      .acc-arrow { display: none; }
-      .student-accordion-body { display: block; border-top: 1.5px solid #e0e7ff; }
-      .student-answer-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 14px; border-bottom: 1px solid #e0e7ff; font-size: 0.84rem; }
-      .student-answer-row:last-child { border-bottom: none; }
-      .sa-num { min-width: 22px; font-weight: 800; color: #6b7280; font-size: 0.78rem; padding-top: 2px; }
-      .sa-question { flex: 1; color: #6b7280; font-size: 0.82rem; }
-      .sa-answer { flex: 1.2; font-weight: 700; }
-      .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
-      .sa-pts { min-width: 48px; text-align: right; font-size: 0.78rem; font-weight: 800; color: #6b7280; }
-    </style>
-  </head><body>${content}</body></html>`;
-
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const fileName = title.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]/g, '').trim() + '.html';
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('⬇️ Informe descargado — ábrelo con cualquier navegador');
-}
-
-// ══════════════════════════════════════════════
-//  PANEL SEGUIMIENTO EN TIEMPO REAL
-// ══════════════════════════════════════════════
-let livePollingInterval = null;
-let liveActiveQuizTitle = null;
-let liveActiveQuizClass = null;
-let lastClosedQuizTitle = null;
-let lastClosedQuizClass = null;
-let lastReportSubmissions = []; // para sincronizar notas recalculadas con Sheets
-
-function startLivePanel(quizTitle, quizClass) {
-  liveActiveQuizTitle = quizTitle;
-  liveActiveQuizClass = quizClass || '';
-  document.getElementById('live-quiz-name').textContent = quizTitle;
-  document.getElementById('live-panel').classList.add('visible');
-  // Resetear estado visual del panel por si venía de un control cerrado
-  document.querySelector('.live-dot').style.background = '';
-  document.querySelector('.live-dot').style.animation = '';
-  document.querySelector('.live-dot').style.boxShadow = '';
-  document.querySelector('.live-title').textContent = '📡 Seguimiento en tiempo real';
-  document.querySelector('.live-btn-stop').style.display = '';
-  document.getElementById('live-report-btn').style.display = 'none';
-  fetchLiveScores();
-  livePollingInterval = setInterval(fetchLiveScores, 20000);
-}
-
-function stopLivePanel() {
-  clearInterval(livePollingInterval);
-  livePollingInterval = null;
-  document.getElementById('live-panel').classList.remove('visible');
-  liveActiveQuizTitle = null;
-}
-
-function closeLiveControl() {
-  // Guardar título/clase antes de limpiar, para el informe posterior
-  lastClosedQuizTitle = liveActiveQuizTitle;
-  lastClosedQuizClass = liveActiveQuizClass;
-  // Detener polling
-  clearInterval(livePollingInterval);
-  livePollingInterval = null;
-  // Actualizar UI
-  document.querySelector('.live-dot').style.background = '#9ca3af';
-  document.querySelector('.live-dot').style.animation = 'none';
-  document.querySelector('.live-dot').style.boxShadow = 'none';
-  document.querySelector('.live-title').textContent = '✅ Control terminado';
-  document.getElementById('live-last-update').textContent = 'Terminado · ' + new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
-  document.querySelector('.live-btn-stop').style.display = 'none';
-  document.getElementById('live-report-btn').style.display = 'inline-flex';
-  showToast('✅ Control terminado — ya puedes ver el informe final');
-  // Última consulta con datos frescos
-  fetchLiveScores();
-}
-
-async function fetchLiveScores() {
-  if (!liveActiveQuizTitle) return;
-  try {
-    const url = '/.netlify/functions/get-scores?quiz=' + encodeURIComponent(liveActiveQuizTitle);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    renderLivePanel(data.submissions || []);
-  } catch(e) {
-    document.getElementById('live-last-update').textContent = '⚠️ Error al conectar con Sheets';
-  }
-}
-
-function renderLivePanel(submissions) {
-  // Determinar lista de alumnos esperados según clase
-  let expectedStudents = [];
-  if (liveActiveQuizClass) {
-    for (const [cls, list] of Object.entries(CLASES)) {
-      if (cls.includes(liveActiveQuizClass) || liveActiveQuizClass.includes(cls.charAt(0))) {
-        expectedStudents = list;
-        break;
-      }
-    }
-    // Fallback: buscar por si contiene '5' o '6'
-    if (!expectedStudents.length) {
-      const key = liveActiveQuizClass.includes('5') ? '5º Primaria' : liveActiveQuizClass.includes('6') ? '6º Primaria' : null;
-      if (key) expectedStudents = CLASES[key] || [];
-    }
-  }
-
-  const submitted = submissions.length;
-  const total = expectedStudents.length || submitted;
-  const pct = total > 0 ? Math.round((submitted / total) * 100) : 0;
-
-  // Barra progreso
-  document.getElementById('live-progress-fill').style.width = pct + '%';
-  document.getElementById('live-progress-label').textContent = `${submitted} / ${total || '?'} entregados (${pct}%)`;
-
-  // Contadores
-  document.getElementById('lc-submitted').textContent = submitted;
-  document.getElementById('lc-pending').textContent = total > submitted ? total - submitted : 0;
-
-  const avg = submitted > 0
-    ? Math.round((submissions.reduce((s, r) => s + r.score, 0) / submitted) * 10) / 10
-    : '—';
-  document.getElementById('lc-avg').textContent = avg;
-
-  const warnings = submissions.filter(r => r.tabSwitches > 0).length;
-  document.getElementById('lc-warnings').textContent = warnings;
-
-  // Tabla de entregados
-  const tbody = document.getElementById('live-table-body');
-  if (submissions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Esperando entregas…</td></tr>';
-  } else {
-    // Ordenar: primero los más recientes (por hora)
-    const sorted = [...submissions].sort((a, b) => (b.time || '').localeCompare(a.time || ''));
-    tbody.innerHTML = sorted.map(r => {
-      const pillCls = r.score >= 7 ? 'high' : r.score >= 5 ? 'mid' : 'low';
-      const antiFlag = r.tabSwitches > 0
-        ? `<span class="warn-flag">⚠️ ${r.tabSwitches} cambio${r.tabSwitches > 1 ? 's' : ''}</span>`
-        : '<span style="color:#10b981;font-weight:700">✓</span>';
-      return `<tr>
-        <td style="font-weight:700">${escHtml(r.name)}</td>
-        <td style="color:var(--muted)">${escHtml(r.cls)}</td>
-        <td><span class="score-pill ${pillCls}">${r.score}</span></td>
-        <td style="color:var(--muted);font-size:0.82rem">${escHtml(r.time)}</td>
-        <td>${antiFlag}</td>
-      </tr>`;
-    }).join('');
-  }
-
-  // Pendientes
-  if (expectedStudents.length > 0) {
-    const submittedNames = new Set(submissions.map(r => r.name.toUpperCase()));
-    const pending = expectedStudents.filter(name => !submittedNames.has(name.toUpperCase()));
-    const pendingSection = document.getElementById('live-pending-section');
-    const pendingList = document.getElementById('live-pending-list');
-    if (pending.length > 0) {
-      pendingSection.style.display = 'block';
-      pendingList.innerHTML = pending.map(n =>
-        `<div class="live-pending-chip">${escHtml(n.split(',')[0])}</div>`
-      ).join('');
-    } else {
-      pendingSection.style.display = 'none';
-    }
-  }
-
-  // Timestamp
-  const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  document.getElementById('live-last-update').textContent = `Última actualización: ${now}`;
-}
-
-// ══════════════════════════════════════════════
-//  BANCO DE CONTROLES (localStorage)
-// ══════════════════════════════════════════════
-const BANK_KEY = 'proferafa_bank';
-
-function loadBank() {
-  try {
-    return JSON.parse(localStorage.getItem(BANK_KEY) || '[]');
-  } catch(e) { return []; }
-}
-
-function saveBank(bank) {
-  localStorage.setItem(BANK_KEY, JSON.stringify(bank));
-}
-
-function saveToBank() {
-  if (!editorQuestions.length) { showToast('⚠️ Añade preguntas primero'); return; }
-  const title = document.getElementById('quiz-title-input').value.trim() || 'Control sin título';
-  const cls = document.getElementById('quiz-class-input').value.trim() || '';
-  const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
-  const password = (document.getElementById('quiz-password-input').value || '').trim();
-
-  const bank = loadBank();
-
-  if (bankEditingId !== null) {
-    // Actualizar el item existente en el banco
-    const idx = bank.findIndex(q => q.id === bankEditingId);
-    if (idx !== -1) {
-      bank[idx] = {
-        ...bank[idx],
-        title,
-        class: cls,
-        timeMinutes: timeMin,
-        questions: JSON.parse(JSON.stringify(editorQuestions)),
-        password: password || '',
-        savedAt: new Date().toLocaleDateString('es-ES')
-      };
-      saveBank(bank);
-      renderBank();
-      showToast('💾 Control actualizado en el banco');
-    } else {
-      // Ya no existe (fue borrado), guardar como nuevo
-      bankEditingId = null;
-      saveToBank();
-      return;
-    }
-  } else {
-    // Control nuevo: insertar al principio
-    const quiz = {
-      id: Date.now(),
-      title,
-      class: cls,
-      timeMinutes: timeMin,
-      questions: JSON.parse(JSON.stringify(editorQuestions)),
-      password: password || '',
-      savedAt: new Date().toLocaleDateString('es-ES')
-    };
-    bank.unshift(quiz);
-    bankEditingId = quiz.id; // el editor ahora apunta a este nuevo item
-    saveBank(bank);
-    renderBank();
-    showToast('💾 Control guardado en el banco');
-  }
-
-  // Respaldo automático cada 7 días
-  const BACKUP_KEY = 'lastBankBackup';
-  const lastBackup = parseInt(localStorage.getItem(BACKUP_KEY) || '0');
-  const daysSince = (Date.now() - lastBackup) / (1000 * 60 * 60 * 24);
-  if (daysSince >= 7) {
-    const json = JSON.stringify(bank, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g, '-');
-    a.href = url;
-    a.download = `banco_controles_${fecha}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    localStorage.setItem(BACKUP_KEY, Date.now().toString());
-    showToast('📦 Respaldo automático descargado (cada 7 días)');
-  }
-}
-
-function deleteBankItem(id) {
-  if (!confirm('¿Eliminar este control del banco?')) return;
-  const bank = loadBank().filter(q => q.id !== id);
-  saveBank(bank);
-  renderBank();
-  showToast('🗑 Control eliminado del banco');
-}
-
-function duplicateBankItem(id) {
-  const original = loadBank().find(q => q.id === id);
-  if (!original) return;
-  const copy = JSON.parse(JSON.stringify(original));
-  copy.id = Date.now();
-  copy.title = copy.title + ' (copia)';
-  copy.savedAt = new Date().toLocaleDateString('es-ES');
-  const bank = loadBank();
-  bank.unshift(copy);
-  saveBank(bank);
-  renderBank();
-  showToast('📋 Control duplicado');
-}
-
-function exportBank() {
-  const bank = loadBank();
-  if (!bank.length) { showToast('⚠️ El banco está vacío'); return; }
-  const json = JSON.stringify(bank, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const fecha = new Date().toLocaleDateString('es-ES').replace(/\//g, '-');
-  a.href = url;
-  a.download = `banco_controles_${fecha}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('⬇️ Banco exportado correctamente');
-}
-
-function importBank(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const imported = JSON.parse(e.target.result);
-      if (!Array.isArray(imported)) throw new Error('Formato incorrecto');
-      const existing = loadBank();
-      const existingIds = new Set(existing.map(q => q.id));
-      const nuevos = imported.filter(q => !existingIds.has(q.id));
-      const merged = [...nuevos, ...existing];
-      saveBank(merged);
-      renderBank();
-      showToast(`✅ ${nuevos.length} control${nuevos.length !== 1 ? 'es' : ''} importado${nuevos.length !== 1 ? 's' : ''} (${imported.length - nuevos.length} ya existían)`);
-    } catch(err) {
-      showToast('❌ Archivo no válido. Usa un JSON exportado desde esta app.');
-    }
-  };
-  reader.readAsText(file);
-  event.target.value = ''; // reset para poder importar el mismo fichero otra vez
-}
-
-function loadBankItemIntoEditor(id) {
-  const quiz = loadBank().find(q => q.id === id);
-  if (!quiz) return;
-  bankEditingId = id;
-  loadQuizIntoEditor(quiz);
-  document.getElementById('editor-card').style.display = 'block';
-  document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
-  showToast('✏️ Control cargado en el editor');
-}
-
-function publishBankItem(id) {
-  const quiz = loadBank().find(q => q.id === id);
-  if (!quiz) return;
-
-  // Avisar si hay cambios en el editor sin guardar para este mismo control
-  if (bankEditingId === id && editorQuestions.length > 0) {
-    const bankedQ = JSON.stringify(quiz.questions);
-    const editorQ = JSON.stringify(editorQuestions);
-    if (bankedQ !== editorQ) {
-      showToast('⚠️ Tienes cambios sin guardar. Pulsa 💾 primero o se publicará la versión anterior.');
-    }
-  }
-
-  currentQuiz = quiz;
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
-  const base = window.location.href.split('?')[0];
-  const quizUrl = base + '?quiz=' + encoded;
-
-  const linkDiv   = document.getElementById('bank-link-' + id);
-  const linkInput = document.getElementById('bank-link-input-' + id);
-  const pwBanner  = document.getElementById('bank-pw-' + id);
-  if (linkDiv) {
-    linkInput.value = quizUrl;
-    linkDiv.classList.add('visible');
-    if (quiz.password) {
-      pwBanner.style.display = 'block';
-      pwBanner.querySelector('span').textContent = quiz.password;
-    } else {
-      pwBanner.style.display = 'none';
-    }
-  }
-  showToast(quiz.password ? '🔒 Control publicado con contraseña' : '🚀 Enlace generado — cópialo y compártelo');
-  startLivePanel(quiz.title, quiz.class || '');
-}
-
-function copyBankLink(id) {
-  const input = document.getElementById('bank-link-input-' + id);
-  if (input) {
-    navigator.clipboard.writeText(input.value);
-    showToast('📋 Enlace copiado');
-  }
-}
-
-function renderBank() {
-  let bank = loadBank();
-  const list = document.getElementById('bank-list');
-  if (!list) return;
-
-  if (bank.length === 0) {
-    list.innerHTML = '<div class="bank-empty">📭 El banco está vacío. Guarda un control con el botón 💾 del editor.</div>';
-    return;
-  }
-
-  const sort1 = document.getElementById('bank-sort1')?.value || 'reciente';
-  const sort2 = document.getElementById('bank-sort2')?.value || 'ninguno';
-
-  function sortValue(quiz, criterion) {
-    if (criterion === 'reciente') return -(quiz.id || 0);
-    if (criterion === 'titulo')   return (quiz.title || '').toLowerCase();
-    if (criterion === 'clase')    return (quiz.class || '').toLowerCase();
-    if (criterion === 'preguntas') return -(quiz.questions?.length || 0);
-    return 0;
-  }
-
-  bank = [...bank].sort((a, b) => {
-    const v1a = sortValue(a, sort1), v1b = sortValue(b, sort1);
-    const cmp1 = v1a < v1b ? -1 : v1a > v1b ? 1 : 0;
-    if (cmp1 !== 0 || sort2 === 'ninguno') return cmp1;
-    const v2a = sortValue(a, sort2), v2b = sortValue(b, sort2);
-    return v2a < v2b ? -1 : v2a > v2b ? 1 : 0;
-  });
-
-  list.innerHTML = '';
-  bank.forEach(quiz => {
-    const item = document.createElement('div');
-    item.className = 'bank-item';
-    const qCount = quiz.questions ? quiz.questions.length : 0;
-    const meta = [
-      quiz.class || '',
-      qCount + ' pregunta' + (qCount !== 1 ? 's' : ''),
-      quiz.timeMinutes + ' min',
-      quiz.password ? '🔒 Con contraseña' : '',
-      'Guardado: ' + quiz.savedAt
-    ].filter(Boolean).join(' · ');
-
-    item.innerHTML = `
-      <div class="bank-item-info">
-        <div class="bank-item-title">${escHtml(quiz.title)}</div>
-        <div class="bank-item-meta">${escHtml(meta)}</div>
-      </div>
-      <div class="bank-item-actions">
-        <button class="btn btn-green btn-sm" onclick="publishBankItem(${quiz.id})">🚀 Publicar</button>
-        <button class="btn btn-primary btn-sm" onclick="loadBankItemIntoEditor(${quiz.id})" style="background:#7c3aed">✏️ Editar</button>
-        <button class="btn btn-primary btn-sm" onclick="duplicateBankItem(${quiz.id})" style="background:#0891b2">📋 Duplicar</button>
-        <button class="btn btn-sm" onclick="deleteBankItem(${quiz.id})" style="background:#fee2e2;color:#991b1b">🗑</button>
-      </div>
-      <div class="bank-item-link" id="bank-link-${quiz.id}">
-        <div class="link-box" style="margin-top:0">
-          <input type="text" id="bank-link-input-${quiz.id}" readonly style="background:transparent;border:none;font-size:0.9rem;color:var(--primary);font-weight:700;flex:1;outline:none;margin-bottom:0">
-          <button class="copy-btn" onclick="copyBankLink(${quiz.id})">📋 Copiar</button>
-        </div>
-        <div id="bank-pw-${quiz.id}" style="display:none;margin-top:8px;background:#d1fae5;border:1.5px solid #10b981;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#065f46;font-weight:700">
-          🔒 Contraseña: <span style="letter-spacing:2px"></span>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <a href="https://docs.google.com/spreadsheets/d/1espPZNRe6ouZl0E8CIQY63woya65gRUPcIvbJiNBBuQ/edit" target="_blank" class="sheets-btn" style="font-size:0.82rem;padding:6px 14px">📊 Abrir Sheets</a>
-          <button class="btn btn-primary btn-sm" onclick="openReport()" style="background:#7c3aed;font-size:0.82rem">📋 Ver informe</button>
-        </div>
-      </div>`;
-    list.appendChild(item);
-  });
-}
-
-// ══════════════════════════════════════════════
-//  ANTI-COPIA
-// ══════════════════════════════════════════════
-(function initAntiCheat() {
-  window._antiCheat = { tabSwitches: 0, blurCount: 0 };
-  const MAX_SWITCHES = 3;
-
-  function isStudentActive() {
-    const container = document.getElementById('quiz-student-container');
-    const results = document.getElementById('results-screen');
-    const identifying = !document.getElementById('identify-screen').classList.contains('hidden');
-    return currentQuiz &&
-      container && container.style.display !== 'none' &&
-      results && results.style.display === 'none' &&
-      !identifying;
-  }
-
-  // 1) Deshabilitar clic derecho, selección de texto y copiar
-  document.addEventListener('contextmenu', e => { if (isStudentActive()) e.preventDefault(); });
-  document.addEventListener('selectstart', e => { if (isStudentActive()) e.preventDefault(); });
-  document.addEventListener('copy', e => { if (isStudentActive()) e.preventDefault(); });
-
-  // 2) Detectar cambio de pestaña
-  document.addEventListener('visibilitychange', () => {
-    if (!isStudentActive() || !document.hidden) return;
-    window._antiCheat.tabSwitches++;
-    if (window._antiCheat.tabSwitches >= MAX_SWITCHES) {
-      showCountdownAndSubmit();
-    } else {
-      showToast(`⚠️ ¡No cambies de pestaña! Aviso ${window._antiCheat.tabSwitches}/${MAX_SWITCHES}`);
-    }
-  });
-
-  // 3) Detectar pérdida de foco (Alt+Tab, minimizar…)
-  window.addEventListener('blur', () => {
-    if (!isStudentActive()) return;
-    window._antiCheat.blurCount++;
-    if (window._antiCheat.blurCount > 1) showToast(`⚠️ ¡Mantente en la ventana del control! (${window._antiCheat.blurCount})`);
-  });
-})();
-
-// ── Init on start ──
-window.addEventListener('load', () => {
-  // Cargar banco de controles
-  renderBank();
-
-  // If URL contains a quiz param, go straight to student view and hide teacher UI
-  if (new URLSearchParams(window.location.search).get('quiz')) {
-    document.querySelector('.tab-bar').style.display = 'none';
-    const urlQuiz = getQuizFromUrl();
-    if (urlQuiz) {
-      currentQuiz = urlQuiz;
-      if (urlQuiz.password) {
-        // Show password screen before revealing the quiz
-        document.getElementById('teacher-view').classList.remove('active');
-        document.getElementById('student-view').style.display = 'block';
-        document.getElementById('student-view').classList.add('active');
-        showPasswordScreen();
-      } else {
-        showView('student');
-      }
-    } else {
-      showView('student');
-    }
-  }
-});
-</script>
-</body>
-<!-- FOOTER -->
-<footer style="text-align:center;padding:18px 24px;font-family:'Nunito',sans-serif;font-size:0.82rem;color:#9ca3af;background:#f0f4ff;border-top:1.5px solid #e0e7ff;margin-top:12px">
-  © <span id="footer-year"></span> <strong style="color:#6b7280">Rafael de la Haza</strong> · Todos los derechos reservados
-  <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
-</footer>
-</html>
+            const correctRef = q.type === 'fill'
+              ? (q.blanks || []).join(', ')
+              : q.type === 'definition'
+                ? `${q.correct || ''}${q.acceptedAnswers && q.acceptedAnswers.length > 0 ? ' (también válido: ' + q.acceptedAnswers.join(' / ') + ')' : ''}`
+                : (q.acceptedAnswers || [q.correct]).join(' / ');
+            aiI
