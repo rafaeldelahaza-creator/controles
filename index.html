@@ -1583,8 +1583,13 @@ function getSelectedDifficulty() {
 // ══════════════════════════════════════════════
 //  TYPE CHIPS
 // ══════════════════════════════════════════════
-document.querySelectorAll('.type-chip').forEach(chip => {
-  chip.addEventListener('click', () => chip.classList.toggle('selected'));
+document.getElementById('type-chips').addEventListener('click', e => {
+  const chip = e.target.closest('.type-chip');
+  if (chip) chip.classList.toggle('selected');
+});
+document.getElementById('type-chips-lang').addEventListener('click', e => {
+  const chip = e.target.closest('.type-chip');
+  if (chip) chip.classList.toggle('selected');
 });
 
 function getSelectedTypes() {
@@ -3209,6 +3214,4 @@ function submitQuiz() {
             const correctRef = q.type === 'fill'
               ? (q.blanks || []).join(', ')
               : q.type === 'definition'
-                ? `${q.correct || ''}${q.acceptedAnswers && q.acceptedAnswers.length > 0 ? ' (también válido: ' + q.acceptedAnswers.join(' / ') + ')' : ''}`
-                : (q.acceptedAnswers || [q.correct]).join(' / ');
-            aiI
+                ? `${q.correct |
