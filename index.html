@@ -3265,12 +3265,15 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
               const oldPts = origR.pts || 0;
               if (newPts > oldPts) {
                 updatedEarned += (newPts - oldPts);
-                // Build updated pair results display
-                const updatedPairResults = (qEntry.r.pairDetails || []).map((pd, pi) => {
-                  if (pd.matched) return `${pd.term} → ${pd.studentAnswer} ✅`;
+                // Build updated pairDetails with AI verdicts merged in
+                const updatedPairDetails = (qEntry.r.pairDetails || []).map((pd, pi) => {
+                  if (pd.matched) return { ...pd, matched: true };
                   const aiItem = items.find(x => x.item.pairIdx === pi);
-                  if (!aiItem) return `${pd.term} → ${pd.studentAnswer || '–'} ❌`;
-                  const icon = aiItem.ar.verdict === 'correct' ? '✅' : aiItem.ar.verdict === 'partial' ? '🟡' : '❌';
+                  if (!aiItem) return pd;
+                  return { ...pd, matched: aiItem.ar.verdict === 'correct', partial: aiItem.ar.verdict === 'partial' };
+                });
+                const updatedPairResults = updatedPairDetails.map(pd => {
+                  const icon = pd.matched ? '✅' : pd.partial ? '🟡' : '❌';
                   return `${pd.term} → ${pd.studentAnswer || '–'} ${icon}`;
                 });
                 const feedbacks = items.map(x => x.ar.feedback).filter(Boolean);
@@ -3282,7 +3285,8 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
                   partial: anyCorrect && !allCorrect,
                   pts: Math.round(newPts * 10) / 10,
                   studentAnswer: updatedPairResults.join(' | '),
-                  feedback: feedbacks.join(' | ')
+                  feedback: feedbacks.join(' | '),
+                  pairDetails: updatedPairDetails
                 };
               }
             } else {
@@ -3365,7 +3369,52 @@ function showResults(score, name, review, totalPoints) {
   review.forEach((r, i) => {
     const cls2 = r.correct ? 'correct' : r.partial ? 'partial' : 'wrong';
     const icon = r.correct ? '✅' : r.partial ? '🟡' : '❌';
-    rc.innerHTML += `<div class="result-card ${cls2}" id="result-card-${i}"><div class="result-icon">${icon}</div><div style="flex:1"><div class="result-q">${i + 1}. ${escHtml(r.text)}</div><div class="result-detail">Tu respuesta: <span>${escHtml(r.studentAnswer || '–')}</span> · ${escHtml(r.feedback)}</div></div></div>`;
+
+    // For translate: render each pair as its own mini-row
+    let bodyHtml = '';
+    if (r.pairDetails && r.pairDetails.length > 0) {
+      // Build per-pair feedback map from the feedback string (split by |)
+      const feedbackParts = (r.feedback || '').split('|').map(s => s.trim()).filter(Boolean);
+      let fbIdx = 0;
+      const pairRows = r.pairDetails.map((pd, pi) => {
+        const pairDisplay = (r.studentAnswer || '').split('|')[pi] || '';
+        // Determine verdict for this pair from the display string
+        const isOk = pairDisplay.includes('✅');
+        const isPartial = pairDisplay.includes('🟡');
+        const pairIcon = isOk ? '✅' : isPartial ? '🟡' : '❌';
+        const pairCls = isOk ? '#d1fae5' : isPartial ? '#fef3c7' : '#fee2e2';
+        const pairBorder = isOk ? '#10b981' : isPartial ? '#f59e0b' : '#ef4444';
+        const studentAns = escHtml(pd.studentAnswer || '–');
+        const correctAns = escHtml(pd.correctAnswer || '');
+        let fb = '';
+        if (!isOk) {
+          fb = feedbackParts[fbIdx] || '';
+          fbIdx++;
+        }
+        return `<div style="display:flex;align-items:flex-start;gap:8px;background:${pairCls};border:1.5px solid ${pairBorder};border-radius:8px;padding:8px 10px;margin-bottom:6px">
+          <span style="font-size:1.1rem;margin-top:1px">${pairIcon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.78rem;color:#6b7280;font-weight:600;margin-bottom:2px">${escHtml(pd.term)}</div>
+            <div style="font-size:0.92rem;font-weight:700;color:#1f2937">Tu respuesta: <span style="font-weight:400">${studentAns}</span></div>
+            ${!isOk ? `<div style="font-size:0.82rem;color:#374151;margin-top:3px">✏️ Correcto: <strong>${correctAns}</strong></div>` : ''}
+            ${fb ? `<div style="font-size:0.78rem;color:#6b7280;margin-top:2px;font-style:italic">${escHtml(fb)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+      bodyHtml = `<div style="font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:6px">${i + 1}. ${escHtml(r.text)}</div>${pairRows}`;
+    } else {
+      // Standard question: simple layout
+      const studentAnsHtml = escHtml(r.studentAnswer || '–');
+      const correctHtml = (!r.correct && r.feedback) ? `<div style="font-size:0.82rem;margin-top:4px">✏️ Correcto: <strong>${escHtml((r.feedback.replace(/^(Correcto|Casi|Incorrecto)[^:]*:\s*/i,'').replace(/\.$/,'').trim()))}</strong></div>` : '';
+      bodyHtml = `<div class="result-q">${i + 1}. ${escHtml(r.text)}</div>
+        <div class="result-detail">Tu respuesta: <span>${studentAnsHtml}</span></div>
+        ${correctHtml}`;
+    }
+
+    rc.innerHTML += `<div class="result-card ${cls2}" id="result-card-${i}" style="flex-direction:column;align-items:stretch">
+      ${r.pairDetails && r.pairDetails.length > 0 ? '' : `<div style="display:flex;align-items:flex-start;gap:10px"><div class="result-icon">${icon}</div><div style="flex:1">${bodyHtml}</div></div>`}
+      ${r.pairDetails && r.pairDetails.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="result-icon" style="margin:0">${icon}</span><div style="flex:1">${bodyHtml}</div></div>` : ''}
+    </div>`;
   });
 
   if (score >= 7) launchConfetti();
