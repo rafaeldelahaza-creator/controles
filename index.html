@@ -147,6 +147,10 @@
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .type-chip.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
 
@@ -1248,19 +1252,19 @@
     </div>
     <label>Tipos de preguntas a incluir</label>
     <div class="type-grid" id="type-chips">
-      <div class="type-chip selected" data-type="test">📋 Tipo test</div>
-      <div class="type-chip selected" data-type="tf">✅ Verdadero / Falso</div>
-      <div class="type-chip selected" data-type="fill">✏️ Completar huecos</div>
-      <div class="type-chip selected" data-type="match">🔗 Relacionar</div>
-      <div class="type-chip selected" data-type="short">💬 Respuesta corta</div>
-      <div class="type-chip" data-type="definition">📖 Definición</div>
-      <div class="type-chip selected" data-type="order">🔢 Ordenar</div>
+      <div class="type-chip selected" data-type="test" onclick="this.classList.toggle('selected')">📋 Tipo test</div>
+      <div class="type-chip selected" data-type="tf" onclick="this.classList.toggle('selected')">✅ Verdadero / Falso</div>
+      <div class="type-chip selected" data-type="fill" onclick="this.classList.toggle('selected')">✏️ Completar huecos</div>
+      <div class="type-chip selected" data-type="match" onclick="this.classList.toggle('selected')">🔗 Relacionar</div>
+      <div class="type-chip selected" data-type="short" onclick="this.classList.toggle('selected')">💬 Respuesta corta</div>
+      <div class="type-chip" data-type="definition" onclick="this.classList.toggle('selected')">📖 Definición</div>
+      <div class="type-chip selected" data-type="order" onclick="this.classList.toggle('selected')">🔢 Ordenar</div>
     </div>
     <div class="lang-section-label">🇫🇷 Solo para idiomas</div>
     <div class="type-grid" id="type-chips-lang">
-      <div class="type-chip lang" data-type="vocab">🔠 Test ampliado</div>
-      <div class="type-chip lang" data-type="translate">🔄 Traducción directa</div>
-      <div class="type-chip lang" data-type="emoji">😀 Emoji → palabra</div>
+      <div class="type-chip lang" data-type="vocab" onclick="this.classList.toggle('selected')">🔠 Test ampliado</div>
+      <div class="type-chip lang" data-type="translate" onclick="this.classList.toggle('selected')">🔄 Traducción directa</div>
+      <div class="type-chip lang" data-type="emoji" onclick="this.classList.toggle('selected')">😀 Emoji → palabra</div>
     </div>
     <button class="btn btn-primary" onclick="generateWithAI()" id="ai-btn">
       <span id="ai-btn-text">✦ Generar control con IA</span>
@@ -3200,18 +3204,4 @@ function submitQuiz() {
                 aiItems.push({
                   idx: i,
                   pairIdx: pi,
-                  type: 'translate_pair',
-                  term: pd.term,
-                  correctAnswer: pd.correctAnswer,
-                  acceptedAnswers: (q.pairs[pi].acceptedAnswers || [pd.correctAnswer]).join(' / '),
-                  studentAnswer: pd.studentAnswer,
-                  maxPoints: q.points,
-                  totalPairs: (q.pairs || []).length
-                });
-              }
-            });
-          } else {
-            const correctRef = q.type === 'fill'
-              ? (q.blanks || []).join(', ')
-              : q.type === 'definition'
-                ? `${q.correct |
+                  type: 'translat
