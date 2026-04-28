@@ -3125,25 +3125,133 @@ function submitQuiz() {
   const timeNow = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   submissions.push({ name, class: cls, quiz: currentQuiz.title, score, date: today });
 
-  // Guardar en Google Sheets (nota + respuestas completas)
   const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
   sessionStorage.setItem(submitKey, '1');
 
-  fetch('/.netlify/functions/save-score', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name, cls, quiz: currentQuiz.title, score, date: today, time: timeNow,
-      tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
-      blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
-      review
-    })
-  }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
+  // Mostrar resultados inmediatamente con corrección exacta
+  showResults(score, name, review, totalPoints);
 
-  showResults(score, name, review);
+  // En paralelo: guardar en Sheets + revisión IA de preguntas abiertas
+  const saveAndReview = async () => {
+    // Detectar preguntas abiertas que no pasaron la corrección exacta
+    const openTypes = ['translate', 'short', 'fill'];
+    const openToReview = questions
+      .map((q, i) => ({ q, i, r: review[i] }))
+      .filter(({ q, r }) => openTypes.includes(q.type) && r && !r.correct);
+
+    let updatedReview = [...review];
+    let updatedEarned = earnedPoints;
+
+    if (openToReview.length > 0) {
+      try {
+        const subject = currentQuiz.subject || currentQuiz.title || 'la asignatura';
+        const payload = openToReview.map(({ q, i, r }) => ({
+          idx: i,
+          type: q.type,
+          question: q.text,
+          correctAnswer: q.type === 'translate'
+            ? (q.pairs || []).map(p => `${p.term} → ${p.answer}`).join(', ')
+            : q.type === 'fill'
+              ? (q.blanks || []).join(', ')
+              : (q.acceptedAnswers || [q.correct]).join(' / '),
+          studentAnswer: r.studentAnswer,
+          maxPoints: q.points,
+          currentPoints: r.pts
+        }));
+
+        const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa las siguientes respuestas de un alumno con criterio flexible pero justo.
+
+CRITERIOS DE EVALUACIÓN:
+- ✅ CORRECTO (puntos completos): la respuesta es semánticamente equivalente a la correcta, aunque use sinónimos, diferente orden de palabras, variantes pronominales (me/te/le/nos), artículos distintos (el/la/un/una), número (singular/plural si el sentido es el mismo), o faltas de ortografía menores que no cambian el significado.
+- 🟡 PARCIAL (mitad de puntos): la respuesta muestra comprensión parcial del concepto pero le falta precisión, o tiene un error en uno de varios elementos pedidos.
+- ❌ INCORRECTO (0 puntos): la respuesta es incorrecta, vacía, o no guarda relación con lo pedido.
+
+PREGUNTAS A EVALUAR:
+${payload.map((p, n) => `${n + 1}. [${p.type}] Pregunta: "${p.question}"
+   Respuesta correcta: ${p.correctAnswer}
+   Respuesta del alumno: "${p.studentAnswer}"
+   Puntos máximos: ${p.maxPoints}`).join('\n\n')}
+
+Responde SOLO con un JSON array, sin texto adicional, sin markdown:
+[{"idx": <número de índice original>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos a asignar>, "feedback": "<explicación breve en español de por qué es correcto/parcial/incorrecto>"}]`;
+
+        const resp = await fetch('/.netlify/functions/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 800,
+            messages: [{ role: 'user', content: aiPrompt }]
+          })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.content) {
+          const text = data.content.map(c => c.text || '').join('');
+          const clean = text.replace(/```json|```/g, '').trim();
+          const aiResults = JSON.parse(clean);
+
+          aiResults.forEach(ar => {
+            const origR = updatedReview[ar.idx];
+            if (!origR) return;
+            // Solo actualizamos si la IA da una nota mejor que la corrección exacta
+            const oldPts = origR.pts || 0;
+            const newPts = Math.min(ar.pts, origR.maxPts);
+            if (newPts > oldPts) {
+              updatedEarned += (newPts - oldPts);
+              updatedReview[ar.idx] = {
+                ...origR,
+                correct: ar.verdict === 'correct',
+                partial: ar.verdict === 'partial',
+                pts: Math.round(newPts * 10) / 10,
+                feedback: ar.feedback + (origR.feedback && origR.feedback !== 'Correcto' ? ` (original: ${origR.feedback})` : ''),
+                aiReviewed: true
+              };
+            }
+          });
+
+          // Si la IA mejoró alguna nota, actualizar pantalla
+          const newRawScore = totalPoints > 0 ? (updatedEarned / totalPoints) * 10 : 0;
+          const newScore = Math.round(newRawScore * 10) / 10;
+          if (newScore > score) {
+            showResults(newScore, name, updatedReview, totalPoints);
+          }
+
+          // Guardar nota definitiva en Sheets
+          fetch('/.netlify/functions/save-score', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name, cls, quiz: currentQuiz.title, score: newScore > score ? newScore : score,
+              date: today, time: timeNow,
+              tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
+              blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
+              review: updatedReview
+            })
+          }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
+          return;
+        }
+      } catch (e) {
+        console.warn('Revisión IA falló, usando corrección exacta:', e);
+      }
+    }
+
+    // Sin preguntas abiertas o si falló la IA: guardar nota exacta
+    fetch('/.netlify/functions/save-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, cls, quiz: currentQuiz.title, score, date: today, time: timeNow,
+        tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
+        blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
+        review
+      })
+    }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
+  };
+
+  saveAndReview();
 }
 
-function showResults(score, name, review) {
+function showResults(score, name, review, totalPoints) {
   document.getElementById('student-view').style.display = 'none';
   const rs = document.getElementById('results-screen');
   rs.style.display = 'block';
@@ -3162,7 +3270,7 @@ function showResults(score, name, review) {
   review.forEach((r, i) => {
     const cls2 = r.correct ? 'correct' : r.partial ? 'partial' : 'wrong';
     const icon = r.correct ? '✅' : r.partial ? '🟡' : '❌';
-    rc.innerHTML += `<div class="result-card ${cls2}"><div class="result-icon">${icon}</div><div><div class="result-q">${i + 1}. ${escHtml(r.text)}</div><div class="result-detail">Tu respuesta: <span>${escHtml(r.studentAnswer || '–')}</span> · ${escHtml(r.feedback)}</div></div></div>`;
+    rc.innerHTML += `<div class="result-card ${cls2}" id="result-card-${i}"><div class="result-icon">${icon}</div><div style="flex:1"><div class="result-q">${i + 1}. ${escHtml(r.text)}</div><div class="result-detail">Tu respuesta: <span>${escHtml(r.studentAnswer || '–')}</span> · ${escHtml(r.feedback)}</div></div></div>`;
   });
 
   if (score >= 7) launchConfetti();
