@@ -1451,6 +1451,16 @@
 
 
 
+<!-- ═══════════════ CORRECTING SCREEN ═══════════════ -->
+<div id="correcting-screen" style="display:none;padding:32px;max-width:680px;margin:0 auto">
+  <div class="card" style="text-align:center;padding:48px 32px">
+    <div style="font-size:3rem;margin-bottom:16px">📝</div>
+    <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:12px">Corrigiendo tu control…</h2>
+    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:24px">Un momento, estamos revisando tus respuestas.</p>
+    <div class="loading-dots" style="justify-content:center"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
 <!-- ═══════════════ RESULTS SCREEN ═══════════════ -->
 <div id="results-screen" style="display:none;padding:32px;max-width:680px;margin:0 auto">
   <div class="card" style="text-align:center">
@@ -1544,7 +1554,7 @@ let uploadedFiles = []; // Array de { type, mediaType, base64, name } | { type:'
 //  NAVIGATION
 // ══════════════════════════════════════════════
 function showView(v) {
-  document.querySelectorAll('.view, #results-screen').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
+  document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   if (v === 'teacher') {
     document.getElementById('teacher-view').style.display = 'block';
@@ -3128,17 +3138,20 @@ function submitQuiz() {
   const submitKey = 'submitted_' + btoa(encodeURIComponent(currentQuiz.title || 'control'));
   sessionStorage.setItem(submitKey, '1');
 
-  // Mostrar resultados inmediatamente con corrección exacta
-  showResults(score, name, review, totalPoints);
+  // Detectar si hay preguntas abiertas que revisar con IA
+  const openTypes = ['translate', 'short', 'fill'];
+  const openToReview = questions
+    .map((q, i) => ({ q, i, r: review[i] }))
+    .filter(({ q, r }) => openTypes.includes(q.type) && r && !r.correct);
 
-  // En paralelo: guardar en Sheets + revisión IA de preguntas abiertas
+  if (openToReview.length > 0) {
+    // Mostrar pantalla de corrección mientras la IA revisa
+    document.getElementById('student-view').style.display = 'none';
+    document.getElementById('correcting-screen').style.display = 'block';
+  }
+
+  // Revisión IA + guardado en Sheets
   const saveAndReview = async () => {
-    // Detectar preguntas abiertas que no pasaron la corrección exacta
-    const openTypes = ['translate', 'short', 'fill'];
-    const openToReview = questions
-      .map((q, i) => ({ q, i, r: review[i] }))
-      .filter(({ q, r }) => openTypes.includes(q.type) && r && !r.correct);
-
     let updatedReview = [...review];
     let updatedEarned = earnedPoints;
 
@@ -3159,12 +3172,21 @@ function submitQuiz() {
           currentPoints: r.pts
         }));
 
-        const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa las siguientes respuestas de un alumno con criterio flexible pero justo.
+        const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa las respuestas de un alumno con criterio MUY flexible y generoso, propio de primaria.
 
-CRITERIOS DE EVALUACIÓN:
-- ✅ CORRECTO (puntos completos): la respuesta es semánticamente equivalente a la correcta, aunque use sinónimos, diferente orden de palabras, variantes pronominales (me/te/le/nos), artículos distintos (el/la/un/una), número (singular/plural si el sentido es el mismo), o faltas de ortografía menores que no cambian el significado.
-- 🟡 PARCIAL (mitad de puntos): la respuesta muestra comprensión parcial del concepto pero le falta precisión, o tiene un error en uno de varios elementos pedidos.
-- ❌ INCORRECTO (0 puntos): la respuesta es incorrecta, vacía, o no guarda relación con lo pedido.
+CRITERIOS DE EVALUACIÓN — LEE CON ATENCIÓN:
+- ✅ CORRECTO (puntos completos): la respuesta transmite el mismo significado que la correcta. Acepta SIN DUDAR:
+  · Variantes pronominales: "me gusta / a mí me gusta / me encanta / yo adoro"
+  · Singular/plural intercambiables si el sentido es el mismo: "la fruta / las frutas", "el arroz / los arroces"
+  · Artículos distintos o ausentes: "el arroz / arroz / un arroz"
+  · Errores gramaticales típicos de primaria que no afectan al significado: "ella no le gusta" en vez de "a ella no le gusta"
+  · Sinónimos claros del mismo campo semántico: "me encanta / adoro / me chifla"
+  · Pequeñas faltas de ortografía que no cambian el significado: "arros", "frúta"
+  · Diferente orden de palabras con mismo significado
+- 🟡 PARCIAL (mitad de puntos): entiende la idea principal pero falta un elemento importante (ej: traduce bien el verbo pero omite el complemento, o acierta la negación pero falla el objeto).
+- ❌ INCORRECTO (0 puntos): la respuesta es incorrecta, vacía, inventada, o no guarda ninguna relación con lo pedido.
+
+REGLA DE ORO: En caso de duda entre CORRECTO y PARCIAL, elige CORRECTO. Entre PARCIAL e INCORRECTO, elige PARCIAL. Es mejor ser generoso que injusto con un alumno de primaria.
 
 PREGUNTAS A EVALUAR:
 ${payload.map((p, n) => `${n + 1}. [${p.type}] Pregunta: "${p.question}"
@@ -3172,8 +3194,11 @@ ${payload.map((p, n) => `${n + 1}. [${p.type}] Pregunta: "${p.question}"
    Respuesta del alumno: "${p.studentAnswer}"
    Puntos máximos: ${p.maxPoints}`).join('\n\n')}
 
-Responde SOLO con un JSON array, sin texto adicional, sin markdown:
-[{"idx": <número de índice original>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos a asignar>, "feedback": "<explicación breve en español de por qué es correcto/parcial/incorrecto>"}]`;
+Responde SOLO con un JSON array, sin texto adicional, sin markdown. El campo "feedback" debe ser una frase clara para el alumno:
+- Si es CORRECTO: explica brevemente por qué se acepta su respuesta aunque difiera de la oficial. Ej: "Correcto. Tu respuesta tiene el mismo significado aunque uses una expresión diferente. La respuesta oficial era: A él le gusta el arroz."
+- Si es PARCIAL: explica qué parte está bien y qué falta o falla. Ej: "Casi. Entiendes la idea pero falta precisión. La respuesta correcta era: Ella no le gustan las frutas."
+- Si es INCORRECTO: indica la respuesta correcta. Ej: "Incorrecto. La respuesta correcta era: Me encantan las frutas."
+[{"idx": <número de índice original>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos a asignar>, "feedback": "<feedback detallado para el alumno>"}]`;
 
         const resp = await fetch('/.netlify/functions/generate', {
           method: 'POST',
@@ -3193,30 +3218,37 @@ Responde SOLO con un JSON array, sin texto adicional, sin markdown:
           aiResults.forEach(ar => {
             const origR = updatedReview[ar.idx];
             if (!origR) return;
-            // Solo actualizamos si la IA da una nota mejor que la corrección exacta
             const oldPts = origR.pts || 0;
             const newPts = Math.min(ar.pts, origR.maxPts);
             if (newPts > oldPts) {
               updatedEarned += (newPts - oldPts);
+              // Construir feedback detallado para el alumno
+              const origCorrect = origR.feedback && origR.feedback !== 'Correcto'
+                ? origR.feedback.replace(/^Correcto:\s*/i, '').replace(/^Respuesta:\s*/i, '')
+                : null;
+              let detailedFeedback = ar.feedback;
+              if (origCorrect) {
+                if (ar.verdict === 'correct') {
+                  detailedFeedback = `${ar.feedback} (la respuesta correcta era: ${origCorrect})`;
+                } else if (ar.verdict === 'partial') {
+                  detailedFeedback = `${ar.feedback} (respuesta correcta: ${origCorrect})`;
+                }
+              }
               updatedReview[ar.idx] = {
                 ...origR,
                 correct: ar.verdict === 'correct',
                 partial: ar.verdict === 'partial',
                 pts: Math.round(newPts * 10) / 10,
-                feedback: ar.feedback + (origR.feedback && origR.feedback !== 'Correcto' ? ` (original: ${origR.feedback})` : ''),
-                aiReviewed: true
+                feedback: detailedFeedback
               };
             }
           });
 
-          // Si la IA mejoró alguna nota, actualizar pantalla
           const newRawScore = totalPoints > 0 ? (updatedEarned / totalPoints) * 10 : 0;
           const newScore = Math.round(newRawScore * 10) / 10;
-          if (newScore > score) {
-            showResults(newScore, name, updatedReview, totalPoints);
-          }
+          document.getElementById('correcting-screen').style.display = 'none';
+          showResults(newScore > score ? newScore : score, name, updatedReview, totalPoints);
 
-          // Guardar nota definitiva en Sheets
           fetch('/.netlify/functions/save-score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3235,7 +3267,9 @@ Responde SOLO con un JSON array, sin texto adicional, sin markdown:
       }
     }
 
-    // Sin preguntas abiertas o si falló la IA: guardar nota exacta
+    // Sin preguntas abiertas o si falló la IA: ocultar pantalla de corrección y mostrar resultados exactos
+    document.getElementById('correcting-screen').style.display = 'none';
+    showResults(score, name, review, totalPoints);
     fetch('/.netlify/functions/save-score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3253,6 +3287,7 @@ Responde SOLO con un JSON array, sin texto adicional, sin markdown:
 
 function showResults(score, name, review, totalPoints) {
   document.getElementById('student-view').style.display = 'none';
+  document.getElementById('correcting-screen').style.display = 'none';
   const rs = document.getElementById('results-screen');
   rs.style.display = 'block';
 
