@@ -1252,19 +1252,19 @@
     </div>
     <label>Tipos de preguntas a incluir</label>
     <div class="type-grid" id="type-chips">
-      <div class="type-chip selected" data-type="test" onclick="this.classList.toggle('selected')">📋 Tipo test</div>
-      <div class="type-chip selected" data-type="tf" onclick="this.classList.toggle('selected')">✅ Verdadero / Falso</div>
-      <div class="type-chip selected" data-type="fill" onclick="this.classList.toggle('selected')">✏️ Completar huecos</div>
-      <div class="type-chip selected" data-type="match" onclick="this.classList.toggle('selected')">🔗 Relacionar</div>
-      <div class="type-chip selected" data-type="short" onclick="this.classList.toggle('selected')">💬 Respuesta corta</div>
-      <div class="type-chip" data-type="definition" onclick="this.classList.toggle('selected')">📖 Definición</div>
-      <div class="type-chip selected" data-type="order" onclick="this.classList.toggle('selected')">🔢 Ordenar</div>
+      <div class="type-chip selected" data-type="test" onclick="toggleChip(this)">📋 Tipo test</div>
+      <div class="type-chip selected" data-type="tf" onclick="toggleChip(this)">✅ Verdadero / Falso</div>
+      <div class="type-chip selected" data-type="fill" onclick="toggleChip(this)">✏️ Completar huecos</div>
+      <div class="type-chip selected" data-type="match" onclick="toggleChip(this)">🔗 Relacionar</div>
+      <div class="type-chip selected" data-type="short" onclick="toggleChip(this)">💬 Respuesta corta</div>
+      <div class="type-chip" data-type="definition" onclick="toggleChip(this)">📖 Definición</div>
+      <div class="type-chip selected" data-type="order" onclick="toggleChip(this)">🔢 Ordenar</div>
     </div>
     <div class="lang-section-label">🇫🇷 Solo para idiomas</div>
     <div class="type-grid" id="type-chips-lang">
-      <div class="type-chip lang" data-type="vocab" onclick="this.classList.toggle('selected')">🔠 Test ampliado</div>
-      <div class="type-chip lang" data-type="translate" onclick="this.classList.toggle('selected')">🔄 Traducción directa</div>
-      <div class="type-chip lang" data-type="emoji" onclick="this.classList.toggle('selected')">😀 Emoji → palabra</div>
+      <div class="type-chip lang" data-type="vocab" onclick="toggleChip(this)">🔠 Test ampliado</div>
+      <div class="type-chip lang" data-type="translate" onclick="toggleChip(this)">🔄 Traducción directa</div>
+      <div class="type-chip lang" data-type="emoji" onclick="toggleChip(this)">😀 Emoji → palabra</div>
     </div>
     <button class="btn btn-primary" onclick="generateWithAI()" id="ai-btn">
       <span id="ai-btn-text">✦ Generar control con IA</span>
@@ -1587,14 +1587,9 @@ function getSelectedDifficulty() {
 // ══════════════════════════════════════════════
 //  TYPE CHIPS
 // ══════════════════════════════════════════════
-document.getElementById('type-chips').addEventListener('click', e => {
-  const chip = e.target.closest('.type-chip');
-  if (chip) chip.classList.toggle('selected');
-});
-document.getElementById('type-chips-lang').addEventListener('click', e => {
-  const chip = e.target.closest('.type-chip');
-  if (chip) chip.classList.toggle('selected');
-});
+function toggleChip(el) {
+  el.classList.toggle('selected');
+}
 
 function getSelectedTypes() {
   return [...document.querySelectorAll('.type-chip.selected')].map(c => c.dataset.type);
