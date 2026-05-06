@@ -1499,7 +1499,7 @@
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
             <span id="an-range-min" style="font-size:0.78rem;font-weight:800;color:#6b7280"></span>
             <input type="range" id="an-num-slider" min="3" max="12" step="1"
-              oninput="document.getElementById('an-num-val').textContent=this.value"
+              oninput="document.getElementById('an-num-val').textContent=this.value;if(window._analyzeHints){document.getElementById('an-num-hint').textContent=window._analyzeHints[parseInt(this.value)]||'';}"
               style="flex:1;accent-color:#5b21b6;cursor:pointer">
             <span id="an-range-max" style="font-size:0.78rem;font-weight:800;color:#6b7280"></span>
           </div>
@@ -1801,10 +1801,11 @@
     </div>
     <h2 style="justify-content:center;font-size:1.6rem" id="score-msg"></h2>
     <p style="color:var(--muted);margin-top:6px;margin-bottom:20px" id="score-sub"></p>
-    <p style="color:var(--muted);font-size:0.9rem;margin-top:8px">Tu nota ha sido registrada. ¡Puedes cerrar esta página!</p>
+    <p style="color:var(--muted);font-size:0.9rem;margin-top:8px">👇 Revisa tus respuestas y correcciones a continuación.</p>
   </div>
   <div class="section-title">📝 Revisión de respuestas</div>
   <div id="review-cards"></div>
+  <div style="text-align:center;color:var(--muted);font-size:0.88rem;padding:18px 0 8px">✅ Tu nota ha sido registrada. ¡Ya puedes cerrar esta página!</div>
 </div>
 
 <!-- ═══════════════ MODAL INFORME POST-CONTROL ═══════════════ -->
@@ -1871,6 +1872,7 @@
 //  STATE
 // ══════════════════════════════════════════════
 let currentQuiz = null;
+let _studentQuizQuestions = null; // preguntas del último control enviado (para revisión del alumno)
 let timerInterval = null;
 let timerSeconds = 0;
 let submissions = [];
@@ -2464,23 +2466,19 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
       ? `${numMin} preguntas`
       : `Entre ${numMin} y ${numMax} preguntas (óptimo: ${numOpt})`;
     document.getElementById('an-num-range').textContent = rangeLabel;
-    // Configurar slider
+    // Configurar slider — asignar min/max ANTES que value para evitar que el navegador lo recorte
     const slider = document.getElementById('an-num-slider');
-    slider.min = numMin; slider.max = numMax; slider.value = numOpt;
-    document.getElementById('an-num-val').textContent = numOpt;
+    slider.min = numMin; slider.max = numMax;
+    slider.value = numOpt;
+    document.getElementById('an-num-val').textContent = slider.value; // usar valor real tras aplicar límites
     document.getElementById('an-range-min').textContent = numMin;
     document.getElementById('an-range-max').textContent = numMax;
-    // Hint dinámico según posición del slider
-    const hints = {};
-    hints[numMin] = 'Mínimo — cubre los conceptos clave.';
-    hints[numMax] = 'Máximo — en el límite, puede haber alguna repetición.';
-    hints[numOpt] = 'Óptimo — equilibrio ideal para este material.';
-    slider.oninput = function() {
-      document.getElementById('an-num-val').textContent = this.value;
-      const h = hints[parseInt(this.value)];
-      document.getElementById('an-num-hint').textContent = h || '';
-    };
-    document.getElementById('an-num-hint').textContent = hints[numOpt] || '';
+    // Hints accesibles desde el handler inline mediante window._analyzeHints
+    window._analyzeHints = {};
+    window._analyzeHints[numMin] = 'Mínimo — cubre los conceptos clave.';
+    window._analyzeHints[numMax] = 'Máximo — en el límite, puede haber alguna repetición.';
+    window._analyzeHints[numOpt] = 'Óptimo — equilibrio ideal para este material.';
+    document.getElementById('an-num-hint').textContent = window._analyzeHints[parseInt(slider.value)] || '';
     document.getElementById('an-num-slider-wrap').style.display = 'block';
     document.getElementById('an-time').textContent = result.timeMinutes + ' minutos';
     document.getElementById('an-reason').textContent = result.reasoning || '';
@@ -2512,10 +2510,12 @@ function applyAnalysisSuggestion() {
     if (subjEl && !subjEl.value.trim()) subjEl.value = lastAnalysis.subject;
   }
 
-  // Aplicar título al campo de configuración inicial
+  // Aplicar título al campo de configuración inicial Y al editor (si ya está abierto)
   if (lastAnalysis.title) {
     const genTitleEl = document.getElementById('gen-title-input');
     if (genTitleEl && !genTitleEl.value.trim()) genTitleEl.value = lastAnalysis.title;
+    const quizTitleEl = document.getElementById('quiz-title-input');
+    if (quizTitleEl && !quizTitleEl.value.trim()) quizTitleEl.value = lastAnalysis.title;
   }
 
 
@@ -3926,6 +3926,7 @@ function submitQuiz() {
   const cls = studentClass || currentQuiz.class || '–';
   if (!name) { showToast('⚠️ Error: nombre no registrado. Recarga la página.'); return; }
   const questions = currentQuiz._rendered || currentQuiz.questions;
+  _studentQuizQuestions = questions; // guardar para que showResults pueda acceder
 
   // Calcular el total real de puntos del control (puede no ser exactamente 10 por redondeos de la IA)
   const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
@@ -4375,7 +4376,7 @@ function showResults(score, name, review, totalPoints) {
   rc.innerHTML = '';
 
   review.forEach((r, i) => {
-    const q = (questions && questions[i]) ? questions[i] : null;
+    const q = (_studentQuizQuestions && _studentQuizQuestions[i]) ? _studentQuizQuestions[i] : null;
     const cls2 = r.correct ? 'correct' : r.partial ? 'partial' : 'wrong';
     const icon = r.correct ? '✅' : r.partial ? '🟡' : '❌';
     const statusLabel = r.correct ? 'Correcto' : r.partial ? 'Parcialmente correcto' : 'Incorrecto';
@@ -5475,7 +5476,7 @@ function normalizeSubject(text) {
   const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   if (/\bmates\b|\bmatematica(s)?\b|\bmat\b/.test(t)) return 'Matemáticas';
   if (/\blengua\b|\blenguaje\b|\bcastellano\b/.test(t)) return 'Lengua';
-  if (/\bfrances\b|\bfrancés\b|\bidioma\b|\bfranc\b/.test(t)) return 'Francés';
+  if (/franc[eé]s|français|françai/i.test(t)) return 'Francés';
   if (/\bcono\b|\bconocimiento(s)?\b|conocimiento(s)? del medio|\bciencias?\b|ciencias? (nat|soc|natur|social|del medio)|\bnaturales?\b|\bsociales?\b|\bmedio\b/.test(t)) return 'Cono';
   if (/\bingles\b|\bingles\b|\benglish\b/.test(t)) return 'Inglés';
   if (/\bmusica\b|\bplastica\b|\bplast\b|\bartistica\b|educacion (fis|art|music)/.test(t)) return 'Otras';
