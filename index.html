@@ -1490,8 +1490,25 @@
     <div id="analyze-panel">
       <div class="analyze-title">✦ Sugerencias para este material</div>
       <div class="analyze-row"><span class="analyze-label">Asignatura:</span><span class="analyze-value" id="an-subject">–</span></div>
-      <div class="analyze-row"><span class="analyze-label">Título sugerido:</span><span class="analyze-value" id="an-title">–</span></div>
-      <div class="analyze-row"><span class="analyze-label">Nº de preguntas:</span><span class="analyze-value" id="an-num">–</span></div>
+      <div class="analyze-row" style="flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="analyze-label" style="min-width:unset">Nº de preguntas:</span>
+          <span class="analyze-value" id="an-num-range" style="color:#5b21b6;font-weight:800">–</span>
+        </div>
+        <div id="an-num-slider-wrap" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span id="an-range-min" style="font-size:0.78rem;font-weight:800;color:#6b7280"></span>
+            <input type="range" id="an-num-slider" min="3" max="12" step="1"
+              oninput="document.getElementById('an-num-val').textContent=this.value"
+              style="flex:1;accent-color:#5b21b6;cursor:pointer">
+            <span id="an-range-max" style="font-size:0.78rem;font-weight:800;color:#6b7280"></span>
+          </div>
+          <div style="text-align:center;font-size:0.95rem;font-weight:800;color:#5b21b6">
+            <span id="an-num-val">6</span> preguntas
+          </div>
+          <div id="an-num-hint" style="font-size:0.75rem;color:#6b7280;font-style:italic;margin-top:4px;text-align:center"></div>
+        </div>
+      </div>
       <div class="analyze-row"><span class="analyze-label">Tiempo estimado:</span><span class="analyze-value" id="an-time">–</span></div>
       <div class="analyze-row" style="flex-direction:column">
         <span class="analyze-label" style="margin-bottom:6px">Tipos recomendados:</span>
@@ -1503,6 +1520,16 @@
       </div>
       <div class="analyze-chips">
         <button class="analyze-chip apply-btn" onclick="applyAnalysisSuggestion()">✅ Aplicar sugerencias</button>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Título del control</label>
+        <input type="text" id="gen-title-input" placeholder="Ej: Control Tema 3 – Fracciones">
+      </div>
+      <div>
+        <label>Curso</label>
+        <input type="text" id="gen-class-input" placeholder="Ej: 5ºA">
       </div>
     </div>
     <div class="row">
@@ -2269,7 +2296,12 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
     loadQuizIntoEditor(quiz);
     bankEditingId = null; // es un control nuevo, no proviene del banco
     document.getElementById('editor-card').style.display = 'block';
-    document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
+    // Traspasar título y curso de la config al editor si están rellenos
+  const genTitle = document.getElementById('gen-title-input')?.value.trim();
+  const genClass = document.getElementById('gen-class-input')?.value.trim();
+  if (genTitle) { const t = document.getElementById('quiz-title-input'); if (t && !t.value.trim()) t.value = genTitle; }
+  if (genClass) { const c = document.getElementById('quiz-class-input'); if (c && !c.value.trim()) c.value = genClass; }
+  document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
   // Resetear chat del asistente al generar un control nuevo
   aiChatHistory = [];
   const chatMsgs = document.getElementById('ai-chat-messages');
@@ -2377,7 +2409,9 @@ Responde SOLO con JSON válido, sin texto adicional ni markdown:
 {
   "subject": "nombre exacto de la asignatura detectada",
   "title": "título sugerido para el control (ej: Control Tema 3 – Los determinantes)",
-  "numQuestions": <número entero entre 4 y 12>,
+  "numMin": <mínimo del rango recomendado (entero 3-12) — número a partir del cual el control cubre los conceptos clave sin quedarse corto>,
+  "numMax": <máximo del rango recomendado (entero 3-12) — número a partir del cual empezarían a repetirse conceptos o el control sería demasiado largo>,
+  "numOptimal": <número óptimo dentro del rango — el que mejor equilibra cobertura y brevedad>,
   "timeMinutes": <minutos estimados entre 5 y 15>,
   "recommendedTypes": ["type1", "type2", ...],
   "reasoning": "explicación breve (2-3 frases) de por qué estos tipos y este número son los más adecuados para este contenido"
@@ -2423,7 +2457,32 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
     // Mostrar resultados
     document.getElementById('an-subject').textContent = result.subject || '–';
     document.getElementById('an-title').textContent = result.title || '–';
-    document.getElementById('an-num').textContent = result.numQuestions + ' preguntas';
+    // Rango de preguntas
+    const numMin = result.numMin || result.numQuestions || 4;
+    const numMax = result.numMax || result.numQuestions || 8;
+    const numOpt = result.numOptimal || result.numQuestions || Math.round((numMin+numMax)/2);
+    const rangeLabel = numMin === numMax
+      ? `${numMin} preguntas`
+      : `Entre ${numMin} y ${numMax} preguntas (óptimo: ${numOpt})`;
+    document.getElementById('an-num-range').textContent = rangeLabel;
+    // Configurar slider
+    const slider = document.getElementById('an-num-slider');
+    slider.min = numMin; slider.max = numMax; slider.value = numOpt;
+    document.getElementById('an-num-val').textContent = numOpt;
+    document.getElementById('an-range-min').textContent = numMin;
+    document.getElementById('an-range-max').textContent = numMax;
+    // Hint dinámico según posición del slider
+    const hints = {};
+    hints[numMin] = 'Mínimo — cubre los conceptos clave.';
+    hints[numMax] = 'Máximo — en el límite, puede haber alguna repetición.';
+    hints[numOpt] = 'Óptimo — equilibrio ideal para este material.';
+    slider.oninput = function() {
+      document.getElementById('an-num-val').textContent = this.value;
+      const h = hints[parseInt(this.value)];
+      document.getElementById('an-num-hint').textContent = h || '';
+    };
+    document.getElementById('an-num-hint').textContent = hints[numOpt] || '';
+    document.getElementById('an-num-slider-wrap').style.display = 'block';
     document.getElementById('an-time').textContent = result.timeMinutes + ' minutos';
     document.getElementById('an-reason').textContent = result.reasoning || '';
 
@@ -2454,16 +2513,21 @@ function applyAnalysisSuggestion() {
     if (subjEl && !subjEl.value.trim()) subjEl.value = lastAnalysis.subject;
   }
 
-  // Aplicar título
+  // Aplicar título al campo de configuración inicial
   if (lastAnalysis.title) {
-    const titleEl = document.getElementById('quiz-title-input');
-    if (titleEl && !titleEl.value.trim()) titleEl.value = lastAnalysis.title;
+    const genTitleEl = document.getElementById('gen-title-input');
+    if (genTitleEl && !genTitleEl.value.trim()) genTitleEl.value = lastAnalysis.title;
   }
 
-  // Aplicar número de preguntas
-  if (lastAnalysis.numQuestions) {
+
+  // Aplicar número de preguntas — leer del slider si está visible
+  const sliderEl = document.getElementById('an-num-slider');
+  const chosenNum = sliderEl && sliderEl.offsetParent !== null
+    ? parseInt(sliderEl.value)
+    : (lastAnalysis.numOptimal || lastAnalysis.numQuestions || null);
+  if (chosenNum) {
     const numEl = document.getElementById('num-questions');
-    if (numEl) { numEl.value = lastAnalysis.numQuestions; checkRepeatWarning(); }
+    if (numEl) { numEl.value = chosenNum; checkRepeatWarning(); }
   }
 
   // Aplicar tiempo
@@ -2570,16 +2634,21 @@ ${material ? `\nMATERIAL DEL TEMA (fuente obligatoria para preguntas nuevas):\n$
 
 Tu trabajo es modificar el control según las instrucciones del profe. Puedes:
 - Sustituir preguntas concretas por otras nuevas
-- Cambiar el tipo de una pregunta manteniendo el concepto
+- Cambiar el tipo de una pregunta manteniendo o cambiando el concepto
 - Añadir preguntas nuevas
 - Cambiar la dificultad de preguntas concretas
 - Cualquier combinación de lo anterior en un solo mensaje
 
-REGLAS:
-- Usa SOLO conceptos del material proporcionado
-- No repitas conceptos ya evaluados en preguntas que NO se modifican
-- Los enunciados deben ser claros para niños de 10-12 años
-- Responde con JSON estructurado (ver formato) y un breve mensaje explicativo
+CRITERIOS PEDAGÓGICOS OBLIGATORIOS (igual que en la generación inicial):
+- Usa SOLO conceptos, términos y datos que aparezcan en el material. Nunca inventes ejemplos o datos que no estén en el texto.
+- NO repitas conceptos ya evaluados en las preguntas que NO se modifican. Revisa el conjunto completo.
+- NUNCA incluyas en el enunciado palabras o pistas que revelen la respuesta de esa pregunta ni de otras del control.
+- Los distractores en test/multi deben ser errores plausibles, no opciones absurdas.
+- El hueco en fill siempre debe ser la palabra clave conceptual, nunca un artículo o preposición.
+- Los enunciados deben ser claros y sin ambigüedades para niños de 10-12 años.
+- La respuesta debe requerir haber estudiado el tema, no deducirse por sentido común.
+- VERIFICA antes de responder: ¿alguna pregunta nueva da pistas para responder otra? Si es así, reformúlala.
+- Elige el TIPO más adecuado para el concepto: match/classify para categorías, fill para fórmulas con hueco clave, order para procesos, short para términos técnicos exactos, definition para comprensión conceptual.
 
 FORMATO DE RESPUESTA — responde SIEMPRE con este JSON seguido de tu explicación:
 {
