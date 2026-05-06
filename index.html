@@ -961,6 +961,22 @@
   .translate-input:focus { border-color: var(--primary-light); background: #fff; }
   @media (max-width: 540px) { .translate-row { grid-template-columns: 1fr; } }
 
+  .classify-grid { display: flex; flex-direction: column; gap: 10px; }
+  .classify-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; align-items: center; }
+  .classify-term {
+    font-weight: 800; font-size: 1rem; padding: 10px 14px;
+    background: #f0fdf4; border-radius: 10px; color: #166534;
+    display: flex; align-items: center; gap: 8px; border: 1.5px solid #bbf7d0;
+  }
+  .classify-input {
+    width: 100%; padding: 10px 14px; border: 2px solid var(--border);
+    border-radius: 10px; font-family: 'Nunito', sans-serif; font-size: 1rem;
+    font-weight: 700; background: #f8f9ff; color: var(--text);
+    outline: none; margin-bottom: 0; transition: border 0.2s;
+  }
+  .classify-input:focus { border-color: #16a34a; background: #f0fdf4; }
+  @media (max-width: 540px) { .classify-row { grid-template-columns: 1fr; } }
+
   /* ── EMOJI student view ── */
   .emoji-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px;
@@ -1257,8 +1273,10 @@
       <div class="type-chip selected" data-type="fill" onclick="toggleChip(this)">✏️ Completar huecos</div>
       <div class="type-chip selected" data-type="match" onclick="toggleChip(this)">🔗 Relacionar</div>
       <div class="type-chip selected" data-type="short" onclick="toggleChip(this)">💬 Respuesta corta</div>
-      <div class="type-chip" data-type="definition" onclick="toggleChip(this)">📖 Definición</div>
+      <div class="type-chip selected" data-type="definition" onclick="toggleChip(this)">📖 Definición</div>
       <div class="type-chip selected" data-type="order" onclick="toggleChip(this)">🔢 Ordenar</div>
+      <div class="type-chip selected" data-type="multi" onclick="toggleChip(this)">☑️ Opción múltiple</div>
+      <div class="type-chip selected" data-type="classify" onclick="toggleChip(this)">🏷️ Clasificar</div>
     </div>
     <div class="lang-section-label">🇫🇷 Solo para idiomas</div>
     <div class="type-grid" id="type-chips-lang">
@@ -1303,6 +1321,8 @@
       <button class="btn btn-accent btn-sm" onclick="addQuestion('short')">+ Respuesta corta</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('definition')">+ Definición</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('order')">+ Ordenar</button>
+      <button class="btn btn-accent btn-sm" onclick="addQuestion('multi')">+ Opción múltiple</button>
+      <button class="btn btn-accent btn-sm" onclick="addQuestion('classify')">+ Clasificar</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:8px;border-top:1.5px dashed #fcd34d">
       <span style="font-size:0.78rem;font-weight:800;color:#b45309;align-self:center">🇫🇷 Idiomas:</span>
@@ -1730,6 +1750,8 @@ async function generateWithAI() {
     short: 'respuesta corta (1-2 palabras)',
     definition: 'definición breve (1-2 frases donde el alumno explica un concepto con sus propias palabras, ej: ¿Qué es la fotosíntesis? ¿Qué es la materia?)',
     order: 'ordenar elementos (4-5 items)',
+    multi: 'opción múltiple con VARIAS respuestas correctas (4-8 opciones, 2 o más correctas — el alumno marca TODAS las que considera correctas, tipo "señala todos los determinantes artículos")',
+    classify: 'clasificar palabras (4-8 términos, cada uno con su categoría — el alumno ve cada término y escribe a qué categoría pertenece, O ve una categoría y escribe un ejemplo, ej: determinantes → "el", "la", "los" o al revés "artículo" → "el")',
     vocab: '🇫🇷 test ampliado de vocabulario (6-8 opciones, SOLO para idiomas: pregunta una palabra y pone como opciones otras palabras de la misma lista del material)',
     translate: '🇫🇷 traducción directa (SOLO para idiomas: lista de 4-6 pares término→traducción, incluye campo "direction": "fr_es" o "es_fr" y array "pairs" con objetos {term, answer, acceptedAnswers}. El campo "acceptedAnswers" es un array con todas las traducciones válidas del término: incluye variantes con distintos pronombres, artículos, orden de palabras y expresiones equivalentes. Ejemplo: "j\'adore le riz" → acceptedAnswers: ["me encanta el arroz", "adoro el arroz", "a mí me encanta el arroz", "yo adoro el arroz"]. Para vocabulario suelto como "le chat" → acceptedAnswers: ["el gato", "gato"]. Sé generoso: incluye al menos 3-4 variantes por par cuando el término es una frase o expresión)',
     emoji: '🇫🇷 emoji→palabra (SOLO para idiomas: 4-6 emojis que representen palabras del vocabulario del material, el alumno escribe la palabra en el idioma extranjero, array "items" con objetos {emoji, answer})'
@@ -1830,33 +1852,88 @@ INSTRUCCIONES PARA USO DE IMÁGENES:
         {"emoji": "🏠", "answer": "la maison"}
       ],
       "points": 1.5
+    }`,
+    multi: `    {
+      "id": 11,
+      "type": "multi",
+      "text": "Señala todos los determinantes artículos:",
+      "options": ["el", "este", "la", "mucho", "los", "mi"],
+      "correctOptions": ["el", "la", "los"],
+      "points": 2
+    }`,
+    classify: `    {
+      "id": 12,
+      "type": "classify",
+      "text": "Escribe a qué tipo de determinante pertenece cada palabra:",
+      "direction": "term_to_category",
+      "items": [
+        {"term": "el", "category": "artículo", "acceptedAnswers": ["artículo", "determinante artículo"]},
+        {"term": "este", "category": "demostrativo", "acceptedAnswers": ["demostrativo", "determinante demostrativo"]},
+        {"term": "mi", "category": "posesivo", "acceptedAnswers": ["posesivo", "determinante posesivo"]},
+        {"term": "dos", "category": "numeral", "acceptedAnswers": ["numeral", "determinante numeral", "cardinal"]}
+      ],
+      "points": 2
     }`
   };
   const selectedExamples = types.map(t => allExamples[t]).filter(Boolean).join(',\n');
 
-  const prompt = `Eres un profesor de primaria (5º-6º). Genera exactamente ${n} preguntas variadas para un control de ${subject} basándote en el material adjunto${material ? ' y el texto proporcionado' : ''}.
+  const prompt = `Eres un maestro experto de 5º y 6º de Primaria (10-12 años, LOMLOE, España). Tu tarea es generar exactamente ${n} preguntas de evaluación para un control de ${subject} basándote EXCLUSIVAMENTE en el material proporcionado.
 
 ${difficultyInstructions}
 
-TIPOS DE PREGUNTAS PERMITIDOS — USA ÚNICAMENTE ESTOS (ni uno más, ni uno menos):
+════════════════════════════════════════
+CRITERIO PEDAGÓGICO — LEE ESTO PRIMERO
+════════════════════════════════════════
+Antes de generar cada pregunta, comprueba mentalmente:
+1. ¿Esta pregunta evalúa comprensión real o solo memoria literal del enunciado?
+2. ¿Un alumno que NO ha estudiado podría responderla por sentido común o leyendo otra pregunta del mismo control?
+3. ¿La pregunta es suficientemente precisa para que solo exista UNA respuesta correcta clara?
+4. ¿El enunciado es comprensible y sin ambigüedades para un niño de 10-12 años?
+
+REGLAS ANTI-TRIVIALIDAD (obligatorias, sin excepción):
+- NUNCA incluyas en una pregunta palabras, datos o pistas que revelen la respuesta de esa misma pregunta o de otra del control. Revisa el conjunto completo antes de confirmar.
+- NUNCA repitas el mismo concepto en dos preguntas distintas, aunque uses tipos de pregunta diferentes.
+- NUNCA hagas preguntas de V/F cuya respuesta sea evidente sin estudiar el tema (ej: "¿Los peces viven en el agua? V/F").
+- NUNCA uses distractores absurdos en test que se descarten sin pensar. Los distractores deben ser errores plausibles que un alumno que no ha estudiado bien podría cometer.
+- fill: el hueco debe ser siempre la palabra clave conceptual, nunca un artículo, preposición o palabra vacía de significado.
+- short: la respuesta debe ser un término técnico o dato concreto que requiera haberlo estudiado.
+- order: los elementos deben tener un orden lógico o cronológico que solo se conoce habiendo estudiado el tema.
+- tf: la afirmación falsa debe ser un error conceptual plausible que alguien sin estudiar podría confundir con lo correcto.
+
+ELECCIÓN INTELIGENTE DEL TIPO POR CONCEPTO:
+- test: clasificaciones, características, identificar excepciones a una regla
+- multi: cuando un concepto tiene VARIAS características correctas simultáneas
+- tf: afirmaciones sobre reglas o hechos con error conceptual plausible
+- fill: fórmulas, definiciones con término clave, estructuras con hueco preciso
+- match: relacionar términos con definiciones, causas con efectos
+- short: nombres propios, fechas clave, términos técnicos exactos
+- order: procesos, ciclos, pasos de un procedimiento, cronología
+- definition: conceptos abstractos donde se evalúa comprensión
+- classify: categorías gramaticales, clasificaciones científicas, tipos dentro de un sistema
+
+DISTRIBUCIÓN: Cubre el máximo de conceptos distintos del material. No concentres 2+ preguntas en el mismo apartado si hay otros contenidos sin evaluar.
+
+TIPOS DE PREGUNTAS PERMITIDOS — USA ÚNICAMENTE ESTOS:
 ${typeDescriptions}
 PROHIBIDO usar cualquier tipo que no esté en esa lista. Si solo hay un tipo seleccionado, todas las preguntas deben ser de ese tipo.
 ${imageInstructions}
 
-RESTRICCIÓN CRÍTICA — MATERIAL:
-- Basa todas las preguntas en los conceptos, estructuras, reglas y vocabulario que aparezcan en el material proporcionado.
-- VOCABULARIO / LISTAS (palabras sueltas, alimentos, animales, objetos, nombres propios, fechas, fórmulas, términos técnicos): usa SOLO los que estén explícitamente en el material. Si el material tiene 10 palabras de vocabulario en francés, solo usa esas 10; nunca añadas otras del mismo campo semántico aunque sean parecidas.
-- ESTRUCTURAS GRAMATICALES Y EXPRESIONES (j'aime / j'adore / je n'aime pas, determinantes, conjugaciones, estructuras de frase…): la estructura debe aparecer en el material, pero PUEDES combinarla libremente con cualquier término de vocabulario que sí esté en el material. Ejemplo: si el material enseña "j'adore" con "le riz" y también lista otros alimentos como "le pain" y "la pomme", puedes generar preguntas con "j'adore le pain" o "j'aime la pomme" aunque no aparezcan exactamente así en el texto. Lo que NO puedes hacer es usar alimentos u otras palabras que no estén en ninguna parte del material.
-- Si el material es insuficiente para generar ${n} preguntas distintas, genera menos preguntas (las que el material permita) y avísalo en el campo "title" añadiendo " (material limitado)".
+════════════════════════════════════════
+RESTRICCIÓN CRÍTICA — MATERIAL
+════════════════════════════════════════
+- Basa TODAS las preguntas en conceptos, reglas y vocabulario del material proporcionado.
+- VOCABULARIO / LISTAS: usa SOLO los que aparezcan explícitamente en el material.
+- ESTRUCTURAS / REGLAS: la estructura debe aparecer en el material, pero puedes combinarla con vocabulario que sí esté en él.
+- Si el material es insuficiente para ${n} preguntas distintas, genera las que permita y añade " (material limitado)" al campo "title".
 
-PUNTUACIÓN — MUY IMPORTANTE:
-- El campo "points" de cada pregunta representa su valor en la nota final sobre 10.
-- La suma de todos los "points" debe ser EXACTAMENTE 10. Sin excepción.
-- Asigna más puntos a preguntas más complejas (match, order, short) y menos a las más sencillas (tf, test simple).
-- Usa valores con hasta 1 decimal (ej: 1.5, 2.5) para ajustar con precisión.
-- Antes de responder, verifica mentalmente que la suma da 10.
+════════════════════════════════════════
+PUNTUACIÓN
+════════════════════════════════════════
+- La suma de "points" debe ser EXACTAMENTE 10.
+- Más puntos para preguntas de comprensión y producción propia (definition, short, match, classify, multi, order); menos para reconocimiento simple (tf, test).
+- Usa hasta 1 decimal. Verifica la suma antes de responder.
 
-Responde SOLO con un JSON válido con esta estructura exacta (sin texto adicional, sin markdown). El array "questions" debe contener ÚNICAMENTE preguntas de los tipos permitidos indicados arriba:
+Responde SOLO con JSON válido, sin texto adicional ni markdown:
 {
   "title": "Control de ${subject}",
   "subject": "${subject}",
@@ -1866,7 +1943,12 @@ ${selectedExamples}
   ]
 }
 
-Genera exactamente ${n} preguntas reales basadas en el material. Usa SOLO los tipos de pregunta listados en "TIPOS DE PREGUNTAS PERMITIDOS". Recuerda: los "points" deben sumar exactamente 10.`;
+LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a todo:
+✓ ¿Ninguna pregunta da pistas para responder otra del control?
+✓ ¿Cada pregunta evalúa un concepto distinto del material?
+✓ ¿Todos los enunciados son claros para un alumno de 10-12 años?
+✓ ¿Los distractores y afirmaciones falsas son errores plausibles, no absurdos obvios?
+✓ ¿La suma de puntos es exactamente 10?`;
 
   // Build multimodal message content
   let messageContent = [];
@@ -1982,30 +2064,19 @@ function toggleRegenPanel(i) {
 function selectRegenType(i, type) {
   const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
   btns.forEach(b => b.classList.remove('sel'));
-  const clicked = [...btns].find(b => b.textContent.includes({test:'Test',tf:'V/F',fill:'Huecos',match:'Relacionar',short:'Corta',order:'Ordenar'}[type]));
+  const clicked = [...btns].find(b => b.dataset.regenType === type);
   if (clicked) clicked.classList.add('sel');
-  document.getElementById(`regen-panel-${i}`).__regenType = type;
+  const panel = document.getElementById(`regen-panel-${i}`);
+  if (panel) { panel.dataset.selectedType = type; panel.__regenType = type; }
 }
 
-// Guarda el tipo seleccionado en el dataset del panel
 function getRegenType(i) {
-  // Lee qué botón tiene la clase 'sel' en el panel
-  const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
-  const typeMap = {'📋 Test':'test','✅ V/F':'tf','✏️ Huecos':'fill','🔗 Relacionar':'match','💬 Corta':'short','🔢 Ordenar':'order','🇫🇷 Test ampliado':'vocab','🇫🇷 Traducción':'translate','🇫🇷 Emoji→palabra':'emoji','📖 Definición':'definition'};
-  let sel = null;
-  btns.forEach(b => { if (b.classList.contains('sel')) sel = typeMap[b.textContent.trim()] || Object.values(typeMap).find(v => b.textContent.includes(v)); });
-  // Fallback: busca por texto
-  if (!sel) {
-    btns.forEach(b => {
-      if (b.classList.contains('sel')) {
-        const txt = b.textContent.trim();
-        for (const [k, v] of Object.entries({'Test':'test','V/F':'tf','Huecos':'fill','Relacionar':'match','Corta':'short','Ordenar':'order','Definición':'definition'})) {
-          if (txt.includes(k)) sel = v;
-        }
-      }
-    });
-  }
-  return sel || editorQuestions[i]?.type || 'test';
+  const panel = document.getElementById(`regen-panel-${i}`);
+  if (panel && panel.dataset.selectedType) return panel.dataset.selectedType;
+  if (panel && panel.__regenType) return panel.__regenType;
+  const sel = document.querySelector(`#regen-types-${i} .regen-type-btn.sel`);
+  if (sel && sel.dataset.regenType) return sel.dataset.regenType;
+  return editorQuestions[i]?.type || 'test';
 }
 
 async function regenQuestion(i) {
@@ -2015,47 +2086,97 @@ async function regenQuestion(i) {
   btn.disabled = true;
   btnText.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span> Generando…';
 
-  // Contexto: preguntas ya existentes (sin la que vamos a reemplazar)
+  // ── Contexto: preguntas ya existentes con enunciado + respuesta correcta ──
   const otherQs = editorQuestions.filter((_, idx) => idx !== i);
-  const existingTexts = otherQs.map((q, n) => `${n+1}. [${q.type}] ${q.text}`).join('\n');
+  const existingTexts = otherQs.map((q, n) => {
+    let correct = '';
+    if (q.type === 'test' || q.type === 'vocab') correct = q.correct || '';
+    else if (q.type === 'tf') correct = q.correct || '';
+    else if (q.type === 'fill') correct = (q.blanks || []).join(', ');
+    else if (q.type === 'short' || q.type === 'definition') correct = (q.acceptedAnswers || [q.correct || '']).join(' / ');
+    else if (q.type === 'match') correct = Object.entries(q.correctPairs || {}).map(([l,r]) => `${l}→${r}`).join(', ');
+    else if (q.type === 'order') correct = (q.correctOrder || q.items || []).join(' → ');
+    else if (q.type === 'multi') correct = (q.correctOptions || []).join(', ');
+    else if (q.type === 'classify') correct = (q.items || []).map(it => `${it.term}→${it.category}`).join(', ');
+    else if (q.type === 'translate') correct = (q.pairs || []).map(p => `${p.term}→${p.answer}`).join(', ');
+    else if (q.type === 'emoji') correct = (q.items || []).map(it => `${it.emoji}→${it.answer}`).join(', ');
+    return `${n+1}. [${q.type}] ${q.text}${correct ? ' | Respuesta: ' + correct : ''}`;
+  }).join('\n');
 
-  // Material disponible
+  // ── Material ──
   const material = document.getElementById('material-input').value.trim();
   const subject = document.getElementById('subject-input').value || 'la asignatura';
-  const typeLabels = { test: 'test (4 opciones, una correcta)', tf: 'verdadero/falso', fill: 'completar huecos', match: 'relacionar columnas (4 pares)', short: 'respuesta corta (1-2 palabras)', order: 'ordenar elementos', definition: 'definición breve con las propias palabras del alumno (1-2 frases)' };
 
-  const prompt = `Eres un generador de preguntas para un examen de primaria (5º-6º) de ${subject}.
+  // ── Ejemplos JSON por tipo ──
+  const jsonExamples = {
+    test: '{"type":"test","text":"¿Pregunta?","options":["a) opción1","b) opción2","c) opción3","d) opción4"],"correct":"a) opción1","points":1}',
+    tf: '{"type":"tf","text":"Afirmación verdadera o falsa.","correct":"verdadero","points":0.5}',
+    fill: '{"type":"fill","text":"La ___ es la unidad básica de los seres vivos.","blanks":["célula"],"points":1}',
+    match: '{"type":"match","text":"Relaciona cada elemento con su descripción:","leftItems":["A","B","C","D"],"rightItems":["1","2","3","4"],"correctPairs":{"A":"1","B":"2","C":"3","D":"4"},"points":2}',
+    short: '{"type":"short","text":"¿Cómo se llama...?","correct":"respuesta","acceptedAnswers":["respuesta","variante"],"points":1}',
+    definition: '{"type":"definition","text":"¿Qué es la fotosíntesis?","correct":"Proceso por el que las plantas producen su alimento usando la luz solar.","acceptedAnswers":["proceso que usan las plantas para alimentarse con la luz","cómo las plantas fabrican su alimento"],"points":2}',
+    order: '{"type":"order","text":"Ordena los pasos del proceso:","items":["Paso 1","Paso 2","Paso 3","Paso 4"],"correctOrder":["Paso 1","Paso 2","Paso 3","Paso 4"],"points":2}',
+    vocab: '{"type":"vocab","text":"¿Qué significa \'le chat\'?","options":["a) el perro","b) el gato","c) el pájaro","d) el pez","e) el ratón","f) el conejo"],"correct":"b) el gato","points":1}',
+    translate: '{"type":"translate","text":"Traduce las siguientes palabras:","direction":"fr_es","pairs":[{"term":"le pain","answer":"el pan","acceptedAnswers":["el pan","pan"]},{"term":"la pomme","answer":"la manzana","acceptedAnswers":["la manzana","manzana"]}],"points":2}',
+    emoji: '{"type":"emoji","text":"Escribe en francés la palabra que representa cada imagen:","items":[{"emoji":"🍎","answer":"la pomme"},{"emoji":"🐱","answer":"le chat"}],"points":1.5}',
+    multi: '{"type":"multi","text":"¿Cuáles de los siguientes son determinantes artículos?","options":["el","este","la","mucho","los","mi"],"correctOptions":["el","la","los"],"points":2}',
+    classify: '{"type":"classify","text":"Escribe a qué tipo de determinante pertenece cada palabra:","direction":"term_to_category","items":[{"term":"el","category":"artículo","acceptedAnswers":["artículo","determinante artículo"]},{"term":"este","category":"demostrativo","acceptedAnswers":["demostrativo"]}],"points":2}'
+  };
+
+  const typeDescriptions = {
+    test: 'test (4 opciones a/b/c/d, una sola correcta)',
+    tf: 'verdadero/falso (una afirmación, el alumno elige V o F)',
+    fill: 'completar huecos (usa ___ para el hueco, el hueco debe ser la palabra clave)',
+    match: 'relacionar columnas (4 pares término↔definición o causa↔efecto)',
+    short: 'respuesta corta (término técnico exacto, 1-2 palabras)',
+    definition: 'definición (el alumno explica un concepto con sus propias palabras)',
+    order: 'ordenar elementos (proceso, secuencia cronológica o pasos)',
+    vocab: '🇫🇷 test ampliado vocabulario (6-8 opciones, SOLO para idiomas)',
+    translate: '🇫🇷 traducción directa (lista de pares, SOLO para idiomas)',
+    emoji: '🇫🇷 emoji→palabra (SOLO para idiomas)',
+    multi: 'opción múltiple con VARIAS respuestas correctas (el alumno marca TODAS las correctas)',
+    classify: 'clasificar (cada término con su categoría, el alumno escribe la clasificación)'
+  };
+
+  const prompt = `Eres un maestro experto de 5º y 6º de Primaria (10-12 años, LOMLOE, España). Genera UNA SOLA pregunta nueva de tipo "${typeDescriptions[type] || type}" para un control de ${subject}.
 ${material ? `
-MATERIAL DE REFERENCIA (FUENTE ÚNICA Y OBLIGATORIA):
+MATERIAL DE REFERENCIA — FUENTE ÚNICA Y OBLIGATORIA:
 ${material.substring(0, 3000)}
 
-REGLAS SOBRE EL MATERIAL:
-- VOCABULARIO / LISTAS (palabras sueltas, alimentos, animales, objetos, nombres, fechas…): usa SOLO los que aparezcan en el material. No añadas sinónimos ni palabras del mismo campo semántico que no estén en el texto.
-- ESTRUCTURAS GRAMATICALES (j'aime / j'adore / je n'aime pas, conjugaciones, determinantes…): la estructura debe aparecer en el material, pero PUEDES combinarla con cualquier término de vocabulario que sí esté en el material, aunque esa combinación exacta no aparezca. Ejemplo: si el material enseña "j'adore" y lista varios alimentos, puedes crear frases con esos alimentos aunque el ejemplo del texto solo use uno.
-- Nunca uses términos, palabras o conceptos que no estén en ninguna parte del material.
+RESTRICCIONES DE MATERIAL (obligatorias):
+- Usa SOLO conceptos, términos y datos que aparezcan en el material.
+- VOCABULARIO: usa únicamente palabras que estén explícitamente en el material.
+- ESTRUCTURAS/REGLAS: la regla debe aparecer en el material; puedes combinarla con vocabulario que sí esté en él.
+- Prohibido inventar ejemplos, sinónimos o datos que no estén en el texto.
 ` : `
-ATENCIÓN: No se ha proporcionado material. Genera una pregunta coherente con las ya existentes, sin inventar contenido.`}
-Ya existen estas preguntas en el control (no repitas ninguna):
+ATENCIÓN: No se proporcionó material. Genera una pregunta coherente con las ya existentes, sin inventar contenido ajeno al tema.`}
+PREGUNTAS YA EXISTENTES — NO REPITAS NINGÚN CONCEPTO NI RESPUESTA:
 ${existingTexts || '(Ninguna todavía)'}
 
-Necesito UNA SOLA pregunta nueva de tipo "${typeLabels[type] || type}".
-IMPORTANTE:
-- No debe repetir ninguna de las preguntas ya existentes
-- SOLO usa contenido que aparezca en el material de referencia
-- Si no encuentras contenido nuevo, elige un aspecto diferente del mismo texto
-- Debe estar en español
+CRITERIOS PEDAGÓGICOS:
+- Evalúa un concepto del material que NO esté cubierto por ninguna de las preguntas anteriores.
+- El enunciado NO debe contener palabras que revelen la respuesta (ni de esta pregunta ni de las ya existentes).
+- Los distractores/afirmaciones falsas deben ser errores plausibles para un alumno de 10-12 años, no opciones absurdas.
+- La respuesta debe requerir haber estudiado el tema.
+- El enunciado debe ser claro y sin ambigüedades para un niño de 10-12 años.
+- Responde en español.
 
-Responde SOLO con el JSON de la pregunta, sin explicaciones, sin bloques de código, sin markdown. Formato exacto:
-${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","b) opción2","c) opción3","d) opción4"],"correct":"a) opción1","points":1}' :
-  type === 'tf' ? '{"type":"tf","text":"afirmación","correct":"verdadero","points":0.5}' :
-  type === 'fill' ? '{"type":"fill","text":"La ___ es importante.","blanks":["respuesta"],"points":1}' :
-  type === 'match' ? '{"type":"match","text":"Relaciona:","leftItems":["A","B","C","D"],"rightItems":["1","2","3","4"],"correctPairs":{"A":"1","B":"2","C":"3","D":"4"},"points":2}' :
-  type === 'short' ? '{"type":"short","text":"¿Pregunta?","correct":"respuesta","acceptedAnswers":["respuesta"],"points":1}' :
-  type === 'definition' ? '{"type":"definition","text":"¿Qué es...?","correct":"Definición completa del concepto.","acceptedAnswers":["definición alternativa válida","otra forma de explicarlo"],"points":2}' :
-  type === 'vocab' ? '{"type":"vocab","text":"¿Qué significa \'mot\'?","options":["a) opción1","b) opción2","c) opción3","d) opción4","e) opción5","f) opción6"],"correct":"b) opción2","points":1}' :
-  type === 'translate' ? '{"type":"translate","text":"Traduce las siguientes palabras:","direction":"fr_es","pairs":[{"term":"j\'aime le chat","answer":"me gusta el gato","acceptedAnswers":["me gusta el gato","me gusta gato","a mí me gusta el gato","yo quiero el gato"]},{"term":"le pain","answer":"el pan","acceptedAnswers":["el pan","pan"]}],"points":2}' :
-  type === 'emoji' ? '{"type":"emoji","text":"Escribe en francés la palabra que representa cada imagen:","items":[{"emoji":"🍎","answer":"la pomme"},{"emoji":"🐱","answer":"le chat"}],"points":1.5}' :
-  '{"type":"order","text":"Ordena:","items":["1","2","3"],"correctOrder":["1","2","3"],"points":2}'}`;
+Responde SOLO con JSON válido, sin explicaciones, sin markdown, sin bloques de código.
+Formato exacto:
+${jsonExamples[type] || jsonExamples.test}`;
+
+  // ── Construir mensaje multimodal (incluye archivos subidos si los hay) ──
+  let messageContent = [];
+  if (typeof uploadedFiles !== 'undefined') {
+    uploadedFiles.forEach(f => {
+      if (f.type === 'image') {
+        messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
+      } else if (f.type === 'pdf') {
+        messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+      }
+    });
+  }
+  messageContent.push({ type: 'text', text: prompt });
 
   try {
     const resp = await fetch('/.netlify/functions/generate', {
@@ -2063,8 +2184,8 @@ ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 800,
-        messages: [{ role: 'user', content: prompt }]
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: messageContent }]
       })
     });
     const data = await resp.json();
@@ -2072,12 +2193,11 @@ ${type === 'test' ? '{"type":"test","text":"pregunta","options":["a) opción1","
     const text = data.content.map(c => c.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
     const newQ = JSON.parse(clean);
-    // Conservar los puntos actuales de la pregunta si el profesor los había ajustado
-    newQ.points = editorQuestions[i].points;
+    // Conservar los puntos del profe si los había ajustado manualmente
+    newQ.points = editorQuestions[i]?.points ?? newQ.points;
     newQ.id = Date.now();
     editorQuestions[i] = newQ;
     renderEditor();
-    // Reabrir el panel para que se vea el resultado
     showToast('✅ Pregunta regenerada correctamente');
   } catch(e) {
     showToast('❌ Error al regenerar. Inténtalo de nuevo.');
@@ -2092,7 +2212,7 @@ function buildEditorBlock(q, i) {
   div.className = 'q-block';
   div.dataset.idx = i;
 
-  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición' };
+  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Opción múltiple', classify: '🏷️ Clasificar' };
   let inner = `
     <button class="del-q" onclick="deleteQuestion(${i})" title="Eliminar pregunta">✕</button>
     <button class="regen-q" onclick="toggleRegenPanel(${i})" title="Regenerar esta pregunta con IA">🔄</button>
@@ -2201,6 +2321,44 @@ function buildEditorBlock(q, i) {
       </div>`;
     });
     inner += `<button type="button" onclick="addEmojiItem(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir emoji</button>`;
+
+  } else if (q.type === 'multi') {
+    inner += `<label>Opciones (marca todas las correctas — mínimo 2)</label>`;
+    (q.options || ['', '', '', '']).forEach((opt, oi) => {
+      const isCorrect = (q.correctOptions || []).includes(opt);
+      inner += `<div class="option-row">
+        <input type="checkbox" name="multicorrect-${i}" class="multi-correct-check" ${isCorrect ? 'checked' : ''} onchange="updateMultiCorrect(${i})">
+        <span class="correct-label">✓</span>
+        <input type="text" value="${escHtml(opt)}" oninput="updateMultiOption(${i},${oi},this.value)" placeholder="Opción ${oi + 1}">
+      </div>`;
+    });
+    const nMultiOpts = (q.options||[]).length;
+    if (nMultiOpts < 8) inner += `<button type="button" onclick="addMultiOption(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir opción</button>`;
+    inner += `<div style="font-size:0.75rem;color:var(--muted);margin-top:6px">✅ Marca todas las opciones correctas (mínimo 2). Puntuación proporcional.</div>`;
+
+  } else if (q.type === 'classify') {
+    const dir = q.direction || 'term_to_category';
+    inner += `<label>Dirección de clasificación</label>
+    <select onchange="editorQuestions[${i}].direction=this.value;renderEditor()" style="margin-bottom:10px">
+      <option value="term_to_category" ${dir==='term_to_category'?'selected':''}>Palabra → el alumno escribe la categoría</option>
+      <option value="category_to_term" ${dir==='category_to_term'?'selected':''}>Categoría → el alumno escribe un ejemplo</option>
+    </select>
+    <label>${dir==='term_to_category' ? 'Pares (término → categoría correcta)' : 'Pares (categoría → ejemplo correcto)'}</label>`;
+    (q.items || []).forEach((item, ci) => {
+      const accepted = (item.acceptedAnswers && item.acceptedAnswers.length > 0) ? item.acceptedAnswers : [item.category || ''];
+      inner += `<div style="background:#f8f9ff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+        <div class="option-row" style="margin-bottom:6px">
+          <input type="text" value="${escHtml(item.term||'')}" placeholder="${dir==='term_to_category'?'Término (ej: el)':'Categoría (ej: artículo)'}" oninput="editorQuestions[${i}].items[${ci}].term=this.value" style="flex:1;margin-bottom:0">
+          <span style="font-weight:800;color:var(--primary)">→</span>
+          <input type="text" value="${escHtml(item.category||'')}" placeholder="${dir==='term_to_category'?'Categoría correcta':'Ejemplo correcto'}" oninput="editorQuestions[${i}].items[${ci}].category=this.value;if(!editorQuestions[${i}].items[${ci}].acceptedAnswers||!editorQuestions[${i}].items[${ci}].acceptedAnswers.length)editorQuestions[${i}].items[${ci}].acceptedAnswers=[this.value]" style="flex:1;margin-bottom:0">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap">✅ También válido:</span>
+          <input type="text" value="${escHtml(accepted.join(' | '))}" placeholder="ej: det. artículo | art. determinado" oninput="editorQuestions[${i}].items[${ci}].acceptedAnswers=this.value.split('|').map(s=>s.trim()).filter(Boolean)" style="flex:1;font-size:0.82rem;padding:6px 10px;margin-bottom:0;border-color:#d1fae5">
+        </div>
+      </div>`;
+    });
+    inner += `<button type="button" onclick="addClassifyItem(${i})" style="background:none;border:1.5px dashed var(--border);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.82rem;color:var(--muted);margin-top:4px">+ Añadir término</button>`;
   }
 
   // Panel regenerar pregunta con IA
@@ -2209,7 +2367,7 @@ function buildEditorBlock(q, i) {
       <label>🔄 Regenerar esta pregunta — elige el tipo nuevo:</label>
       <div class="regen-type-row" id="regen-types-${i}">
         ${['test','tf','fill','match','short','order','vocab','translate','emoji'].map(t =>
-          `<button class="regen-type-btn${t === q.type ? ' sel' : ''}" onclick="selectRegenType(${i},'${t}')">${typeLabels[t]}</button>`
+          `<button class="regen-type-btn${t === q.type ? ' sel' : ''}" data-regen-type="${t}" onclick="selectRegenType(${i},'${t}')">${typeLabels[t]}</button>`
         ).join('')}
       </div>
       <button class="regen-action-btn" id="regen-btn-${i}" onclick="regenQuestion(${i})">
@@ -2224,6 +2382,43 @@ function buildEditorBlock(q, i) {
 function updateCorrectIfChecked(qi, oi, val) {
   const radios = document.querySelectorAll(`input[name="correct-${qi}"]`);
   if (radios[oi] && radios[oi].checked) editorQuestions[qi].correct = val;
+}
+
+// ── Multi: sincronizar opciones y correctas ──
+function updateMultiCorrect(qi) {
+  const q = editorQuestions[qi];
+  const checks = document.querySelectorAll(`input[name="multicorrect-${qi}"]`);
+  q.correctOptions = [];
+  checks.forEach((cb, oi) => {
+    if (cb.checked && q.options[oi] !== undefined) q.correctOptions.push(q.options[oi]);
+  });
+}
+
+function updateMultiOption(qi, oi, val) {
+  const q = editorQuestions[qi];
+  const oldVal = q.options[oi];
+  q.options[oi] = val;
+  // Si la opción editada estaba en correctOptions, actualizar también ahí
+  if (q.correctOptions) {
+    const idx = q.correctOptions.indexOf(oldVal);
+    if (idx !== -1) q.correctOptions[idx] = val;
+  }
+}
+
+function addMultiOption(qi) {
+  const q = editorQuestions[qi];
+  if (!q.options) q.options = [];
+  if (q.options.length >= 8) return;
+  q.options.push('');
+  renderEditor();
+}
+
+// ── Classify: añadir ítem ──
+function addClassifyItem(qi) {
+  const q = editorQuestions[qi];
+  if (!q.items) q.items = [];
+  q.items.push({ term: '', category: '', acceptedAnswers: [] });
+  renderEditor();
 }
 
 function addVocabOption(qi) {
@@ -2278,7 +2473,9 @@ function addQuestion(type) {
     order: { type: 'order', text: 'Ordena:', items: ['Primero', 'Segundo', 'Tercero'], correctOrder: ['Primero', 'Segundo', 'Tercero'], points: 2 },
     vocab: { type: 'vocab', text: '¿Qué significa…?', options: ['a) ', 'b) ', 'c) ', 'd) ', 'e) ', 'f) '], correct: 'a) ', points: 1 },
     translate: { type: 'translate', text: 'Traduce las siguientes palabras:', direction: 'fr_es', pairs: [{ term: '', answer: '' }, { term: '', answer: '' }, { term: '', answer: '' }], points: 2 },
-    emoji: { type: 'emoji', text: 'Escribe en francés la palabra que representa cada imagen:', items: [{ emoji: '🍎', answer: '' }, { emoji: '🐱', answer: '' }, { emoji: '🏠', answer: '' }], points: 2 }
+    emoji: { type: 'emoji', text: 'Escribe en francés la palabra que representa cada imagen:', items: [{ emoji: '🍎', answer: '' }, { emoji: '🐱', answer: '' }, { emoji: '🏠', answer: '' }], points: 2 },
+    multi: { type: 'multi', text: '¿Cuáles de las siguientes son correctas?', options: ['Opción A', 'Opción B', 'Opción C', 'Opción D'], correctOptions: ['Opción A', 'Opción C'], points: 2 },
+    classify: { type: 'classify', text: 'Escribe a qué tipo de determinante pertenece cada palabra:', direction: 'term_to_category', items: [{ term: 'el', category: 'artículo', acceptedAnswers: ['artículo'] }, { term: 'este', category: 'demostrativo', acceptedAnswers: ['demostrativo'] }, { term: 'mi', category: 'posesivo', acceptedAnswers: ['posesivo'] }, { term: 'dos', category: 'numeral', acceptedAnswers: ['numeral'] }], points: 2 }
   };
   editorQuestions.push({ id: Date.now(), ...defaults[type] });
   document.getElementById('editor-card').style.display = 'block';
@@ -2344,7 +2541,7 @@ function previewQuiz() {
   questions.forEach((q, i) => {
     const card = document.createElement('div');
     card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra' };
+    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     const pvTotalPoints = questions.reduce((s, qq) => s + (qq.points || 0), 0);
     const pvWeight = pvTotalPoints > 0 ? Math.round((q.points / pvTotalPoints) * 100) / 10 : q.points;
@@ -2402,6 +2599,17 @@ function previewQuiz() {
       let html = '<div class="emoji-grid">';
       (q.items||[]).forEach(item => {
         html += `<div class="emoji-item"><span class="emoji-icon">${escHtml(item.emoji)}</span><input class="emoji-input" type="text" placeholder="En francés…"></div>`;
+      });
+      wrap.innerHTML = html + '</div>';
+    } else if (q.type === 'multi') {
+      const opts = (q.options||[]).map((opt, oi) => `<li><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pv-multi-${i}-${oi}" style="width:16px;height:16px;cursor:pointer"><span>${escHtml(opt)}</span></label></li>`).join('');
+      wrap.innerHTML = `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px;font-weight:700">☑️ Marca TODAS las respuestas correctas</div><ul class="options-list">${opts}</ul>`;
+    } else if (q.type === 'classify') {
+      const dir = q.direction || 'term_to_category';
+      const ph = dir === 'term_to_category' ? 'Categoría…' : 'Ejemplo…';
+      let html = '<div class="classify-grid">';
+      (q.items||[]).forEach((item, ci) => {
+        html += `<div class="classify-row"><div class="classify-term">🏷️ ${escHtml(item.term)}</div><input class="classify-input" type="text" placeholder="${ph}" disabled></div>`;
       });
       wrap.innerHTML = html + '</div>';
     }
@@ -2587,7 +2795,7 @@ function renderStudentQuestions() {
     const sqWeight = sqTotalPoints > 0 ? Math.round((q.points / sqTotalPoints) * 100) / 10 : q.points;
     const card = document.createElement('div');
     card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra' };
+    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${sqWeight} pt${sqWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
     container.appendChild(card);
@@ -2658,6 +2866,23 @@ function renderStudentAnswer(q, i) {
       html += `<div class="emoji-item">
         <span class="emoji-icon">${escHtml(item.emoji)}</span>
         <input class="emoji-input" type="text" id="em-${i}-${ei}" placeholder="En francés…" autocomplete="off">
+      </div>`;
+    });
+    html += '</div>';
+    wrap.innerHTML = html;
+
+  } else if (q.type === 'multi') {
+    const opts = (q.options || []).map((opt, oi) => `<li><label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0"><input type="checkbox" id="multi-${i}-${oi}" name="multi-q${i}" value="${escHtml(opt)}" style="width:18px;height:18px;cursor:pointer;flex-shrink:0" autocomplete="off"><span>${escHtml(opt)}</span></label></li>`).join('');
+    wrap.innerHTML = `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;font-weight:700">☑️ Marca TODAS las respuestas correctas</div><ul class="options-list">${opts}</ul>`;
+
+  } else if (q.type === 'classify') {
+    const dir = q.direction || 'term_to_category';
+    const placeholder = dir === 'term_to_category' ? 'Escribe la categoría…' : 'Escribe un ejemplo…';
+    let html = '<div class="classify-grid">';
+    (q.items || []).forEach((item, ci) => {
+      html += `<div class="classify-row">
+        <div class="classify-term">🏷️ ${escHtml(item.term)}</div>
+        <input class="classify-input" type="text" id="classify-${i}-${ci}" placeholder="${placeholder}" autocomplete="off" autocorrect="off" autocapitalize="off">
       </div>`;
     });
     html += '</div>';
@@ -2963,6 +3188,11 @@ function getBlankQuestions() {
     } else if (q.type === 'emoji') {
       const inputs = document.querySelectorAll(`#sq-answer-${i} .emoji-input`);
       empty = [...inputs].every(el => !el.value.trim());
+    } else if (q.type === 'multi') {
+      empty = !document.querySelector(`input[name="multi-q${i}"]:checked`);
+    } else if (q.type === 'classify') {
+      const inputs = document.querySelectorAll(`#sq-answer-${i} .classify-input`);
+      empty = [...inputs].every(el => !el.value.trim());
     }
     if (empty) blanks.push(i + 1);
   });
@@ -3154,6 +3384,48 @@ function submitQuiz() {
       else if (partialEm) earnedPoints += q.points * (emojiCorrect / items.length);
       feedback = correct ? 'Todo correcto' : (wrongCorrections.length > 0 ? `Correcto: ${wrongCorrections.join(' | ')}` : `${emojiCorrect}/${items.length} correctas`);
       review.push({ text: q.text, correct, partial: partialEm, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
+      return;
+
+    } else if (q.type === 'multi') {
+      const correctSet = new Set(q.correctOptions || []);
+      const totalCorrect = correctSet.size;
+      let hits = 0, wrong = 0;
+      const markedLabels = [];
+      (q.options || []).forEach((opt, oi) => {
+        const cb = document.getElementById(`multi-${i}-${oi}`);
+        const marked = cb && cb.checked;
+        if (marked) markedLabels.push(opt);
+        if (marked && correctSet.has(opt)) hits++;
+        else if (marked && !correctSet.has(opt)) wrong++;
+      });
+      const ratio = totalCorrect > 0 ? Math.max(0, (hits - wrong) / totalCorrect) : 0;
+      correct = hits === totalCorrect && wrong === 0;
+      earnedPoints += q.points * ratio;
+      studentAnswer = markedLabels.length > 0 ? markedLabels.join(', ') : '–';
+      feedback = correct ? 'Correcto' : `Correctas: ${[...correctSet].join(', ')}`;
+      review.push({ text: q.text, correct, partial: !correct && ratio > 0, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
+      return;
+
+    } else if (q.type === 'classify') {
+      const clItems = q.items || [];
+      let classifyCorrect = 0;
+      const clResults = [], clWrong = [];
+      clItems.forEach((item, ci) => {
+        const input = document.getElementById(`classify-${i}-${ci}`);
+        const raw = input ? input.value.trim() : '';
+        const accepted = (item.acceptedAnswers && item.acceptedAnswers.length > 0) ? item.acceptedAnswers : [item.category];
+        const clResult = matchShortAnswer(raw, accepted);
+        if (clResult.match) classifyCorrect++;
+        clResults.push(`${item.term}→${raw || '–'}${clResult.match ? '✅' : '❌'}`);
+        if (!clResult.match) clWrong.push(`${item.term}→${item.category}`);
+      });
+      correct = classifyCorrect === clItems.length;
+      const partialCl = classifyCorrect > 0 && !correct;
+      studentAnswer = clResults.join(' | ');
+      if (correct) earnedPoints += q.points;
+      else if (partialCl) earnedPoints += q.points * (classifyCorrect / clItems.length);
+      feedback = correct ? 'Todo correcto' : (clWrong.length > 0 ? `Correcto: ${clWrong.join(' | ')}` : `${classifyCorrect}/${clItems.length} correctas`);
+      review.push({ text: q.text, correct, partial: partialCl, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
     }
 
