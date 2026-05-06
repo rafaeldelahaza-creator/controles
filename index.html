@@ -270,6 +270,7 @@
     padding: 22px 26px;
     margin-bottom: 16px;
     box-shadow: 0 2px 10px rgba(79,70,229,0.06);
+    scroll-margin-top: 70px;
   }
   .sq-card .sq-top {
     display: flex;
@@ -411,16 +412,18 @@
   }
   .score-circle .score-label { font-size: 0.85rem; font-weight: 700; opacity: 0.85; margin-top: -6px; font-family: 'Nunito', sans-serif; }
   .result-card {
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 10px;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
+    flex-direction: column;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
-  .result-card.correct { background: #d1fae5; border: 1.5px solid #6ee7b7; }
-  .result-card.wrong { background: #fee2e2; border: 1.5px solid #fca5a5; }
-  .result-card.partial { background: #fef3c7; border: 1.5px solid #fcd34d; }
+  .result-card.correct { border-color: #6ee7b7; box-shadow: 0 1px 6px rgba(16,185,129,0.15); }
+  .result-card.wrong { border-color: #fca5a5; box-shadow: 0 1px 6px rgba(239,68,68,0.12); }
+  .result-card.partial { border-color: #fcd34d; box-shadow: 0 1px 6px rgba(245,158,11,0.15); }
   .result-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 1px; }
   .result-q { font-weight: 700; font-size: 0.97rem; margin-bottom: 4px; }
   .result-detail { font-size: 0.88rem; color: var(--muted); }
@@ -681,6 +684,103 @@
   }
   .bank-item-link.visible { display: block; }
   .bank-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 0.93rem; }
+  .bank-folder {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .bank-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #eef2ff;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--primary);
+    transition: background 0.15s;
+  }
+  .bank-folder-header:hover { background: #e0e7ff; }
+  .bank-folder-count {
+    font-size: 0.78rem;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 20px;
+    padding: 1px 8px;
+    font-weight: 700;
+  }
+  .bank-folder-arrow { margin-left: auto; font-size: 0.75rem; color: var(--muted); transition: transform 0.2s; }
+  .bank-folder.open .bank-folder-arrow { transform: rotate(180deg); }
+  .bank-folder-body { display: none; border-top: 1.5px solid var(--border); }
+  .bank-folder.open .bank-folder-body { display: block; }
+  .bank-folder-body .bank-item { border-radius: 0; border: none; border-bottom: 1px solid var(--border); }
+  .bank-folder-body .bank-item:last-child { border-bottom: none; }
+  .bank-subfolder {
+    border-bottom: 1px solid var(--border);
+  }
+  .bank-subfolder:last-child { border-bottom: none; }
+  .bank-subfolder-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: #f8f9ff;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    font-size: 0.87rem;
+    color: #4b5563;
+    transition: background 0.15s;
+  }
+  .bank-subfolder-header:hover { background: #eef2ff; }
+  .bank-subfolder-count {
+    font-size: 0.72rem;
+    background: #e0e7ff;
+    color: var(--primary);
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+  .bank-subfolder-arrow { margin-left: auto; font-size: 0.7rem; color: var(--muted); transition: transform 0.2s; }
+  .bank-subfolder.open .bank-subfolder-arrow { transform: rotate(180deg); }
+  .bank-subfolder-body { display: none; }
+  .bank-subfolder.open .bank-subfolder-body { display: block; }
+  .bank-subfolder-body .bank-item { padding-left: 28px; }
+  .bank-subfolder {
+    border-bottom: 1px solid var(--border);
+  }
+  .bank-subfolder:last-child { border-bottom: none; }
+  .bank-subfolder-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: #f8f9ff;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 700;
+    font-size: 0.87rem;
+    color: #4b5563;
+    transition: background 0.15s;
+  }
+  .bank-subfolder-header:hover { background: #eef2ff; }
+  .bank-subfolder-count {
+    font-size: 0.72rem;
+    background: #e0e7ff;
+    color: var(--primary);
+    border-radius: 20px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+  .bank-subfolder-arrow { margin-left: auto; font-size: 0.7rem; color: var(--muted); transition: transform 0.2s; }
+  .bank-subfolder.open .bank-subfolder-arrow { transform: rotate(180deg); }
+  .bank-subfolder-body { display: none; }
+  .bank-subfolder.open .bank-subfolder-body { display: block; }
+  .bank-subfolder-body .bank-item { padding-left: 28px; }
+  .bank-subfolder-body .bank-item:last-child { border-bottom: none; }
 
   /* ── LINK BOX ── */
   .link-box {
@@ -702,11 +802,15 @@
     align-items: center;
     gap: 14px;
     background: var(--card);
-    border-radius: 12px;
-    padding: 12px 20px;
+    border-radius: 0 0 14px 14px;
+    padding: 10px 20px;
     margin-bottom: 20px;
     border: 1.5px solid var(--border);
-    box-shadow: var(--shadow);
+    border-top: none;
+    box-shadow: 0 4px 12px rgba(79,70,229,0.10);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
   .timer-display {
     font-family: 'Baloo 2', cursive;
@@ -1224,8 +1328,7 @@
 <div id="teacher-view" class="view active">
 
   <div class="card">
-    <h2>✨ Generar control con IA</h2>
-    <div class="ai-badge">✦ Inteligencia Artificial</div>
+    <h2 style="font-size:1.5rem;font-weight:800">✨ Generador de controles</h2>
     <label>Material del tema</label>
     <!-- Upload zone -->
     <div id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
@@ -1285,7 +1388,7 @@
       <div class="type-chip lang" data-type="emoji" onclick="toggleChip(this)">😀 Emoji → palabra</div>
     </div>
     <button class="btn btn-primary" onclick="generateWithAI()" id="ai-btn">
-      <span id="ai-btn-text">✦ Generar control con IA</span>
+      <span id="ai-btn-text">✦ Generar control</span>
     </button>
 
     <div class="pw-field-wrap">
@@ -1466,7 +1569,7 @@
         <div class="progress-bar-fill" id="progress-bar-fill" style="width:100%"></div>
       </div>
     </div>
-    <div id="sq-questions"></div>
+    <div id="sq-questions" style="padding-top:4px"></div>
     <div style="text-align:center;margin-top:8px">
       <button class="btn btn-green" onclick="confirmSubmit()" style="font-size:1.1rem;padding:14px 36px">
         ✅ Entregar control
@@ -1997,7 +2100,7 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
     showToast('❌ Error al generar. Comprueba la conexión.');
     console.error(e);
   } finally {
-    document.getElementById('ai-btn-text').innerHTML = '✦ Generar control con IA';
+    document.getElementById('ai-btn-text').innerHTML = '✦ Generar control';
     btn.disabled = false;
   }
 }
@@ -2198,6 +2301,18 @@ ${jsonExamples[type] || jsonExamples.test}`;
     newQ.id = Date.now();
     editorQuestions[i] = newQ;
     renderEditor();
+    // Reabrir el panel regen de la pregunta recién generada
+    const panel = document.getElementById(`regen-panel-${i}`);
+    if (panel) {
+      panel.classList.add('open');
+      panel.dataset.selectedType = type;
+      panel.__regenType = type;
+      // Marcar el tipo correcto como seleccionado
+      const btns = document.querySelectorAll(`#regen-types-${i} .regen-type-btn`);
+      btns.forEach(b => b.classList.toggle('sel', b.dataset.regenType === newQ.type));
+      // Scroll suave hasta la pregunta
+      document.getElementById(`regen-panel-${i}`)?.closest('.q-block')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
     showToast('✅ Pregunta regenerada correctamente');
   } catch(e) {
     showToast('❌ Error al regenerar. Inténtalo de nuevo.');
@@ -3524,7 +3639,7 @@ ${aiItems.map((p, n) => {
   if (p.type === 'translate_pair') {
     return n+1 + '. Traducción de: "' + p.term + '"\n   Respuesta correcta: ' + p.correctAnswer + (p.acceptedAnswers !== p.correctAnswer ? ' (también válido: ' + p.acceptedAnswers + ')' : '') + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"';
   }
-  const defHint = p.type === 'definition' ? '\n   CRITERIO: evalúa si el alumno entiende el concepto, no si coincide literalmente. Acepta cualquier explicación que capture la idea principal.' : '';
+  const defHint = p.type === 'definition' ? '\n   CRITERIO ESPECIAL DEFINICIÓN: usa estos 4 niveles exactos:\n   - correct (pts = maxPoints): explica el concepto correctamente aunque use otras palabras, incluye ejemplo correcto sin explicación, o captura la idea principal.\n   - partial_high (pts = maxPoints * 0.75): entiende la idea principal pero le falta un elemento importante o es demasiado vaga.\n   - partial_low (pts = maxPoints * 0.5): solo da un ejemplo sin explicar el concepto, o da una idea relacionada pero incompleta.\n   - wrong (pts = 0): vacía, completamente equivocada o sin relación con el concepto pedido.\n   Usa "partial" para partial_high y partial_low (indica el ratio en pts), y sé GENEROSO: ante la duda sube un nivel.' : '';
   return n+1 + '. [' + p.type + '] "' + (p.question||p.term) + '"\n   Respuesta correcta: ' + p.correctAnswer + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"' + defHint;
 }).join('\n\n')}
 
@@ -3676,57 +3791,209 @@ function showResults(score, name, review, totalPoints) {
 
   const rc = document.getElementById('review-cards');
   rc.innerHTML = '';
+
   review.forEach((r, i) => {
+    const q = questions[i];
     const cls2 = r.correct ? 'correct' : r.partial ? 'partial' : 'wrong';
     const icon = r.correct ? '✅' : r.partial ? '🟡' : '❌';
+    const statusLabel = r.correct ? 'Correcto' : r.partial ? 'Parcialmente correcto' : 'Incorrecto';
+    const statusColor = r.correct ? '#065f46' : r.partial ? '#92400e' : '#991b1b';
+    const statusBg = r.correct ? '#d1fae5' : r.partial ? '#fef3c7' : '#fee2e2';
+    const accentColor = r.correct ? '#10b981' : r.partial ? '#f59e0b' : '#ef4444';
 
-    // For translate: render each pair as its own mini-row
-    let bodyHtml = '';
-    if (r.pairDetails && r.pairDetails.length > 0) {
-      // Build per-pair feedback map from the feedback string (split by |)
-      const feedbackParts = (r.feedback || '').split('|').map(s => s.trim()).filter(Boolean);
-      let fbIdx = 0;
-      const pairRows = r.pairDetails.map((pd, pi) => {
-        const pairDisplay = (r.studentAnswer || '').split('|')[pi] || '';
-        // Determine verdict for this pair from the display string
-        const isOk = pairDisplay.includes('✅');
-        const isPartial = pairDisplay.includes('🟡');
-        const pairIcon = isOk ? '✅' : isPartial ? '🟡' : '❌';
-        const pairCls = isOk ? '#d1fae5' : isPartial ? '#fef3c7' : '#fee2e2';
-        const pairBorder = isOk ? '#10b981' : isPartial ? '#f59e0b' : '#ef4444';
-        const studentAns = escHtml(pd.studentAnswer || '–');
-        const correctAns = escHtml(pd.correctAnswer || '');
-        let fb = '';
-        if (!isOk) {
-          fb = feedbackParts[fbIdx] || '';
-          fbIdx++;
+    // ── Puntuación de esta pregunta ──
+    const ptsHtml = `<span style="font-size:0.78rem;font-weight:700;color:${statusColor};background:${statusBg};padding:2px 8px;border-radius:20px;margin-left:auto;white-space:nowrap">${r.pts ?? 0} / ${r.maxPts} pts</span>`;
+
+    // ── Renderizar la pregunta según su tipo ──
+    let questionBodyHtml = '';
+
+    if (q.type === 'test' || q.type === 'vocab') {
+      const opts = (q.options || []).map(opt => {
+        const isStudentChoice = opt === r.studentAnswer;
+        const isCorrectOpt = opt === q.correct;
+        let bg = '#f9fafb', border = '#e5e7eb', color = '#374151', badge = '';
+        if (isCorrectOpt) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; badge = ' ✅'; }
+        if (isStudentChoice && !isCorrectOpt) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; badge = ' ❌'; }
+        const bold = (isStudentChoice || isCorrectOpt) ? 'font-weight:800' : 'font-weight:500';
+        return `<div style="padding:8px 12px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.9rem;${bold}">${escHtml(opt)}${badge}</div>`;
+      }).join('');
+      questionBodyHtml = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${opts}</div>`;
+
+    } else if (q.type === 'tf') {
+      ['verdadero','falso'].forEach(val => {
+        // rendered inside the loop below
+      });
+      const opts = ['Verdadero','Falso'].map(label => {
+        const val = label.toLowerCase();
+        const isStudentChoice = r.studentAnswer === val;
+        const isCorrect = q.correct === val;
+        let bg = '#f9fafb', border = '#e5e7eb', color = '#374151', badge = '';
+        if (isCorrect) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; badge = ' ✅'; }
+        if (isStudentChoice && !isCorrect) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; badge = ' ❌'; }
+        const bold = (isStudentChoice || isCorrect) ? 'font-weight:800' : 'font-weight:500';
+        return `<div style="padding:8px 12px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.9rem;${bold}">${label}${badge}</div>`;
+      }).join('');
+      questionBodyHtml = `<div style="display:flex;gap:8px;margin-top:10px">${opts}</div>`;
+
+    } else if (q.type === 'fill') {
+      const parts = (q.text || '').split('___');
+      const answers = (r.studentAnswer || '').split(', ');
+      const blanks = q.blanks || [];
+      let html = '<div style="font-size:0.95rem;line-height:2;margin-top:8px">';
+      parts.forEach((part, pi) => {
+        html += escHtml(part);
+        if (pi < parts.length - 1) {
+          const studentVal = answers[pi] || '–';
+          const correctVal = blanks[pi] || '';
+          const isOk = normalizeAnswer(studentVal) === normalizeAnswer(correctVal) || r.correct;
+          const bg = isOk ? '#d1fae5' : '#fee2e2';
+          const color = isOk ? '#065f46' : '#991b1b';
+          const border = isOk ? '#10b981' : '#ef4444';
+          html += `<span style="display:inline-block;min-width:80px;padding:2px 10px;background:${bg};color:${color};border-bottom:2px solid ${border};border-radius:4px;font-weight:800;margin:0 2px">${escHtml(studentVal)}</span>`;
+          if (!isOk) html += `<span style="font-size:0.8rem;color:#10b981;font-weight:700"> (${escHtml(correctVal)})</span>`;
         }
-        return `<div style="display:flex;align-items:flex-start;gap:8px;background:${pairCls};border:1.5px solid ${pairBorder};border-radius:8px;padding:8px 10px;margin-bottom:6px">
-          <span style="font-size:1.1rem;margin-top:1px">${pairIcon}</span>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.78rem;color:#6b7280;font-weight:600;margin-bottom:2px">${escHtml(pd.term)}</div>
-            <div style="font-size:0.92rem;font-weight:700;color:#1f2937">Tu respuesta: <span style="font-weight:400">${studentAns}</span></div>
-            ${!isOk ? `<div style="font-size:0.82rem;color:#374151;margin-top:3px">✏️ Correcto: <strong>${correctAns}</strong></div>` : ''}
-            ${fb ? `<div style="font-size:0.78rem;color:#6b7280;margin-top:2px;font-style:italic">${escHtml(fb)}</div>` : ''}
-          </div>
+      });
+      html += '</div>';
+      questionBodyHtml = html;
+
+    } else if (q.type === 'match') {
+      const lefts = Object.keys(q.correctPairs || {});
+      const studentPairs = (r.studentAnswer || '').split(' | ');
+      const html = lefts.map((left, li) => {
+        const correctRight = q.correctPairs[left];
+        const studentRight = (studentPairs[li] || '').replace(`${left} → `, '');
+        const isOk = studentRight === correctRight;
+        const bg = isOk ? '#d1fae5' : '#fee2e2';
+        const border = isOk ? '#10b981' : '#ef4444';
+        return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;background:${bg};border:1.5px solid ${border};border-radius:8px;padding:7px 10px;font-size:0.88rem">
+          <span style="font-weight:700">${escHtml(left)}</span>
+          <span style="color:#6b7280">→</span>
+          <span>${isOk ? `<strong>${escHtml(studentRight)}</strong> ✅` : `<span style="text-decoration:line-through;color:#9ca3af">${escHtml(studentRight)}</span> → <strong style="color:#10b981">${escHtml(correctRight)}</strong> ✅`}</span>
         </div>`;
       }).join('');
-      bodyHtml = `<div style="font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:6px">${i + 1}. ${escHtml(r.text)}</div>${pairRows}`;
-    } else {
-      // Standard question: simple layout
-      const studentAnsHtml = escHtml(r.studentAnswer || '–');
-      const correctHtml = (!r.correct && r.feedback) ? `<div style="font-size:0.82rem;margin-top:4px">✏️ Correcto: <strong>${escHtml((r.feedback.replace(/^(Correcto|Casi|Incorrecto)[^:]*:\s*/i,'').replace(/\.$/,'').trim()))}</strong></div>` : '';
-      bodyHtml = `<div class="result-q">${i + 1}. ${escHtml(r.text)}</div>
-        <div class="result-detail">Tu respuesta: <span>${studentAnsHtml}</span></div>
-        ${correctHtml}`;
+      questionBodyHtml = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${html}</div>`;
+
+    } else if (q.type === 'short') {
+      const isOk = r.correct;
+      const correctVal = (q.acceptedAnswers && q.acceptedAnswers[0]) || q.correct || '';
+      questionBodyHtml = `<div style="margin-top:10px">
+        <div style="padding:8px 14px;border-radius:8px;border:1.5px solid ${isOk ? '#10b981' : '#ef4444'};background:${isOk ? '#d1fae5' : '#fee2e2'};font-size:0.95rem;font-weight:700;color:${isOk ? '#065f46' : '#991b1b'}">
+          Tu respuesta: ${escHtml(r.studentAnswer || '–')} ${isOk ? '✅' : '❌'}
+        </div>
+        ${!isOk ? `<div style="padding:8px 14px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.95rem;font-weight:700;color:#065f46;margin-top:6px">✅ Respuesta correcta: ${escHtml(correctVal)}</div>` : ''}
+      </div>`;
+
+    } else if (q.type === 'definition') {
+      const defRef = escHtml((q.acceptedAnswers && q.acceptedAnswers[0]) || q.correct || '');
+      const defFeedbackText = r.feedback && r.feedback !== 'Correcto' ? r.feedback : '';
+      const defPartialNote = r.partial ? `<div style="margin-top:6px;padding:7px 12px;border-radius:8px;background:#fffbeb;border:1.5px solid #fcd34d;font-size:0.83rem;color:#92400e">🟡 <strong>Parcialmente correcto</strong> — ${escHtml(defFeedbackText || 'Capturaste parte de la idea. Revisa la definición completa.')}</div>` : '';
+      questionBodyHtml = `<div style="margin-top:10px">
+        <div style="padding:10px 14px;border-radius:8px;border:1.5px solid ${r.correct ? '#10b981' : r.partial ? '#fcd34d' : '#e5e7eb'};background:${r.correct ? '#d1fae5' : r.partial ? '#fffbeb' : '#f9fafb'};font-size:0.92rem;color:#374151;margin-bottom:6px">
+          <span style="font-size:0.78rem;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">Tu respuesta:</span>
+          ${escHtml(r.studentAnswer || '–')}
+        </div>
+        ${defPartialNote}
+        ${!r.correct ? `<div style="padding:10px 14px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.92rem;color:#065f46">
+          <span style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px">💡 Definición de referencia:</span>
+          ${defRef}
+        </div>` : ''}
+      </div>`;
+
+    } else if (q.type === 'order') {
+      const expected = q.correctOrder || q.items || [];
+      const studentItems = (r.studentAnswer || '').split(' → ');
+      const html = studentItems.map((item, idx) => {
+        const isOk = item === expected[idx];
+        const bg = isOk ? '#d1fae5' : '#fee2e2';
+        const border = isOk ? '#10b981' : '#ef4444';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;border:1.5px solid ${border};background:${bg};font-size:0.88rem">
+          <span style="font-weight:800;color:#6b7280;width:20px;text-align:center">${idx + 1}</span>
+          <span style="flex:1;font-weight:700">${escHtml(item)} ${isOk ? '✅' : '❌'}</span>
+          ${!isOk ? `<span style="font-size:0.8rem;color:#10b981;font-weight:700">→ ${escHtml(expected[idx])}</span>` : ''}
+        </div>`;
+      }).join('');
+      questionBodyHtml = `<div style="display:flex;flex-direction:column;gap:5px;margin-top:10px">${html}</div>`;
+
+    } else if (q.type === 'multi') {
+      const correctSet = new Set(q.correctOptions || []);
+      const studentSet = new Set((r.studentAnswer || '').split(', ').filter(s => s && s !== '–'));
+      const opts = (q.options || []).map(opt => {
+        const isStudentChoice = studentSet.has(opt);
+        const isCorrectOpt = correctSet.has(opt);
+        let bg = '#f9fafb', border = '#e5e7eb', color = '#374151', badge = '';
+        if (isCorrectOpt && isStudentChoice) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; badge = ' ✅'; }
+        else if (isCorrectOpt && !isStudentChoice) { bg = '#ecfdf5'; border = '#10b981'; color = '#065f46'; badge = ' ✅ (no marcaste)'; }
+        else if (!isCorrectOpt && isStudentChoice) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; badge = ' ❌ (incorrecta)'; }
+        const bold = (isStudentChoice || isCorrectOpt) ? 'font-weight:800' : 'font-weight:400;opacity:0.6';
+        return `<div style="padding:7px 12px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.88rem;${bold};display:flex;align-items:center;gap:6px">
+          <span style="width:16px;height:16px;border-radius:3px;border:2px solid ${border};background:${isStudentChoice ? accentColor : 'white'};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">
+            ${isStudentChoice ? '<span style="color:white;font-size:0.7rem;font-weight:900">✓</span>' : ''}
+          </span>
+          ${escHtml(opt)}${badge}
+        </div>`;
+      }).join('');
+      questionBodyHtml = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${opts}</div>`;
+
+    } else if (q.type === 'classify') {
+      const dir = q.direction || 'term_to_category';
+      const studentParts = (r.studentAnswer || '').split(' | ');
+      const html = (q.items || []).map((item, ci) => {
+        const part = studentParts[ci] || '';
+        const isOk = part.includes('✅');
+        const studentVal = part.replace(`${item.term}→`,'').replace('✅','').replace('❌','').trim();
+        const bg = isOk ? '#d1fae5' : '#fee2e2';
+        const border = isOk ? '#10b981' : '#ef4444';
+        return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;background:${bg};border:1.5px solid ${border};border-radius:8px;padding:7px 10px;font-size:0.88rem">
+          <span style="font-weight:700">🏷️ ${escHtml(item.term)}</span>
+          <span style="color:#6b7280">→</span>
+          <span>${isOk ? `<strong>${escHtml(studentVal)}</strong> ✅` : `<span style="text-decoration:line-through;color:#9ca3af">${escHtml(studentVal||'–')}</span> → <strong style="color:#10b981">${escHtml(item.category)}</strong> ✅`}</span>
+        </div>`;
+      }).join('');
+      questionBodyHtml = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${html}</div>`;
+
+    } else if (q.type === 'translate' || q.type === 'emoji') {
+      // translate/emoji: usa pairDetails si existe
+      if (r.pairDetails && r.pairDetails.length > 0) {
+        const rows = r.pairDetails.map(pd => {
+          const isOk = pd.matched;
+          const bg = isOk ? '#d1fae5' : '#fee2e2';
+          const border = isOk ? '#10b981' : '#ef4444';
+          return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;background:${bg};border:1.5px solid ${border};border-radius:8px;padding:7px 10px;font-size:0.88rem">
+            <span style="font-weight:700">${escHtml(pd.term)}</span>
+            <span style="color:#6b7280">→</span>
+            <span>${isOk ? `<strong>${escHtml(pd.studentAnswer)}</strong> ✅` : `<span style="text-decoration:line-through;color:#9ca3af">${escHtml(pd.studentAnswer||'–')}</span> → <strong style="color:#10b981">${escHtml(pd.correctAnswer)}</strong> ✅`}</span>
+          </div>`;
+        }).join('');
+        questionBodyHtml = `<div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${rows}</div>`;
+      }
     }
 
-    rc.innerHTML += `<div class="result-card ${cls2}" id="result-card-${i}" style="flex-direction:column;align-items:stretch">
-      ${r.pairDetails && r.pairDetails.length > 0 ? '' : `<div style="display:flex;align-items:flex-start;gap:10px"><div class="result-icon">${icon}</div><div style="flex:1">${bodyHtml}</div></div>`}
-      ${r.pairDetails && r.pairDetails.length > 0 ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="result-icon" style="margin:0">${icon}</span><div style="flex:1">${bodyHtml}</div></div>` : ''}
-    </div>`;
-  });
+    // ── Feedback / corrección ──
+    let feedbackHtml = '';
+    if (!r.correct && !r.aiReviewPending) {
+      // Para tipos con corrección IA pendiente se añade luego
+      const feedbackText = (r.feedback || '').replace(/^(Correcto|Casi|Incorrecto|Todo correcto|Orden correcto)[^:]*:\s*/i, '').trim();
+      if (feedbackText && q.type !== 'test' && q.type !== 'vocab' && q.type !== 'tf' && q.type !== 'fill' && q.type !== 'match' && q.type !== 'multi' && q.type !== 'classify' && q.type !== 'order' && q.type !== 'translate' && q.type !== 'emoji') {
+        // Solo mostrar feedback de texto para tipos donde no hemos ya mostrado las correcciones visualmente
+        feedbackHtml = `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fffbeb;border:1.5px solid #fcd34d;font-size:0.85rem;color:#92400e">
+          💡 ${escHtml(feedbackText)}
+        </div>`;
+      }
+    }
 
+    rc.innerHTML += `
+      <div class="result-card ${cls2}" id="result-card-${i}" style="flex-direction:column;align-items:stretch;padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:1.2rem">${icon}</span>
+          <span style="font-size:0.97rem;font-weight:800;flex:1;color:#1f2937">${i + 1}. ${escHtml(r.text)}</span>
+          ${ptsHtml}
+        </div>
+        <div style="font-size:0.78rem;font-weight:700;color:${statusColor};margin-bottom:4px">${statusLabel}</div>
+        ${questionBodyHtml}
+        ${feedbackHtml}
+        ${r.aiReviewPending ? `<div id="ai-feedback-${i}" style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#f3f4f6;border:1.5px solid #e5e7eb;font-size:0.85rem;color:#6b7280">⏳ Revisando con IA…</div>` : ''}
+      </div>`;
+  });
   if (score >= 7) launchConfetti();
 }
 
@@ -4017,51 +4284,165 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
       const score = scoreMap[st.name] ?? '–';
       const pillCls = score >= 7 ? 'high' : score >= 5 ? 'mid' : 'low';
       const rows = st.answers.map(a => {
-        const icon = (a.result === 'sí' || a.result === 'si') ? '✅'
-                   : a.result === 'parcial' ? '🟡' : '❌';
+        const isCorrect = (a.result === 'sí' || a.result === 'si' || a.result === 'Sí' || a.result === 'correct');
+        const isPartial = (a.result === 'parcial' || a.result === 'Parcial' || a.result === 'partial');
+        const icon = isCorrect ? '✅' : isPartial ? '🟡' : '❌';
+        const statusColor = isCorrect ? '#065f46' : isPartial ? '#92400e' : '#991b1b';
+        const borderColor = isCorrect ? '#6ee7b7' : isPartial ? '#fcd34d' : '#fca5a5';
+        const bgColor = isCorrect ? '#f0fdf4' : isPartial ? '#fffbeb' : '#fff5f5';
+        const accentColor = isCorrect ? '#10b981' : isPartial ? '#f59e0b' : '#ef4444';
+
         const qIdx = (a.num || 1) - 1;
-        // Buscar la pregunta por texto en currentQuiz (más fiable que por índice)
         const quizQuestions = currentQuiz && currentQuiz.questions;
         const quizQ = quizQuestions
-          ? (quizQuestions.find(q => q.text && a.question && q.text.substring(0,60) === a.question.substring(0,60))
-             || quizQuestions[qIdx])
+          ? (quizQuestions.find(q => q.text && a.question && q.text.substring(0,60) === a.question.substring(0,60)) || quizQuestions[qIdx])
           : undefined;
-        const maxPts = a.maxPts !== undefined ? a.maxPts
-                     : (quizQ ? quizQ.points : 10);
-        const pts    = a.pts !== undefined ? a.pts : undefined;
+        const qType = quizQ ? quizQ.type : 'unknown';
+        const maxPts = a.maxPts !== undefined ? a.maxPts : (quizQ ? quizQ.points : undefined);
+        const pts = a.pts !== undefined ? a.pts : undefined;
 
-        // Color del input según puntuación
-        const inputColor = pts === undefined ? '#6b7280'
-          : pts === maxPts ? '#10b981'
-          : pts > 0       ? '#f59e0b'
-          : '#ef4444';
-
+        // Puntos editables
+        const inputColor = pts === undefined ? '#6b7280' : pts === maxPts ? '#10b981' : pts > 0 ? '#f59e0b' : '#ef4444';
         const ptsInput = maxPts !== undefined
-          ? `<input class="pts-edit-input"
-               type="number" min="0" max="${maxPts}" step="0.25"
-               value="${pts !== undefined ? pts : ''}"
-               placeholder="–"
-               data-student="${escHtml(st.name)}"
-               data-qnum="${a.num}"
-               data-maxpts="${maxPts}"
+          ? `<input class="pts-edit-input" type="number" min="0" max="${maxPts}" step="0.25"
+               value="${pts !== undefined ? pts : ''}" placeholder="–"
+               data-student="${escHtml(st.name)}" data-qnum="${a.num}" data-maxpts="${maxPts}"
                oninput="onPtsEdit(this)"
                style="width:44px;border:1.5px solid ${inputColor};border-radius:6px;padding:2px 4px;font-size:0.82rem;font-weight:800;text-align:center;color:${inputColor};background:${pts===maxPts?'#f0fdf4':pts>0?'#fffbeb':'#fef2f2'}">/<span style="color:var(--muted);font-size:0.78rem">${maxPts}</span>`
           : '';
 
-        // Respuesta correcta desde feedback
-        const correctHtml = a.feedback && a.feedback !== 'Correcto' && a.feedback !== 'Todo correcto' && a.feedback !== 'Orden correcto'
-          ? `<div class="sa-correct">✔ ${escHtml(a.feedback)}</div>`
-          : '';
+        // ── Cuerpo visual según tipo ──
+        let visualBody = '';
+        if (quizQ) {
+          if (qType === 'test' || qType === 'vocab') {
+            const opts = (quizQ.options || []).map(opt => {
+              const isSel = opt === a.answer, isOk = opt === quizQ.correct;
+              let bg = '#f9fafb', border = '#e5e7eb', color = '#374151', badge = '';
+              if (isOk) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; badge = ' ✅'; }
+              if (isSel && !isOk) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; badge = ' ❌'; }
+              const bold = (isSel || isOk) ? 'font-weight:800' : 'font-weight:500;opacity:0.7';
+              return `<div style="padding:5px 10px;border-radius:6px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.82rem;${bold}">${escHtml(opt)}${badge}</div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${opts}</div>`;
+          } else if (qType === 'tf') {
+            const opts = ['Verdadero','Falso'].map(label => {
+              const val = label.toLowerCase();
+              const isSel = a.answer === val, isOk = quizQ.correct === val;
+              let bg = '#f9fafb', border = '#e5e7eb', color = '#374151', badge = '';
+              if (isOk) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; badge = ' ✅'; }
+              if (isSel && !isOk) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; badge = ' ❌'; }
+              return `<div style="padding:5px 10px;border-radius:6px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.82rem;font-weight:${isSel||isOk?'800':'500'}">${label}${badge}</div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;gap:6px;margin-top:6px">${opts}</div>`;
+          } else if (qType === 'fill') {
+            const parts = (quizQ.text || '').split('___');
+            const answers = (a.answer || '').split(', ');
+            const blanks = quizQ.blanks || [];
+            let html = '<div style="font-size:0.88rem;line-height:2;margin-top:6px">';
+            parts.forEach((part, pi) => {
+              html += escHtml(part);
+              if (pi < parts.length - 1) {
+                const sv = answers[pi] || '–', cv = blanks[pi] || '';
+                const ok = sv.toLowerCase().trim() === cv.toLowerCase().trim();
+                html += `<span style="display:inline-block;min-width:70px;padding:1px 8px;background:${ok?'#d1fae5':'#fee2e2'};color:${ok?'#065f46':'#991b1b'};border-bottom:2px solid ${ok?'#10b981':'#ef4444'};border-radius:4px;font-weight:800;margin:0 2px">${escHtml(sv)}</span>`;
+                if (!ok) html += `<span style="font-size:0.75rem;color:#10b981;font-weight:700"> (${escHtml(cv)})</span>`;
+              }
+            });
+            visualBody = html + '</div>';
+          } else if (qType === 'match') {
+            const lefts = Object.keys(quizQ.correctPairs || {});
+            const pairs = (a.answer || '').split(' | ');
+            const html = lefts.map((left, li) => {
+              const cr = quizQ.correctPairs[left];
+              const sr = (pairs[li] || '').replace(`${left} → `, '');
+              const ok = sr === cr;
+              return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:5px;align-items:center;background:${ok?'#d1fae5':'#fee2e2'};border:1px solid ${ok?'#10b981':'#ef4444'};border-radius:6px;padding:5px 8px;font-size:0.82rem">
+                <span style="font-weight:700">${escHtml(left)}</span><span>→</span>
+                <span>${ok?`<strong>${escHtml(sr)}</strong> ✅`:`<span style="text-decoration:line-through;color:#9ca3af">${escHtml(sr)}</span> → <strong style="color:#10b981">${escHtml(cr)}</strong>`}</span>
+              </div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${html}</div>`;
+          } else if (qType === 'order') {
+            const expected = quizQ.correctOrder || quizQ.items || [];
+            const items = (a.answer || '').split(' → ');
+            const html = items.map((item, idx) => {
+              const ok = item === expected[idx];
+              return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid ${ok?'#10b981':'#ef4444'};background:${ok?'#d1fae5':'#fee2e2'};font-size:0.82rem">
+                <span style="font-weight:800;color:#6b7280;width:16px">${idx+1}</span>
+                <span style="flex:1;font-weight:700">${escHtml(item)} ${ok?'✅':'❌'}</span>
+                ${!ok?`<span style="font-size:0.75rem;color:#10b981;font-weight:700">→ ${escHtml(expected[idx]||'')}</span>`:''}
+              </div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;flex-direction:column;gap:3px;margin-top:6px">${html}</div>`;
+          } else if (qType === 'multi') {
+            const correctSet = new Set(quizQ.correctOptions || []);
+            const studentSet = new Set((a.answer || '').split(', ').filter(Boolean));
+            const opts = (quizQ.options || []).map(opt => {
+              const isSel = studentSet.has(opt), isOk = correctSet.has(opt);
+              let bg = '#f9fafb', border = '#e5e7eb', color = '#374151', badge = '';
+              if (isOk && isSel) { bg = '#d1fae5'; border = '#10b981'; color = '#065f46'; badge = ' ✅'; }
+              else if (isOk && !isSel) { bg = '#ecfdf5'; border = '#10b981'; color = '#065f46'; badge = ' ✅ (no marcó)'; }
+              else if (!isOk && isSel) { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; badge = ' ❌'; }
+              return `<div style="padding:5px 10px;border-radius:6px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.82rem;font-weight:${isSel||isOk?'800':'500'};opacity:${!isSel&&!isOk?0.6:1}">${escHtml(opt)}${badge}</div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${opts}</div>`;
+          } else if (qType === 'classify') {
+            const parts = (a.answer || '').split(' | ');
+            const html = (quizQ.items || []).map((item, ci) => {
+              const part = parts[ci] || '';
+              const ok = part.includes('✅');
+              const sv = part.replace(`${item.term}→`,'').replace('✅','').replace('❌','').trim();
+              return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:5px;align-items:center;background:${ok?'#d1fae5':'#fee2e2'};border:1px solid ${ok?'#10b981':'#ef4444'};border-radius:6px;padding:5px 8px;font-size:0.82rem">
+                <span style="font-weight:700">🏷️ ${escHtml(item.term)}</span><span>→</span>
+                <span>${ok?`<strong>${escHtml(sv)}</strong> ✅`:`<span style="text-decoration:line-through;color:#9ca3af">${escHtml(sv||'–')}</span> → <strong style="color:#10b981">${escHtml(item.category)}</strong>`}</span>
+              </div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${html}</div>`;
+          } else if (qType === 'short') {
+            const isOk = isCorrect;
+            const cv = (quizQ.acceptedAnswers && quizQ.acceptedAnswers[0]) || quizQ.correct || '';
+            visualBody = `<div style="margin-top:6px">
+              <div style="padding:6px 12px;border-radius:6px;border:1.5px solid ${isOk?'#10b981':'#ef4444'};background:${isOk?'#d1fae5':'#fee2e2'};font-size:0.88rem;font-weight:700;color:${isOk?'#065f46':'#991b1b'}">${escHtml(a.answer||'–')} ${isOk?'✅':'❌'}</div>
+              ${!isOk?`<div style="padding:6px 12px;border-radius:6px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.88rem;font-weight:700;color:#065f46;margin-top:4px">✅ ${escHtml(cv)}</div>`:''}
+            </div>`;
+          } else if (qType === 'definition') {
+            const cv = (quizQ.acceptedAnswers && quizQ.acceptedAnswers[0]) || quizQ.correct || '';
+            const feedbackClean = (a.feedback || '').replace(/^(Correcto|Casi|Incorrecto)[^:]*:\s*/i,'').trim();
+            visualBody = `<div style="margin-top:6px">
+              <div style="padding:8px 12px;border-radius:6px;border:1.5px solid ${isCorrect?'#10b981':isPartial?'#fcd34d':'#e5e7eb'};background:${isCorrect?'#d1fae5':isPartial?'#fffbeb':'#f9fafb'};font-size:0.88rem;color:#374151;margin-bottom:4px">
+                <span style="font-size:0.72rem;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Respuesta del alumno:</span>${escHtml(a.answer||'–')}
+              </div>
+              ${isPartial&&feedbackClean?`<div style="padding:6px 10px;border-radius:6px;background:#fffbeb;border:1px solid #fcd34d;font-size:0.8rem;color:#92400e;margin-bottom:4px">🟡 ${escHtml(feedbackClean)}</div>`:''}
+              ${!isCorrect?`<div style="padding:8px 12px;border-radius:6px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.88rem;color:#065f46">
+                <span style="font-size:0.72rem;font-weight:700;display:block;margin-bottom:3px">💡 Definición de referencia:</span>${escHtml(cv)}
+              </div>`:''}
+            </div>`;
+          } else if (qType === 'translate' || qType === 'emoji') {
+            const pairs = (a.answer || '').split(' | ');
+            const html = pairs.map(pair => {
+              const ok = pair.includes('✅'), partial = pair.includes('🟡');
+              const clean = pair.replace('✅','').replace('🟡','').replace('❌','').trim();
+              return `<div style="padding:5px 10px;border-radius:6px;border:1px solid ${ok?'#10b981':partial?'#fcd34d':'#ef4444'};background:${ok?'#d1fae5':partial?'#fffbeb':'#fee2e2'};font-size:0.82rem;font-weight:700">${escHtml(clean)} ${ok?'✅':partial?'🟡':'❌'}</div>`;
+            }).join('');
+            visualBody = `<div style="display:flex;flex-direction:column;gap:3px;margin-top:6px">${html}</div>`;
+          }
+        }
 
-        return `<div class="student-answer-row">
-          <div class="sa-num">${a.num}</div>
-          <div class="sa-question">${escHtml(a.question.substring(0, 80))}${a.question.length > 80 ? '…' : ''}</div>
-          <div class="sa-answers-col">
-            <div class="sa-answer">${escHtml(a.answer || '–')}</div>
-            ${correctHtml}
+        // Fallback: texto plano si no hay visual
+        if (!visualBody) {
+          const feedbackTxt = a.feedback && a.feedback !== 'Correcto' && a.feedback !== 'Todo correcto' && a.feedback !== 'Orden correcto'
+            ? `<div style="font-size:0.8rem;color:#10b981;font-weight:700;margin-top:3px">✔ ${escHtml(a.feedback)}</div>` : '';
+          visualBody = `<div style="margin-top:6px"><div style="font-size:0.88rem;font-weight:700;padding:5px 10px;border-radius:6px;border:1px solid ${borderColor};background:${bgColor}">${escHtml(a.answer||'–')}</div>${feedbackTxt}</div>`;
+        }
+
+        return `<div style="border-bottom:1px solid #e0e7ff;padding:10px 14px;background:${bgColor}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <span style="font-size:0.72rem;font-weight:800;color:#6b7280;min-width:18px">${a.num}</span>
+            <span style="flex:1;font-size:0.85rem;font-weight:700;color:#1f2937">${escHtml((a.question||'').substring(0,90))}${(a.question||'').length>90?'…':''}</span>
+            <span style="font-size:0.9rem">${icon}</span>
+            <span style="font-size:0.8rem;font-weight:800;color:${inputColor}">${ptsInput}</span>
           </div>
-          <div class="sa-result">${icon}</div>
-          <div class="sa-pts">${ptsInput}</div>
+          ${visualBody}
         </div>`;
       }).join('');
       return `<div class="student-accordion" id="acc-${idx}">
@@ -4130,6 +4511,7 @@ function downloadReportPDF() {
       .sa-answer { flex: 1.2; font-weight: 700; }
       .sa-result { min-width: 28px; text-align: center; font-size: 1rem; }
       .sa-pts { min-width: 48px; text-align: right; font-size: 0.78rem; font-weight: 800; color: #6b7280; }
+      .pts-edit-input { pointer-events: none; border: 1px solid #e5e7eb !important; background: #f9fafb !important; color: #6b7280 !important; }
     </style>
   </head><body>${content}</body></html>`;
 
@@ -4318,10 +4700,12 @@ function saveToBank() {
     // Actualizar el item existente en el banco
     const idx = bank.findIndex(q => q.id === bankEditingId);
     if (idx !== -1) {
+      const subjectUpd = document.getElementById('subject-input')?.value.trim() || '';
       bank[idx] = {
         ...bank[idx],
         title,
         class: cls,
+        subject: subjectUpd,
         timeMinutes: timeMin,
         questions: JSON.parse(JSON.stringify(editorQuestions)),
         password: password || '',
@@ -4338,10 +4722,12 @@ function saveToBank() {
     }
   } else {
     // Control nuevo: insertar al principio
+    const subject = document.getElementById('subject-input')?.value.trim() || '';
     const quiz = {
       id: Date.now(),
       title,
       class: cls,
+      subject,
       timeMinutes: timeMin,
       questions: JSON.parse(JSON.stringify(editorQuestions)),
       password: password || '',
@@ -4486,6 +4872,34 @@ function copyBankLink(id) {
   }
 }
 
+function detectSubject(quiz) {
+  // Primero usar el campo subject si existe
+  if (quiz.subject && quiz.subject.trim()) return normalizeSubject(quiz.subject.trim());
+  // Fallback: inferir del título
+  return normalizeSubject(quiz.title || '');
+}
+
+function normalizeSubject(text) {
+  const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/mat(ematica|ematicas|s\b|\b)/.test(t)) return 'Matemáticas';
+  if (/lengu(a|as)/.test(t)) return 'Lengua';
+  if (/frances|frances|idioma|fran[cç]/.test(t)) return 'Francés';
+  if (/cono(cimiento)?|ciencias? (nat|soc|natur|social)|social|natural|medio/.test(t)) return 'Cono';
+  if (/ingles|english/.test(t)) return 'Inglés';
+  if (/musica|plastica|educa/.test(t)) return 'Otras';
+  return 'Sin asignatura';
+}
+
+const SUBJECT_ICONS = {
+  'Matemáticas': '🔢',
+  'Lengua': '📖',
+  'Francés': '🇫🇷',
+  'Cono': '🌍',
+  'Inglés': '🇬🇧',
+  'Otras': '🎨',
+  'Sin asignatura': '📄'
+};
+
 function renderBank() {
   let bank = loadBank();
   const list = document.getElementById('bank-list');
@@ -4515,8 +4929,83 @@ function renderBank() {
     return v2a < v2b ? -1 : v2a > v2b ? 1 : 0;
   });
 
-  list.innerHTML = '';
+  // Agrupar por clase → asignatura
+  const folders = {};
+  const FOLDER_ICONS = { '5': '📗', '6': '📘' };
   bank.forEach(quiz => {
+    const cls = (quiz.class || 'Sin clase').trim();
+    const subj = detectSubject(quiz);
+    if (!folders[cls]) folders[cls] = {};
+    if (!folders[cls][subj]) folders[cls][subj] = [];
+    folders[cls][subj].push(quiz);
+  });
+
+  const folderKeys = Object.keys(folders).sort((a, b) => {
+    const numA = parseInt(a), numB = parseInt(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    if (!isNaN(numA)) return -1;
+    if (!isNaN(numB)) return 1;
+    return a.localeCompare(b, 'es');
+  });
+
+  list.innerHTML = '';
+  const openFolders = JSON.parse(sessionStorage.getItem('bankFolders') || '{}');
+
+  folderKeys.forEach(cls => {
+    const subjMap = folders[cls];
+    const totalItems = Object.values(subjMap).reduce((s, a) => s + a.length, 0);
+    const numMatch = cls.match(/\d+/);
+    const icon = numMatch ? (FOLDER_ICONS[numMatch[0]] || '📁') : '📁';
+    const folderId = 'folder-' + cls.replace(/\s+/g, '_');
+    const isOpen = folderKeys.length === 1 || openFolders[cls] !== false;
+
+    const folder = document.createElement('div');
+    folder.className = 'bank-folder' + (isOpen ? ' open' : '');
+    folder.id = folderId;
+
+    const header = document.createElement('div');
+    header.className = 'bank-folder-header';
+    header.innerHTML = `<span>${icon}</span><span>${escHtml(cls)}</span><span class="bank-folder-count">${totalItems}</span><span class="bank-folder-arrow">▼</span>`;
+    header.onclick = () => {
+      folder.classList.toggle('open');
+      const state = JSON.parse(sessionStorage.getItem('bankFolders') || '{}');
+      state[cls] = folder.classList.contains('open');
+      sessionStorage.setItem('bankFolders', JSON.stringify(state));
+    };
+
+    const body = document.createElement('div');
+    body.className = 'bank-folder-body';
+
+    // Subcarpetas por asignatura
+    const subjKeys = Object.keys(subjMap).sort((a, b) => {
+      const order = ['Matemáticas','Lengua','Cono','Francés','Inglés','Otras','Sin asignatura'];
+      return (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99);
+    });
+
+    subjKeys.forEach(subj => {
+      const items = subjMap[subj];
+      const sIcon = SUBJECT_ICONS[subj] || '📄';
+      const sfId = 'sf-' + cls.replace(/\s+/g,'_') + '-' + subj.replace(/\s+/g,'_');
+      const sfOpen = openFolders[sfId] !== false;
+
+      const subfolder = document.createElement('div');
+      subfolder.className = 'bank-subfolder' + (sfOpen ? ' open' : '');
+
+      const sfHeader = document.createElement('div');
+      sfHeader.className = 'bank-subfolder-header';
+      sfHeader.innerHTML = `<span>${sIcon}</span><span>${escHtml(subj)}</span><span class="bank-subfolder-count">${items.length}</span><span class="bank-subfolder-arrow">▼</span>`;
+      sfHeader.onclick = (e) => {
+        e.stopPropagation();
+        subfolder.classList.toggle('open');
+        const state = JSON.parse(sessionStorage.getItem('bankFolders') || '{}');
+        state[sfId] = subfolder.classList.contains('open');
+        sessionStorage.setItem('bankFolders', JSON.stringify(state));
+      };
+
+      const sfBody = document.createElement('div');
+      sfBody.className = 'bank-subfolder-body';
+
+      items.forEach(quiz => {
     const item = document.createElement('div');
     item.className = 'bank-item';
     const qCount = quiz.questions ? quiz.questions.length : 0;
@@ -4552,7 +5041,17 @@ function renderBank() {
           <button class="btn btn-primary btn-sm" onclick="openReport()" style="background:#7c3aed;font-size:0.82rem">📋 Ver informe</button>
         </div>
       </div>`;
-    list.appendChild(item);
+        sfBody.appendChild(item);
+      });
+
+      subfolder.appendChild(sfHeader);
+      subfolder.appendChild(sfBody);
+      body.appendChild(subfolder);
+    });
+
+    folder.appendChild(header);
+    folder.appendChild(body);
+    list.appendChild(folder);
   });
 }
 
