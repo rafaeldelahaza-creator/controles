@@ -822,6 +822,140 @@
   .progress-bar-wrap { flex: 1; background: var(--border); border-radius: 20px; height: 10px; overflow: hidden; }
   .progress-bar-fill { height: 100%; background: var(--primary); border-radius: 20px; transition: width 1s linear; }
 
+  /* ── ANALYZE MATERIAL ── */
+  #analyze-btn {
+    display: flex; align-items: center; gap: 7px;
+    margin-top: 8px; padding: 8px 16px;
+    background: linear-gradient(135deg, #ede9fe, #dbeafe);
+    border: 1.5px solid #c4b5fd; border-radius: 10px;
+    font-family: 'Nunito', sans-serif; font-weight: 800;
+    font-size: 0.88rem; color: #5b21b6; cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  #analyze-btn:hover { opacity: 0.85; }
+  #analyze-btn:active { transform: scale(0.98); }
+  #analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #analyze-panel {
+    display: none;
+    margin-top: 12px;
+    background: linear-gradient(135deg, #faf5ff, #eff6ff);
+    border: 1.5px solid #c4b5fd;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+  }
+  #analyze-panel.visible { display: block; }
+  .analyze-title {
+    font-family: 'Baloo 2', cursive; font-weight: 800;
+    font-size: 0.97rem; color: #5b21b6; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .analyze-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 8px; font-size: 0.87rem;
+  }
+  .analyze-label {
+    font-weight: 800; color: #6b7280; min-width: 110px; flex-shrink: 0;
+  }
+  .analyze-value { color: #1f2937; font-weight: 600; flex: 1; }
+  .analyze-chips {
+    display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
+  }
+  .analyze-chip {
+    padding: 3px 10px; border-radius: 20px; font-size: 0.78rem;
+    font-weight: 800; border: 1.5px solid #c4b5fd;
+    background: #ede9fe; color: #5b21b6; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .analyze-chip:hover { background: #ddd6fe; }
+  .analyze-chip.apply-btn {
+    background: #5b21b6; color: #fff; border-color: #5b21b6;
+    margin-top: 8px; padding: 5px 16px; font-size: 0.85rem;
+  }
+  .analyze-chip.apply-btn:hover { background: #4c1d95; }
+
+  /* ── AI CHAT EDITOR ── */
+  #ai-chat-card {
+    border: 2px solid var(--primary-light);
+    background: linear-gradient(135deg, #faf5ff 0%, #eff6ff 100%);
+  }
+  .ai-chat-messages {
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 4px 0;
+  }
+  .ai-chat-msg {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .ai-chat-msg.user { flex-direction: row-reverse; }
+  .ai-chat-bubble {
+    max-width: 85%;
+    padding: 9px 14px;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    font-weight: 600;
+  }
+  .ai-chat-msg.user .ai-chat-bubble {
+    background: var(--primary);
+    color: #fff;
+    border-radius: 14px 14px 4px 14px;
+  }
+  .ai-chat-msg.ai .ai-chat-bubble {
+    background: #fff;
+    color: var(--text);
+    border: 1.5px solid #e0e7ff;
+    border-radius: 14px 14px 14px 4px;
+  }
+  .ai-chat-msg.ai .ai-chat-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; flex-shrink: 0; margin-top: 2px;
+  }
+  .ai-chat-input-row {
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .ai-chat-input-row textarea {
+    flex: 1; resize: none; min-height: 44px; max-height: 120px;
+    padding: 10px 14px; border-radius: 12px; font-size: 0.9rem;
+    border: 1.5px solid var(--border); font-family: 'Nunito', sans-serif;
+    font-weight: 600; line-height: 1.4; margin-bottom: 0;
+    transition: border 0.2s;
+  }
+  .ai-chat-input-row textarea:focus { border-color: var(--primary-light); outline: none; }
+  .ai-chat-send-btn {
+    width: 44px; height: 44px; border-radius: 12px; border: none;
+    background: var(--primary); color: #fff; font-size: 1.1rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: opacity 0.2s;
+  }
+  .ai-chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ai-chat-hint {
+    font-size: 0.75rem; color: var(--muted); margin-bottom: 10px;
+    font-style: italic;
+  }
+  .repeat-warning {
+    display: none;
+    background: #fffbeb;
+    border: 1.5px solid #fcd34d;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: #92400e;
+    font-weight: 700;
+    margin-top: 10px;
+    gap: 8px;
+    align-items: center;
+  }
+  .repeat-warning.visible { display: flex; }
+
   /* ── AI SECTION ── */
   .ai-badge {
     display: inline-flex;
@@ -1348,7 +1482,29 @@
       <span style="font-size:0.82rem;color:var(--muted);font-weight:700">O escribe / pega el texto</span>
       <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>
-    <textarea id="material-input" placeholder="Ej: El sistema solar está formado por el Sol y los planetas que orbitan a su alrededor..."></textarea>
+    <textarea id="material-input" oninput="checkRepeatWarning()" placeholder="Ej: El sistema solar está formado por el Sol y los planetas que orbitan a su alrededor..."></textarea>
+    <button id="analyze-btn" type="button" onclick="analyzeMaterial()">
+      <span id="analyze-btn-icon">✦</span>
+      <span id="analyze-btn-text">Analizar material y sugerir configuración</span>
+    </button>
+    <div id="analyze-panel">
+      <div class="analyze-title">✦ Sugerencias para este material</div>
+      <div class="analyze-row"><span class="analyze-label">Asignatura:</span><span class="analyze-value" id="an-subject">–</span></div>
+      <div class="analyze-row"><span class="analyze-label">Título sugerido:</span><span class="analyze-value" id="an-title">–</span></div>
+      <div class="analyze-row"><span class="analyze-label">Nº de preguntas:</span><span class="analyze-value" id="an-num">–</span></div>
+      <div class="analyze-row"><span class="analyze-label">Tiempo estimado:</span><span class="analyze-value" id="an-time">–</span></div>
+      <div class="analyze-row" style="flex-direction:column">
+        <span class="analyze-label" style="margin-bottom:6px">Tipos recomendados:</span>
+        <div class="analyze-chips" id="an-types"></div>
+      </div>
+      <div class="analyze-row" style="flex-direction:column">
+        <span class="analyze-label" style="margin-bottom:4px">Razonamiento:</span>
+        <span class="analyze-value" id="an-reason" style="font-style:italic;color:#6b7280"></span>
+      </div>
+      <div class="analyze-chips">
+        <button class="analyze-chip apply-btn" onclick="applyAnalysisSuggestion()">✅ Aplicar sugerencias</button>
+      </div>
+    </div>
     <div class="row">
       <div>
         <label>Asignatura</label>
@@ -1356,7 +1512,10 @@
       </div>
       <div>
         <label>Número de preguntas</label>
-        <input type="number" id="num-questions" value="6" min="3" max="12">
+        <input type="number" id="num-questions" value="6" min="3" max="12" oninput="checkRepeatWarning()">
+        <div id="repeat-warning" class="repeat-warning">
+          ⚠️ <span id="repeat-warning-text">Con tantas preguntas puede haber conceptos repetidos. Reduce el número o amplía el material.</span>
+        </div>
       </div>
       <div>
         <label>Tiempo (minutos)</label>
@@ -1432,6 +1591,22 @@
       <button class="btn btn-sm" onclick="addQuestion('vocab')" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d">+ Test ampliado</button>
       <button class="btn btn-sm" onclick="addQuestion('translate')" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d">+ Traducción</button>
       <button class="btn btn-sm" onclick="addQuestion('emoji')" style="background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d">+ Emoji→palabra</button>
+    </div>
+    <hr style="margin:20px 0;border:none;border-top:1.5px solid var(--border)">
+    <!-- IA CHAT -->
+    <div id="ai-chat-card" style="border-radius:14px;padding:16px 18px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:1.1rem">✦</span>
+        <span style="font-family:'Baloo 2',cursive;font-weight:800;font-size:1rem;color:var(--primary)">Asistente del control</span>
+        <span style="font-size:0.72rem;background:#ede9fe;color:#7c3aed;border-radius:20px;padding:2px 8px;font-weight:700">IA</span>
+      </div>
+      <p class="ai-chat-hint">Dime qué cambiar: "la pregunta 3 es demasiado fácil, pon una de huecos sobre los determinantes" · "cambia la 2 y la 5, que sean de relacionar" · "añade una pregunta sobre el ciclo del agua"</p>
+      <div class="ai-chat-messages" id="ai-chat-messages"></div>
+      <div class="ai-chat-input-row">
+        <textarea id="ai-chat-input" placeholder="Escribe aquí tu instrucción…" rows="2"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIChatMessage()}"></textarea>
+        <button class="ai-chat-send-btn" id="ai-chat-send" onclick="sendAIChatMessage()" title="Enviar">➤</button>
+      </div>
     </div>
     <hr style="margin:20px 0;border:none;border-top:1.5px solid var(--border)">
     <button class="btn btn-green" onclick="publishQuiz()" style="margin-right:10px">🚀 Publicar control</button>
@@ -2095,6 +2270,11 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
     bankEditingId = null; // es un control nuevo, no proviene del banco
     document.getElementById('editor-card').style.display = 'block';
     document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
+  // Resetear chat del asistente al generar un control nuevo
+  aiChatHistory = [];
+  const chatMsgs = document.getElementById('ai-chat-messages');
+  if (chatMsgs) chatMsgs.innerHTML = '';
+  checkRepeatWarning();
     showToast('✅ Control generado correctamente');
   } catch (e) {
     showToast('❌ Error al generar. Comprueba la conexión.');
@@ -2157,6 +2337,340 @@ function updatePointsBar() {
   const ok = Math.abs(total - 10) < 0.01;
   bar.className = 'points-total-bar ' + (ok ? 'ok' : 'warn');
   msg.textContent = ok ? '✅ ¡Todo cuadra!' : total < 10 ? `⚠️ Faltan ${Math.round((10 - total) * 100) / 100} pts` : `⚠️ Sobran ${Math.round((total - 10) * 100) / 100} pts`;
+}
+
+// ══════════════════════════════════════════════
+//  ANALYZE MATERIAL
+// ══════════════════════════════════════════════
+let lastAnalysis = null; // guardar resultado para aplicarlo
+
+async function analyzeMaterial() {
+  const material = document.getElementById('material-input').value.trim();
+  const hasFiles = uploadedFiles && uploadedFiles.length > 0;
+
+  if (!material && !hasFiles) {
+    showToast('⚠️ Sube un archivo o pega el material primero');
+    return;
+  }
+
+  const btn = document.getElementById('analyze-btn');
+  const btnText = document.getElementById('analyze-btn-text');
+  const btnIcon = document.getElementById('analyze-btn-icon');
+  btn.disabled = true;
+  btnIcon.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+  btnText.textContent = 'Analizando…';
+
+  const TYPE_LABELS = {
+    test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos',
+    match: '🔗 Relacionar', short: '💬 Respuesta corta',
+    order: '🔢 Ordenar', definition: '📖 Definición',
+    multi: '☑️ Opción múltiple', classify: '🏷️ Clasificar',
+    vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra'
+  };
+
+  const analyzePrompt = `Eres un maestro experto de 5º-6º de Primaria (LOMLOE, España). Analiza el siguiente material educativo y devuelve una configuración óptima para generar un control de evaluación.
+
+MATERIAL:
+${material.substring(0, 3000)}
+
+Responde SOLO con JSON válido, sin texto adicional ni markdown:
+{
+  "subject": "nombre exacto de la asignatura detectada",
+  "title": "título sugerido para el control (ej: Control Tema 3 – Los determinantes)",
+  "numQuestions": <número entero entre 4 y 12>,
+  "timeMinutes": <minutos estimados entre 5 y 15>,
+  "recommendedTypes": ["type1", "type2", ...],
+  "reasoning": "explicación breve (2-3 frases) de por qué estos tipos y este número son los más adecuados para este contenido"
+}
+
+Tipos disponibles: test, tf, fill, match, short, order, definition, multi, classify, vocab, translate, emoji.
+Solo recomienda vocab/translate/emoji si el material es de idiomas (francés, inglés).
+Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
+- Listas de conceptos/categorías → classify, match, multi
+- Definiciones y términos técnicos → definition, short, fill
+- Procesos y secuencias → order, fill
+- Reglas y afirmaciones → tf, test
+- Vocabulario de idioma → vocab, translate, emoji`;
+
+  // Construir mensaje multimodal si hay archivos
+  let messageContent = [];
+  if (uploadedFiles) {
+    uploadedFiles.forEach(f => {
+      if (f.type === 'image') messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
+      else if (f.type === 'pdf') messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+    });
+  }
+  messageContent.push({ type: 'text', text: analyzePrompt });
+
+  try {
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: messageContent }]
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error?.message || 'Error API');
+
+    const raw = data.content.map(c => c.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    lastAnalysis = result;
+
+    // Mostrar resultados
+    document.getElementById('an-subject').textContent = result.subject || '–';
+    document.getElementById('an-title').textContent = result.title || '–';
+    document.getElementById('an-num').textContent = result.numQuestions + ' preguntas';
+    document.getElementById('an-time').textContent = result.timeMinutes + ' minutos';
+    document.getElementById('an-reason').textContent = result.reasoning || '';
+
+    // Chips de tipos recomendados
+    const typesEl = document.getElementById('an-types');
+    typesEl.innerHTML = (result.recommendedTypes || [])
+      .map(t => `<span class="analyze-chip">${TYPE_LABELS[t] || t}</span>`)
+      .join('');
+
+    document.getElementById('analyze-panel').classList.add('visible');
+
+  } catch(e) {
+    console.error(e);
+    showToast('❌ No se pudo analizar el material. Inténtalo de nuevo.');
+  } finally {
+    btn.disabled = false;
+    btnIcon.textContent = '✦';
+    btnText.textContent = 'Analizar material y sugerir configuración';
+  }
+}
+
+function applyAnalysisSuggestion() {
+  if (!lastAnalysis) return;
+
+  // Aplicar asignatura
+  if (lastAnalysis.subject) {
+    const subjEl = document.getElementById('subject-input');
+    if (subjEl && !subjEl.value.trim()) subjEl.value = lastAnalysis.subject;
+  }
+
+  // Aplicar título
+  if (lastAnalysis.title) {
+    const titleEl = document.getElementById('quiz-title-input');
+    if (titleEl && !titleEl.value.trim()) titleEl.value = lastAnalysis.title;
+  }
+
+  // Aplicar número de preguntas
+  if (lastAnalysis.numQuestions) {
+    const numEl = document.getElementById('num-questions');
+    if (numEl) { numEl.value = lastAnalysis.numQuestions; checkRepeatWarning(); }
+  }
+
+  // Aplicar tiempo
+  if (lastAnalysis.timeMinutes) {
+    const timeEl = document.getElementById('time-limit');
+    if (timeEl) timeEl.value = lastAnalysis.timeMinutes;
+  }
+
+  // Aplicar tipos recomendados: desmarcar todos y marcar solo los sugeridos
+  if (lastAnalysis.recommendedTypes && lastAnalysis.recommendedTypes.length > 0) {
+    const chips = document.querySelectorAll('#type-chips .type-chip');
+    chips.forEach(chip => {
+      const t = chip.dataset.type;
+      const shouldSelect = lastAnalysis.recommendedTypes.includes(t);
+      chip.classList.toggle('selected', shouldSelect);
+    });
+  }
+
+  document.getElementById('analyze-panel').classList.remove('visible');
+  showToast('✅ Configuración aplicada');
+  // Scroll suave a la configuración
+  document.getElementById('num-questions')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ══════════════════════════════════════════════
+//  REPEAT WARNING
+// ══════════════════════════════════════════════
+function checkRepeatWarning() {
+  const n = parseInt(document.getElementById('num-questions')?.value) || 0;
+  const material = document.getElementById('material-input')?.value.trim() || '';
+  const warning = document.getElementById('repeat-warning');
+  if (!warning) return;
+  // Heurística: estimar conceptos disponibles por palabras únicas significativas del material
+  // (~1 concepto por cada 40 palabras de material, mínimo garantizado de 5)
+  const words = material.split(/\s+/).filter(w => w.length > 4).length;
+  const estimatedConcepts = Math.max(5, Math.floor(words / 40));
+  if (n > estimatedConcepts && material.length > 50) {
+    document.getElementById('repeat-warning-text').textContent =
+      `Con ${n} preguntas y este material puede haber conceptos repetidos. Prueba con ${estimatedConcepts} o menos, o amplía el material.`;
+    warning.classList.add('visible');
+  } else {
+    warning.classList.remove('visible');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  AI CHAT DEL EDITOR
+// ══════════════════════════════════════════════
+let aiChatHistory = [];
+
+function addAIChatMessage(role, text) {
+  aiChatHistory.push({ role, text });
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  const msg = document.createElement('div');
+  msg.className = 'ai-chat-msg ' + (role === 'user' ? 'user' : 'ai');
+  if (role === 'ai') {
+    msg.innerHTML = `<div class="ai-chat-avatar">✦</div><div class="ai-chat-bubble">${text.replace(/\n/g,'<br>')}</div>`;
+  } else {
+    msg.innerHTML = `<div class="ai-chat-bubble">${escHtml(text)}</div>`;
+  }
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendAIChatMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const sendBtn = document.getElementById('ai-chat-send');
+  const userMsg = input.value.trim();
+  if (!userMsg) return;
+  if (!editorQuestions.length) {
+    addAIChatMessage('ai', '⚠️ Primero genera o añade preguntas al control.');
+    return;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  addAIChatMessage('user', userMsg);
+  sendBtn.disabled = true;
+  sendBtn.textContent = '…';
+
+  const subject = document.getElementById('subject-input')?.value || 'la asignatura';
+  const material = document.getElementById('material-input')?.value.trim() || '';
+
+  // Construir representación del control actual
+  const controlSummary = editorQuestions.map((q, i) => {
+    let correct = '';
+    if (q.type === 'test' || q.type === 'vocab') correct = `Correcta: "${q.correct}"`;
+    else if (q.type === 'tf') correct = `Correcta: ${q.correct}`;
+    else if (q.type === 'fill') correct = `Huecos: ${(q.blanks||[]).join(', ')}`;
+    else if (q.type === 'short' || q.type === 'definition') correct = `Respuesta: ${(q.acceptedAnswers||[q.correct||''])[0]}`;
+    else if (q.type === 'match') correct = `Pares: ${Object.entries(q.correctPairs||{}).map(([l,r])=>`${l}→${r}`).join(', ')}`;
+    else if (q.type === 'order') correct = `Orden: ${(q.correctOrder||q.items||[]).join(' → ')}`;
+    else if (q.type === 'multi') correct = `Correctas: ${(q.correctOptions||[]).join(', ')}`;
+    else if (q.type === 'classify') correct = `${(q.items||[]).map(it=>`${it.term}→${it.category}`).join(', ')}`;
+    else if (q.type === 'translate') correct = `${(q.pairs||[]).map(p=>`${p.term}→${p.answer}`).join(', ')}`;
+    return `P${i+1} [${q.type}] "${q.text}" | ${correct} | ${q.points}pts`;
+  }).join('\n');
+
+  const systemPrompt = `Eres el asistente de edición del "Generador de controles Profe Rafa" para 5º-6º de Primaria (LOMLOE, España).
+El profe tiene un control de ${subject} con estas preguntas:
+${controlSummary}
+${material ? `\nMATERIAL DEL TEMA (fuente obligatoria para preguntas nuevas):\n${material.substring(0,2500)}` : ''}
+
+Tu trabajo es modificar el control según las instrucciones del profe. Puedes:
+- Sustituir preguntas concretas por otras nuevas
+- Cambiar el tipo de una pregunta manteniendo el concepto
+- Añadir preguntas nuevas
+- Cambiar la dificultad de preguntas concretas
+- Cualquier combinación de lo anterior en un solo mensaje
+
+REGLAS:
+- Usa SOLO conceptos del material proporcionado
+- No repitas conceptos ya evaluados en preguntas que NO se modifican
+- Los enunciados deben ser claros para niños de 10-12 años
+- Responde con JSON estructurado (ver formato) y un breve mensaje explicativo
+
+FORMATO DE RESPUESTA — responde SIEMPRE con este JSON seguido de tu explicación:
+{
+  "actions": [
+    {
+      "op": "replace",        // "replace" | "add" | "delete"
+      "index": 2,             // índice 0-based (para replace y delete)
+      "question": { ... }     // objeto pregunta completo (para replace y add)
+    }
+  ],
+  "message": "He sustituido la pregunta 3 por una de huecos sobre los determinantes posesivos y añadido una nueva sobre..."
+}
+
+El campo "question" debe tener la misma estructura JSON que las preguntas del control (type, text, options/blanks/etc., correct/correctOptions/etc., points).
+Conserva los puntos de la pregunta original al hacer replace, salvo que el profe pida explícitamente cambiarlos.
+Si el profe pide algo imposible (ej: no hay material suficiente), explícalo en "message" y devuelve "actions": [].`;
+
+  const messages = [{ role: 'user', content: userMsg }];
+
+  // Incluir historial reciente (últimos 4 turnos)
+  const historyForAPI = [];
+  const recent = aiChatHistory.slice(-8);
+  for (let i = 0; i < recent.length - 1; i++) {
+    const h = recent[i];
+    if (h.role === 'user') historyForAPI.push({ role: 'user', content: h.text });
+    else historyForAPI.push({ role: 'assistant', content: h.text });
+  }
+  historyForAPI.push({ role: 'user', content: userMsg });
+
+  try {
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: systemPrompt + '\n\n---\nINSTRUCCIÓN DEL PROFE: ' + userMsg }]
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error?.message || 'Error API');
+
+    const rawText = data.content.map(c => c.text || '').join('');
+
+    // Parsear JSON de la respuesta
+    const jsonMatch = rawText.match(/\{[\s\S]*"actions"[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No se encontró JSON en la respuesta');
+
+    const result = JSON.parse(jsonMatch[0]);
+    const actions = result.actions || [];
+    const aiMessage = result.message || 'Hecho.';
+
+    // Aplicar acciones en orden inverso para que los índices no se desplacen
+    const sorted = [...actions].sort((a, b) => (b.index ?? 999) - (a.index ?? 999));
+    let applied = 0;
+
+    sorted.forEach(action => {
+      if (action.op === 'replace' && action.index !== undefined && action.question) {
+        const orig = editorQuestions[action.index];
+        action.question.id = orig?.id || Date.now() + Math.random();
+        action.question.points = action.question.points ?? orig?.points ?? 1;
+        editorQuestions[action.index] = action.question;
+        applied++;
+      } else if (action.op === 'add' && action.question) {
+        action.question.id = Date.now() + Math.random();
+        editorQuestions.push(action.question);
+        applied++;
+      } else if (action.op === 'delete' && action.index !== undefined) {
+        editorQuestions.splice(action.index, 1);
+        applied++;
+      }
+    });
+
+    if (applied > 0) {
+      renderEditor();
+      // Reabrir paneles de preguntas modificadas (replace)
+      actions.filter(a => a.op === 'replace').forEach(a => {
+        const panel = document.getElementById(`regen-panel-${a.index}`);
+        if (panel) panel.classList.remove('open');
+      });
+    }
+
+    addAIChatMessage('ai', aiMessage);
+
+  } catch(e) {
+    console.error(e);
+    addAIChatMessage('ai', '❌ No pude procesar la solicitud. Inténtalo de nuevo o reformula tu petición.');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = '➤';
+  }
 }
 
 function toggleRegenPanel(i) {
@@ -3793,7 +4307,7 @@ function showResults(score, name, review, totalPoints) {
   rc.innerHTML = '';
 
   review.forEach((r, i) => {
-    const q = questions[i];
+    const q = (questions && questions[i]) ? questions[i] : null;
     const cls2 = r.correct ? 'correct' : r.partial ? 'partial' : 'wrong';
     const icon = r.correct ? '✅' : r.partial ? '🟡' : '❌';
     const statusLabel = r.correct ? 'Correcto' : r.partial ? 'Parcialmente correcto' : 'Incorrecto';
@@ -3807,7 +4321,17 @@ function showResults(score, name, review, totalPoints) {
     // ── Renderizar la pregunta según su tipo ──
     let questionBodyHtml = '';
 
-    if (q.type === 'test' || q.type === 'vocab') {
+    // Fallback si no hay datos de la pregunta original
+    if (!q) {
+      const isOk = r.correct, isPart = r.partial;
+      const feedbackClean = (r.feedback || '').replace(/^(Correcto|Casi|Incorrecto|Todo correcto|Orden correcto)[^:]*:\s*/i, '').trim();
+      questionBodyHtml = `<div style="margin-top:8px">
+        <div style="padding:8px 12px;border-radius:8px;border:1.5px solid ${isOk?'#10b981':isPart?'#fcd34d':'#e5e7eb'};background:${isOk?'#d1fae5':isPart?'#fffbeb':'#f9fafb'};font-size:0.92rem;font-weight:700;color:#374151">
+          Tu respuesta: ${escHtml(r.studentAnswer || '–')}
+        </div>
+        ${!isOk && feedbackClean ? `<div style="padding:7px 12px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.88rem;color:#065f46;margin-top:6px;font-weight:700">✅ ${escHtml(feedbackClean)}</div>` : ''}
+      </div>`;
+    } else if (q.type === 'test' || q.type === 'vocab') {
       const opts = (q.options || []).map(opt => {
         const isStudentChoice = opt === r.studentAnswer;
         const isCorrectOpt = opt === q.correct;
@@ -4881,12 +5405,12 @@ function detectSubject(quiz) {
 
 function normalizeSubject(text) {
   const t = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (/mat(ematica|ematicas|s\b|\b)/.test(t)) return 'Matemáticas';
-  if (/lengu(a|as)/.test(t)) return 'Lengua';
-  if (/frances|frances|idioma|fran[cç]/.test(t)) return 'Francés';
-  if (/cono(cimiento)?|ciencias? (nat|soc|natur|social)|social|natural|medio/.test(t)) return 'Cono';
-  if (/ingles|english/.test(t)) return 'Inglés';
-  if (/musica|plastica|educa/.test(t)) return 'Otras';
+  if (/\bmates\b|\bmatematica(s)?\b|\bmat\b/.test(t)) return 'Matemáticas';
+  if (/\blengua\b|\blenguaje\b|\bcastellano\b/.test(t)) return 'Lengua';
+  if (/\bfrances\b|\bfrancés\b|\bidioma\b|\bfranc\b/.test(t)) return 'Francés';
+  if (/\bcono\b|\bconocimiento(s)?\b|conocimiento(s)? del medio|\bciencias?\b|ciencias? (nat|soc|natur|social|del medio)|\bnaturales?\b|\bsociales?\b|\bmedio\b/.test(t)) return 'Cono';
+  if (/\bingles\b|\bingles\b|\benglish\b/.test(t)) return 'Inglés';
+  if (/\bmusica\b|\bplastica\b|\bplast\b|\bartistica\b|educacion (fis|art|music)/.test(t)) return 'Otras';
   return 'Sin asignatura';
 }
 
@@ -4957,7 +5481,7 @@ function renderBank() {
     const numMatch = cls.match(/\d+/);
     const icon = numMatch ? (FOLDER_ICONS[numMatch[0]] || '📁') : '📁';
     const folderId = 'folder-' + cls.replace(/\s+/g, '_');
-    const isOpen = folderKeys.length === 1 || openFolders[cls] !== false;
+    const isOpen = openFolders[cls] === true;
 
     const folder = document.createElement('div');
     folder.className = 'bank-folder' + (isOpen ? ' open' : '');
@@ -4986,7 +5510,7 @@ function renderBank() {
       const items = subjMap[subj];
       const sIcon = SUBJECT_ICONS[subj] || '📄';
       const sfId = 'sf-' + cls.replace(/\s+/g,'_') + '-' + subj.replace(/\s+/g,'_');
-      const sfOpen = openFolders[sfId] !== false;
+      const sfOpen = openFolders[sfId] === true;
 
       const subfolder = document.createElement('div');
       subfolder.className = 'bank-subfolder' + (sfOpen ? ' open' : '');
