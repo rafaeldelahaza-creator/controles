@@ -2610,7 +2610,7 @@ function renderStudentAnswer(q, i) {
     let html = '<div class="blank-container">';
     parts.forEach((part, pi) => {
       html += `<span>${escHtml(part)}</span>`;
-      if (pi < parts.length - 1) html += `<input class="blank-input" type="text" id="blank-${i}-${pi}" placeholder="…">`;
+      if (pi < parts.length - 1) html += `<input class="blank-input" type="text" id="blank-${i}-${pi}" placeholder="…" autocomplete="off" autocorrect="off" autocapitalize="off">`;
     });
     html += '</div>';
     wrap.innerHTML = html;
@@ -2626,7 +2626,9 @@ function renderStudentAnswer(q, i) {
     html += '</div>';
     wrap.innerHTML = html;
   } else if (q.type === 'short') {
-    wrap.innerHTML = `<input class="short-input" type="text" id="short-${i}" placeholder="Escribe tu respuesta…">`;
+    wrap.innerHTML = `<input class="short-input" type="text" id="short-${i}" placeholder="Escribe tu respuesta…" autocomplete="off" autocorrect="off" autocapitalize="off">`;
+  } else if (q.type === 'definition') {
+    wrap.innerHTML = `<textarea class="short-input" id="definition-${i}" placeholder="Explica el concepto con tus propias palabras…" rows="3" style="resize:none;width:100%;font-family:inherit;font-size:1rem;padding:10px 14px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>`;
   } else if (q.type === 'order') {
     const items = q.items.map((item, ii) => `<li class="order-item" draggable="true" data-idx="${ii}" data-text="${escHtml(item)}"><span class="drag-handle">⠿</span><span class="order-num" id="onum-${i}-${ii}">${ii + 1}</span><span>${escHtml(item)}</span></li>`).join('');
     wrap.innerHTML = `<ul class="order-list" id="order-list-${i}">${items}</ul>`;
