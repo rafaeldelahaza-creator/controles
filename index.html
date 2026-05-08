@@ -2327,7 +2327,7 @@ let editorQuestions = [];
 function loadQuizIntoEditor(quiz) {
   document.getElementById('quiz-title-input').value = quiz.title || '';
   document.getElementById('time-limit').value = quiz.timeMinutes || 8;
-  editorQuestions = quiz.questions || [];
+  editorQuestions = (quiz.questions || []).map(sanitizeQuestion);
 
   // Corrección automática: si la IA no asignó exactamente 10 puntos, reescalar proporcionalmente
   const rawTotal = editorQuestions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0);
@@ -2348,6 +2348,20 @@ function loadQuizIntoEditor(quiz) {
   renderEditor();
 }
 
+// Asegura que correct y acceptedAnswers estén siempre sincronizados
+function sanitizeQuestion(q) {
+  if (!q) return q;
+  if (q.type === 'short' || q.type === 'definition') {
+    // acceptedAnswers siempre debe ser un array no vacío
+    if (!q.acceptedAnswers || q.acceptedAnswers.length === 0) {
+      q.acceptedAnswers = q.correct ? [q.correct] : [''];
+    }
+    // correct siempre debe ser la primera respuesta aceptada
+    if (q.acceptedAnswers[0]) q.correct = q.acceptedAnswers[0];
+  }
+  return q;
+}
+
 function renderEditor() {
   const container = document.getElementById('questions-editor');
   container.innerHTML = '';
@@ -2355,6 +2369,34 @@ function renderEditor() {
     container.appendChild(buildEditorBlock(q, i));
   });
   updatePointsBar();
+  syncPublishedQuiz();
+}
+
+// Sincroniza currentQuiz y el enlace publicado con el estado actual del editor
+let _syncDebounce = null;
+function syncPublishedQuiz() {
+  clearTimeout(_syncDebounce);
+  _syncDebounce = setTimeout(() => {
+    const publishCard = document.getElementById('publish-card');
+    if (!publishCard || publishCard.style.display === 'none') return;
+    if (!editorQuestions.length) return;
+    const title = document.getElementById('quiz-title-input')?.value || currentQuiz?.title || 'Control';
+    const cls   = document.getElementById('quiz-class-input')?.value  || currentQuiz?.class  || '';
+    const timeMin = parseInt(document.getElementById('time-limit')?.value) || currentQuiz?.timeMinutes || 8;
+    const password = document.getElementById('quiz-password-input')?.value?.trim() || currentQuiz?.password || '';
+    currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentQuiz))));
+    const base = window.location.href.split('?')[0];
+    const quizUrl = base + '?quiz=' + encoded;
+    const linkInput = document.getElementById('quiz-link');
+    if (linkInput) linkInput.value = quizUrl;
+    // Actualizar también en el banco si estaba guardado
+    if (bankEditingId !== null) {
+      const bank = loadBank();
+      const idx = bank.findIndex(q => q.id === bankEditingId);
+      if (idx !== -1) { bank[idx].publishedUrl = quizUrl; saveBank(bank); }
+    }
+  }, 400);
 }
 
 function updatePointsBar() {
@@ -2720,11 +2762,11 @@ Si el profe pide algo imposible (ej: no hay material suficiente), explícalo en 
         const orig = editorQuestions[action.index];
         action.question.id = orig?.id || Date.now() + Math.random();
         action.question.points = action.question.points ?? orig?.points ?? 1;
-        editorQuestions[action.index] = action.question;
+        editorQuestions[action.index] = sanitizeQuestion(action.question);
         applied++;
       } else if (action.op === 'add' && action.question) {
         action.question.id = Date.now() + Math.random();
-        editorQuestions.push(action.question);
+        editorQuestions.push(sanitizeQuestion(action.question));
         applied++;
       } else if (action.op === 'delete' && action.index !== undefined) {
         editorQuestions.splice(action.index, 1);
@@ -2976,9 +3018,9 @@ function buildEditorBlock(q, i) {
     <input type="text" value="${escHtml((q.acceptedAnswers||[q.correct||'']).join('|'))}" oninput="editorQuestions[${i}].acceptedAnswers=this.value.split('|').map(s=>s.trim());editorQuestions[${i}].correct=editorQuestions[${i}].acceptedAnswers[0]">`;
   } else if (q.type === 'definition') {
     inner += `<label>Definición correcta (referencia del libro)</label>
-    <textarea rows="3" style="width:100%;font-family:inherit;font-size:0.9rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px" oninput="editorQuestions[${i}].correct=this.value;if(!editorQuestions[${i}].acceptedAnswers||editorQuestions[${i}].acceptedAnswers.length===0)editorQuestions[${i}].acceptedAnswers=[this.value]" placeholder="Definición oficial o del libro de texto">${escHtml(q.correct||'')}</textarea>
+    <textarea rows="3" style="width:100%;font-family:inherit;font-size:0.9rem;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px" oninput="editorQuestions[${i}].correct=this.value;editorQuestions[${i}].acceptedAnswers=[this.value].concat((editorQuestions[${i}].acceptedAnswers||[]).slice(1))" placeholder="Definición oficial o del libro de texto">${escHtml(q.correct||'')}</textarea>
     <label style="font-size:0.8rem;color:var(--muted)">Otras formas válidas de explicarlo (separa con |)</label>
-    <input type="text" value="${escHtml((q.acceptedAnswers||[q.correct||'']).filter(Boolean).join(' | '))}" placeholder="ej: lo que podemos tocar y ver | todo lo que existe | todo lo que ocupa espacio" oninput="editorQuestions[${i}].acceptedAnswers=this.value.split('|').map(s=>s.trim()).filter(Boolean)" style="font-size:0.85rem">
+    <input type="text" value="${escHtml((q.acceptedAnswers||[q.correct||'']).filter(Boolean).slice(1).join(' | '))}" placeholder="ej: lo que podemos tocar y ver | todo lo que existe | todo lo que ocupa espacio" oninput="editorQuestions[${i}].acceptedAnswers=[editorQuestions[${i}].correct].concat(this.value.split('|').map(s=>s.trim()).filter(Boolean))" style="font-size:0.85rem">
     <div style="font-size:0.72rem;color:var(--muted);margin-top:3px">La IA acepta automáticamente variantes equivalentes aunque no estén aquí</div>`;
     inner += `<label>Orden correcto (uno por línea)</label>
     <textarea style="min-height:80px" oninput="editorQuestions[${i}].correctOrder=this.value.split('\\n').map(s=>s.trim()).filter(Boolean);editorQuestions[${i}].items=[...editorQuestions[${i}].correctOrder]">${escHtml((q.correctOrder||q.items||[]).join('\n'))}</textarea>`;
@@ -5759,6 +5801,12 @@ function renderBank() {
 
 // ── Init on start ──
 window.addEventListener('load', () => {
+  // Listener global: cualquier cambio en el editor sincroniza currentQuiz y el enlace publicado
+  const editorContainer = document.getElementById('questions-editor');
+  if (editorContainer) {
+    editorContainer.addEventListener('input', () => syncPublishedQuiz());
+  }
+
   // Cargar banco de controles
   renderBank();
 
