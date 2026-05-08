@@ -2298,11 +2298,11 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
     loadQuizIntoEditor(quiz);
     bankEditingId = null; // es un control nuevo, no proviene del banco
     document.getElementById('editor-card').style.display = 'block';
-    // Traspasar título y curso de la config al editor si están rellenos
-  const genTitle = document.getElementById('gen-title-input')?.value.trim();
-  const genClass = document.getElementById('gen-class-input')?.value.trim();
-  if (genTitle) { const t = document.getElementById('quiz-title-input'); if (t && !t.value.trim()) t.value = genTitle; }
-  if (genClass) { const c = document.getElementById('quiz-class-input'); if (c && !c.value.trim()) c.value = genClass; }
+    // Traspasar título y curso de la config al editor — SIEMPRE tienen prioridad sobre el título que genera la IA
+    const genTitle = document.getElementById('gen-title-input')?.value.trim();
+    const genClass = document.getElementById('gen-class-input')?.value.trim();
+    if (genTitle) { const t = document.getElementById('quiz-title-input'); if (t) t.value = genTitle; }
+    if (genClass) { const c = document.getElementById('quiz-class-input'); if (c && !c.value.trim()) c.value = genClass; }
   document.getElementById('editor-card').scrollIntoView({ behavior: 'smooth' });
   // Resetear chat del asistente al generar un control nuevo
   aiChatHistory = [];
@@ -2420,7 +2420,14 @@ Responde SOLO con JSON válido, sin texto adicional ni markdown:
 }
 
 Tipos disponibles: test, tf, fill, match, short, order, definition, multi, classify, vocab, translate, emoji.
-Solo recomienda vocab/translate/emoji si el material es de idiomas (francés, inglés).
+Solo recomienda vocab/translate/emoji si el material es de idiomas (francés, inglés). En ese caso:
+- vocab → preguntas de vocabulario con 6-8 opciones (ej: ¿qué significa "maison"?)
+- translate → traducción directa de palabras o frases cortas (ej: traduce "il fait chaud")
+- emoji → asociar un emoji con la palabra del idioma (ej: 🏠 → "maison")
+Para contenido de idiomas ten en cuenta estos tipos específicos y recomiéndalos si encajan con el material:
+- vocab → preguntas de vocabulario con 6-8 opciones (ej: ¿qué significa "maison"?)
+- translate → traducción directa de palabras o frases cortas (ej: traduce "il fait chaud")
+- emoji → asociar un emoji con la palabra del idioma (ej: 🏠 → "maison"), útil si hay sustantivos concretos visualizables
 Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
 - Listas de conceptos/categorías → classify, match, multi
 - Definiciones y términos técnicos → definition, short, fill
@@ -2473,11 +2480,15 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
     document.getElementById('an-num-val').textContent = slider.value; // usar valor real tras aplicar límites
     document.getElementById('an-range-min').textContent = numMin;
     document.getElementById('an-range-max').textContent = numMax;
-    // Hints accesibles desde el handler inline mediante window._analyzeHints
+    // Hints para TODOS los valores del rango, no solo los 3 puntos fijos
     window._analyzeHints = {};
-    window._analyzeHints[numMin] = 'Mínimo — cubre los conceptos clave.';
-    window._analyzeHints[numMax] = 'Máximo — en el límite, puede haber alguna repetición.';
-    window._analyzeHints[numOpt] = 'Óptimo — equilibrio ideal para este material.';
+    for (let v = numMin; v <= numMax; v++) {
+      if (v === numMin) window._analyzeHints[v] = 'Mínimo — cubre los conceptos clave sin extenderse.';
+      else if (v === numMax) window._analyzeHints[v] = 'Máximo — control completo, puede ser algo largo.';
+      else if (v === numOpt) window._analyzeHints[v] = '⭐ Óptimo — equilibrio ideal para este material.';
+      else if (v < numOpt) window._analyzeHints[v] = 'Control corto — rápido de hacer, cubre lo esencial.';
+      else window._analyzeHints[v] = 'Control largo — cobertura amplia, requiere más tiempo.';
+    }
     document.getElementById('an-num-hint').textContent = window._analyzeHints[parseInt(slider.value)] || '';
     document.getElementById('an-num-slider-wrap').style.display = 'block';
     document.getElementById('an-time').textContent = result.timeMinutes + ' minutos';
@@ -3338,6 +3349,12 @@ function publishQuiz() {
   const quizUrl = base + '?quiz=' + encoded;
   document.getElementById('publish-card').style.display = 'block';
   document.getElementById('quiz-link').value = quizUrl;
+  // Guardar el enlace en el banco si este control ya está guardado
+  if (bankEditingId !== null) {
+    const bank = loadBank();
+    const idx = bank.findIndex(q => q.id === bankEditingId);
+    if (idx !== -1) { bank[idx].publishedUrl = quizUrl; saveBank(bank); }
+  }
   if (password) {
     document.getElementById('pw-active-banner').style.display = 'block';
     document.getElementById('pw-active-text').textContent = password;
@@ -4638,6 +4655,16 @@ function launchConfetti() {
 // ══════════════════════════════════════════════
 //  INFORME POST-CONTROL
 // ══════════════════════════════════════════════
+function openReportFromBank(id) {
+  const bank = loadBank();
+  const quiz = bank.find(q => q.id === id);
+  if (!quiz) { showToast('⚠️ Control no encontrado en el banco'); return; }
+  // Activar el panel de seguimiento con este control para que openReport tenga contexto
+  currentQuiz = quiz;
+  startLivePanel(quiz.title, quiz.class || '');
+  openReport();
+}
+
 async function openReport() {
   const reportTitle = liveActiveQuizTitle || lastClosedQuizTitle;
   const reportClass = liveActiveQuizClass || lastClosedQuizClass || (currentQuiz?.class || '');
@@ -5476,6 +5503,11 @@ function publishBankItem(id) {
   const base = window.location.href.split('?')[0];
   const quizUrl = base + '?quiz=' + encoded;
 
+  // Guardar el enlace en el banco para recuperarlo sin tener que republicar
+  const bank = loadBank();
+  const idx = bank.findIndex(q => q.id === id);
+  if (idx !== -1) { bank[idx].publishedUrl = quizUrl; saveBank(bank); renderBank(); }
+
   const linkDiv   = document.getElementById('bank-link-' + id);
   const linkInput = document.getElementById('bank-link-input-' + id);
   const pwBanner  = document.getElementById('bank-pw-' + id);
@@ -5652,22 +5684,22 @@ function renderBank() {
         <div class="bank-item-meta">${escHtml(meta)}</div>
       </div>
       <div class="bank-item-actions">
-        <button class="btn btn-green btn-sm" onclick="publishBankItem(${quiz.id})">🚀 Publicar</button>
+        <button class="btn btn-green btn-sm" onclick="publishBankItem(${quiz.id})">${quiz.publishedUrl ? '🔄 Republicar' : '🚀 Publicar'}</button>
         <button class="btn btn-primary btn-sm" onclick="loadBankItemIntoEditor(${quiz.id})" style="background:#7c3aed">✏️ Editar</button>
         <button class="btn btn-primary btn-sm" onclick="duplicateBankItem(${quiz.id})" style="background:#0891b2">📋 Duplicar</button>
         <button class="btn btn-sm" onclick="deleteBankItem(${quiz.id})" style="background:#fee2e2;color:#991b1b">🗑</button>
       </div>
-      <div class="bank-item-link" id="bank-link-${quiz.id}">
+      <div class="bank-item-link ${quiz.publishedUrl ? 'visible' : ''}" id="bank-link-${quiz.id}">
         <div class="link-box" style="margin-top:0">
-          <input type="text" id="bank-link-input-${quiz.id}" readonly style="background:transparent;border:none;font-size:0.9rem;color:var(--primary);font-weight:700;flex:1;outline:none;margin-bottom:0">
+          <input type="text" id="bank-link-input-${quiz.id}" readonly value="${quiz.publishedUrl ? escHtml(quiz.publishedUrl) : ''}" style="background:transparent;border:none;font-size:0.9rem;color:var(--primary);font-weight:700;flex:1;outline:none;margin-bottom:0">
           <button class="copy-btn" onclick="copyBankLink(${quiz.id})">📋 Copiar</button>
         </div>
-        <div id="bank-pw-${quiz.id}" style="display:none;margin-top:8px;background:#d1fae5;border:1.5px solid #10b981;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#065f46;font-weight:700">
-          🔒 Contraseña: <span style="letter-spacing:2px"></span>
+        <div id="bank-pw-${quiz.id}" style="display:${quiz.password ? 'block' : 'none'};margin-top:8px;background:#d1fae5;border:1.5px solid #10b981;border-radius:10px;padding:8px 12px;font-size:0.85rem;color:#065f46;font-weight:700">
+          🔒 Contraseña: <span style="letter-spacing:2px">${quiz.password || ''}</span>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <a href="https://docs.google.com/spreadsheets/d/1espPZNRe6ouZl0E8CIQY63woya65gRUPcIvbJiNBBuQ/edit" target="_blank" class="sheets-btn" style="font-size:0.82rem;padding:6px 14px">📊 Abrir Sheets</a>
-          <button class="btn btn-primary btn-sm" onclick="openReport()" style="background:#7c3aed;font-size:0.82rem">📋 Ver informe</button>
+          <button class="btn btn-primary btn-sm" onclick="openReportFromBank(${quiz.id})" style="background:#7c3aed;font-size:0.82rem">📋 Ver informe</button>
         </div>
       </div>`;
         sfBody.appendChild(item);
