@@ -2548,7 +2548,7 @@ function applyAnalysisSuggestion() {
 
   // Aplicar tipos recomendados: desmarcar todos y marcar solo los sugeridos
   if (lastAnalysis.recommendedTypes && lastAnalysis.recommendedTypes.length > 0) {
-    const chips = document.querySelectorAll('#type-chips .type-chip');
+    const chips = document.querySelectorAll('#type-chips .type-chip, #type-chips-lang .type-chip');
     chips.forEach(chip => {
       const t = chip.dataset.type;
       const shouldSelect = lastAnalysis.recommendedTypes.includes(t);
