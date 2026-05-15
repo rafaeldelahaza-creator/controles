@@ -1579,10 +1579,10 @@
       <div class="type-chip selected" data-type="order" onclick="toggleChip(this)">🔢 Ordenar</div>
       <div class="type-chip selected" data-type="multi" onclick="toggleChip(this)">☑️ Opción múltiple</div>
       <div class="type-chip selected" data-type="classify" onclick="toggleChip(this)">🏷️ Clasificar</div>
+      <div class="type-chip selected" data-type="vocab" onclick="toggleChip(this)">🔠 Test ampliado</div>
     </div>
     <div class="lang-section-label">🇫🇷 Solo para idiomas</div>
     <div class="type-grid" id="type-chips-lang">
-      <div class="type-chip lang" data-type="vocab" onclick="toggleChip(this)">🔠 Test ampliado</div>
       <div class="type-chip lang" data-type="translate" onclick="toggleChip(this)">🔄 Traducción directa</div>
       <div class="type-chip lang" data-type="emoji" onclick="toggleChip(this)">😀 Emoji → palabra</div>
     </div>
@@ -2012,14 +2012,27 @@ let uploadedFiles = []; // Array de { type, mediaType, base64, name } | { type:'
 function showView(v) {
   document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  // Ocultar también pantallas de examen al cambiar de pestaña
+  ocultarTodasPantallasExamen();
   if (v === 'teacher') {
     document.getElementById('teacher-view').style.display = 'block';
     document.getElementById('teacher-view').classList.add('active');
     document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
   } else if (v === 'student') {
+    document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+    // Comprobar si hay examen publicado activo
+    try {
+      const raw = sessionStorage.getItem('proferafa_exam_activo');
+      if (raw) {
+        _examActivo = JSON.parse(raw);
+        document.getElementById('exam-student-screen').style.display = 'block';
+        mostrarIdentificacionExamen();
+        return;
+      }
+    } catch(e) {}
+    // Sin examen activo: vista alumno normal
     document.getElementById('student-view').style.display = 'block';
     document.getElementById('student-view').classList.add('active');
-    document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
     loadStudentView();
   } else if (v === 'examenes') {
     document.getElementById('examenes-view').style.display = 'block';
@@ -2187,7 +2200,7 @@ async function generateWithAI() {
     order: 'ordenar elementos (4-5 items)',
     multi: 'opción múltiple con VARIAS respuestas correctas (4-8 opciones, 2 o más correctas — el alumno marca TODAS las que considera correctas, tipo "señala todos los determinantes artículos")',
     classify: 'clasificar palabras (4-8 términos, cada uno con su categoría — el alumno ve cada término y escribe a qué categoría pertenece, O ve una categoría y escribe un ejemplo, ej: determinantes → "el", "la", "los" o al revés "artículo" → "el")',
-    vocab: '🇫🇷 test ampliado de vocabulario (6-8 opciones, SOLO para idiomas: pregunta una palabra y pone como opciones otras palabras de la misma lista del material)',
+    vocab: 'test ampliado (6-8 opciones en lugar de 4). Úsalo cuando el material tenga listas de elementos, vocabulario abundante, partes de un todo, conceptos con muchos ejemplos posibles o cualquier contenido donde tenga sentido ofrecer más distractores. No es exclusivo de idiomas: también sirve para ciencias (partes del cuerpo, animales, planetas…), sociales (países, capitales, épocas…), lengua (tipos de palabras, ejemplos de categorías…), etc. La pregunta formula algo concreto y las opciones son términos o expresiones del material',
     translate: '🇫🇷 traducción directa (SOLO para idiomas: lista de 4-6 pares término→traducción, incluye campo "direction": "fr_es" o "es_fr" y array "pairs" con objetos {term, answer, acceptedAnswers}. El campo "acceptedAnswers" es un array con todas las traducciones válidas del término: incluye variantes con distintos pronombres, artículos, orden de palabras y expresiones equivalentes. Ejemplo: "j\'adore le riz" → acceptedAnswers: ["me encanta el arroz", "adoro el arroz", "a mí me encanta el arroz", "yo adoro el arroz"]. Para vocabulario suelto como "le chat" → acceptedAnswers: ["el gato", "gato"]. Sé generoso: incluye al menos 3-4 variantes por par cuando el término es una frase o expresión)',
     emoji: '🇫🇷 emoji→palabra (SOLO para idiomas: 4-6 emojis que representen palabras del vocabulario del material, el alumno escribe la palabra en el idioma extranjero, array "items" con objetos {emoji, answer})'
   };
@@ -2569,7 +2582,7 @@ async function analyzeMaterial() {
     match: '🔗 Relacionar', short: '💬 Respuesta corta',
     order: '🔢 Ordenar', definition: '📖 Definición',
     multi: '☑️ Opción múltiple', classify: '🏷️ Clasificar',
-    vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra'
+    vocab: '🔠 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra'
   };
 
   const analyzePrompt = `Eres un maestro experto de 5º-6º de Primaria (LOMLOE, España). Analiza el siguiente material educativo y devuelve una configuración óptima para generar un control de evaluación.
@@ -3014,7 +3027,7 @@ async function regenQuestion(i) {
     short: 'respuesta corta (término técnico exacto, 1-2 palabras)',
     definition: 'definición (el alumno explica un concepto con sus propias palabras)',
     order: 'ordenar elementos (proceso, secuencia cronológica o pasos)',
-    vocab: '🇫🇷 test ampliado vocabulario (6-8 opciones, SOLO para idiomas)',
+    vocab: 'test ampliado (6-8 opciones). Úsalo cuando el contenido tenga listas, vocabulario abundante, partes de un todo o muchos posibles distractores válidos. No es exclusivo de idiomas',
     translate: '🇫🇷 traducción directa (lista de pares, SOLO para idiomas)',
     emoji: '🇫🇷 emoji→palabra (SOLO para idiomas)',
     multi: 'opción múltiple con VARIAS respuestas correctas (el alumno marca TODAS las correctas)',
@@ -3112,7 +3125,7 @@ function buildEditorBlock(q, i) {
   div.className = 'q-block';
   div.dataset.idx = i;
 
-  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Opción múltiple', classify: '🏷️ Clasificar' };
+  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🔠 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Opción múltiple', classify: '🏷️ Clasificar' };
   let inner = `
     <button class="del-q" onclick="deleteQuestion(${i})" title="Eliminar pregunta">✕</button>
     <button class="regen-q" onclick="toggleRegenPanel(${i})" title="Regenerar esta pregunta con IA">🔄</button>
@@ -3441,7 +3454,7 @@ function previewQuiz() {
   questions.forEach((q, i) => {
     const card = document.createElement('div');
     card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
+    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🔠 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     const pvTotalPoints = questions.reduce((s, qq) => s + (qq.points || 0), 0);
     const pvWeight = pvTotalPoints > 0 ? Math.round((q.points / pvTotalPoints) * 100) / 10 : q.points;
@@ -3701,7 +3714,7 @@ function renderStudentQuestions() {
     const sqWeight = sqTotalPoints > 0 ? Math.round((q.points / sqTotalPoints) * 100) / 10 : q.points;
     const card = document.createElement('div');
     card.className = 'sq-card';
-    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🇫🇷 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
+    const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🔠 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${sqWeight} pt${sqWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
     container.appendChild(card);
@@ -6024,13 +6037,16 @@ window.addEventListener('load', () => {
     if (urlQuiz) {
       currentQuiz = urlQuiz;
       if (urlQuiz.password) {
-        // Show password screen before revealing the quiz
         document.getElementById('teacher-view').classList.remove('active');
         document.getElementById('student-view').style.display = 'block';
         document.getElementById('student-view').classList.add('active');
         showPasswordScreen();
       } else {
-        showView('student');
+        // Carga directa desde enlace: mostrar vista alumno normal SIN comprobar examen
+        document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
+        document.getElementById('student-view').style.display = 'block';
+        document.getElementById('student-view').classList.add('active');
+        loadStudentView();
       }
     } else {
       showView('student');
@@ -6247,29 +6263,7 @@ function saveEntregaExamen(examId, entrega) {
 }
 
 // ─── Detectar examen activo al entrar en pestaña Alumno ────────────────────
-// Hook sobre showView para interceptar la pestaña Alumno
-const _origShowView = showView;
-function showView(v) {
-  if (v === 'student') {
-    try {
-      const raw = sessionStorage.getItem(EXAM_SS_KEY);
-      if (raw) {
-        _examActivo = JSON.parse(raw);
-        // Ocultar student-view normal, mostrar pantalla examen
-        document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => {
-          el.style.display = 'none'; el.classList.remove('active');
-        });
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-        ocultarTodasPantallasExamen();
-        document.getElementById('exam-student-screen').style.display = 'block';
-        mostrarIdentificacionExamen();
-        return;
-      }
-    } catch(e) {}
-  }
-  _origShowView(v);
-}
+// (lógica integrada directamente en showView, arriba)
 
 // ─── PANTALLA IDENTIFICACIÓN alumno ────────────────────────────────────────
 function mostrarIdentificacionExamen() {
