@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controles Profe Rafa</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
 <style>
   :root {
     --bg: #f0f4ff;
@@ -684,6 +685,101 @@
   }
   .bank-item-link.visible { display: block; }
   .bank-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 0.93rem; }
+
+  /* ── TAGS (etiquetas) ── */
+  .q-tags-section { margin-top: 10px; margin-bottom: 6px; }
+  .q-tags-label { font-size: 0.78rem; font-weight: 800; color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .q-tags-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; min-height: 10px; }
+  .tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; background: #eef2ff; border: 1.5px solid #c7d2fe; color: #4338ca; font-size: 0.78rem; font-weight: 800; }
+  .tag-chip .tag-del { background: none; border: none; color: #818cf8; cursor: pointer; font-size: 0.9rem; padding: 0 1px; line-height: 1; display: flex; align-items: center; }
+  .tag-chip .tag-del:hover { color: var(--danger); }
+  .tag-input-row { display: flex; align-items: center; gap: 6px; }
+  .tag-input-field { border: 1.5px solid var(--border); border-radius: 20px; padding: 4px 12px; font-family: 'Nunito', sans-serif; font-size: 0.82rem; font-weight: 700; color: var(--primary); background: #f8f9ff; width: 160px; outline: none; margin-bottom: 0 !important; transition: border-color 0.2s; }
+  .tag-input-field:focus { border-color: var(--primary-light); background: #fff; }
+  .tag-add-hint { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── MERMAID SECTION ── */
+  .q-mermaid-section { margin-top: 12px; background: #f0f4ff; border: 1.5px solid #c7d2fe; border-radius: 12px; padding: 12px 14px; }
+  .q-mermaid-label { font-size: 0.78rem; font-weight: 800; color: #4338ca; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .q-mermaid-render { background: #fff; border-radius: 8px; padding: 10px; margin-bottom: 8px; min-height: 40px; overflow-x: auto; }
+  .q-mermaid-render svg { max-width: 100%; height: auto; }
+  .q-mermaid-edit-toggle { background: none; border: 1.5px solid #c7d2fe; border-radius: 8px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; color: #4338ca; cursor: pointer; transition: background 0.15s; font-family: 'Nunito', sans-serif; }
+  .q-mermaid-edit-toggle:hover { background: #e0e7ff; }
+  .q-mermaid-textarea { display: none; width: 100%; min-height: 80px; border: 1.5px solid #c7d2fe; border-radius: 8px; padding: 8px 10px; font-family: monospace; font-size: 0.82rem; background: #fff; color: #1e1b4b; resize: vertical; outline: none; margin-top: 8px; margin-bottom: 0; }
+  .q-mermaid-textarea.visible { display: block; }
+  .q-mermaid-error { font-size: 0.78rem; color: var(--danger); font-weight: 700; margin-top: 4px; display: none; }
+
+  /* ── MODAL BANCO DE PREGUNTAS INTELIGENTE ── */
+  #bank-import-modal { position: fixed; inset: 0; background: rgba(30,27,75,0.55); z-index: 9500; display: none; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow-y: auto; }
+  #bank-import-modal.open { display: flex; }
+  .bank-import-box { background: #fff; border-radius: 20px; width: 100%; max-width: 740px; box-shadow: 0 12px 48px rgba(79,70,229,0.22); overflow: hidden; margin: auto; }
+  .bank-import-header { background: var(--primary); color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  .bank-import-header h3 { font-family: 'Baloo 2', cursive; font-size: 1.15rem; flex: 1; margin: 0; }
+  .bank-import-close { background: rgba(255,255,255,0.18); border: none; color: #fff; border-radius: 50%; width: 32px; height: 32px; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .bank-import-search-bar { padding: 14px 20px; border-bottom: 1.5px solid var(--border); background: #f8f9ff; display: flex; gap: 10px; align-items: center; }
+  .bank-import-search-bar input { flex: 1; border: 2px solid var(--border); border-radius: 30px; padding: 9px 18px; font-family: 'Nunito', sans-serif; font-size: 0.92rem; font-weight: 600; outline: none; color: var(--text); background: #fff; margin-bottom: 0; transition: border-color 0.2s; }
+  .bank-import-search-bar input:focus { border-color: var(--primary-light); }
+  .bank-import-count { font-size: 0.82rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+  .bank-import-list { padding: 14px 18px; max-height: 440px; overflow-y: auto; }
+  .bank-import-item { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; background: #f8f9ff; display: flex; align-items: flex-start; gap: 10px; transition: background 0.15s, border-color 0.15s; }
+  .bank-import-item:hover { background: #eef2ff; border-color: var(--primary-light); }
+  .bank-import-item-body { flex: 1; min-width: 0; }
+  .bank-import-item-text { font-weight: 700; font-size: 0.9rem; color: var(--text); margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bank-import-item-meta { font-size: 0.75rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bank-import-item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .bank-import-tag { padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #4338ca; font-size: 0.72rem; font-weight: 800; border: 1px solid #c7d2fe; }
+  .bank-import-add-btn { background: var(--accent2); color: #fff; border: none; border-radius: 20px; padding: 7px 14px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.82rem; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: transform 0.15s, box-shadow 0.15s; }
+  .bank-import-add-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
+  .bank-import-add-btn:disabled { background: #9ca3af; cursor: default; transform: none; box-shadow: none; }
+  .bank-import-empty { text-align: center; padding: 32px; color: var(--muted); font-size: 0.92rem; }
+
+  /* ── FEEDBACK GLOBAL (Próximos pasos) ── */
+  #global-feedback-box {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border: 2.5px solid #60a5fa;
+    border-radius: 16px;
+    padding: 20px 22px;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  #global-feedback-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    border-radius: 16px 16px 0 0;
+  }
+  .global-fb-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .global-fb-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .global-fb-title {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #1d4ed8;
+  }
+  .global-fb-text {
+    font-size: 0.97rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    line-height: 1.55;
+  }
+  .global-fb-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .global-fb-skeleton .loading-dots { display: inline-flex; }
   .bank-folder {
     border: 1.5px solid var(--border);
     border-radius: 12px;
@@ -1110,6 +1206,25 @@
   .q-img-remove { position: absolute; top: -8px; right: -8px; background: var(--danger); color: #fff; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800; }
   /* student question image */
   .sq-q-img { max-width: 100%; max-height: 200px; border-radius: 12px; border: 1.5px solid var(--border); margin-bottom: 14px; display: block; }
+
+  /* Mermaid en tarjeta del alumno */
+  .sq-mermaid-wrap {
+    background: #f8f9ff;
+    border: 1.5px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+  }
+  .sq-mermaid-wrap svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  .sq-mermaid-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #6d28d9;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+  }
 
   /* ── UPLOAD ZONE ── */
   #upload-zone {
@@ -1625,6 +1740,7 @@
       <button class="btn btn-accent btn-sm" onclick="addQuestion('order')">+ Ordenar</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('multi')">+ Opción múltiple</button>
       <button class="btn btn-accent btn-sm" onclick="addQuestion('classify')">+ Clasificar</button>
+      <button class="btn btn-sm" onclick="openBankImport()" style="background:#ede9fe;color:#6d28d9;border:1.5px solid #c4b5fd;font-weight:800">🧠 Importar del banco</button>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;padding-top:8px;border-top:1.5px dashed #fcd34d">
       <span style="font-size:0.78rem;font-weight:800;color:#b45309;align-self:center">🇫🇷 Idiomas:</span>
@@ -1923,6 +2039,7 @@
   </div>
   <div class="section-title">📝 Revisión de respuestas</div>
   <div id="review-cards"></div>
+  <div id="global-feedback-box" style="display:none"></div>
   <div style="text-align:center;padding:20px 0 8px">
     <button onclick="descargarControlAlumno()" class="btn btn-primary" style="font-size:0.95rem;padding:12px 28px;margin-bottom:12px">
       💾 Descargar mi control para repasar
@@ -2014,6 +2131,9 @@ function showView(v) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   // Ocultar también pantallas de examen al cambiar de pestaña
   ocultarTodasPantallasExamen();
+  // Restaurar siempre la visibilidad de la tab-bar al navegar
+  const tabBar = document.querySelector('.tab-bar');
+  if (tabBar) tabBar.style.visibility = '';
   if (v === 'teacher') {
     document.getElementById('teacher-view').style.display = 'block';
     document.getElementById('teacher-view').classList.add('active');
@@ -2221,7 +2341,9 @@ INSTRUCCIONES PARA USO DE IMÁGENES:
       "text": "¿Pregunta?",
       "options": ["a) opción1", "b) opción2", "c) opción3", "d) opción4"],
       "correct": "a) opción1",
-      "points": 2
+      "points": 2,
+      "imageRequired": false,
+      "imageDescription": null
     }`,
     tf: `    {
       "id": 2,
@@ -2381,6 +2503,54 @@ PUNTUACIÓN
 - Más puntos para preguntas de comprensión y producción propia (definition, short, match, classify, multi, order); menos para reconocimiento simple (tf, test).
 - Usa hasta 1 decimal. Verifica la suma antes de responder.
 
+════════════════════════════════════════
+SUGERENCIAS VISUALES CRÍTICAS
+════════════════════════════════════════
+Para CADA pregunta, evalúa si una imagen es ESTRICTAMENTE NECESARIA para que el alumno pueda responder.
+- Añade "imageRequired": true SOLO si el alumno NO puede responder sin ver una imagen (ejemplos válidos: identificar partes en un mapa mudo, analizar una gráfica, geometría, anatomía sin etiquetas, identificar un elemento visual).
+- PROHIBIDO marcar imageRequired: true para imágenes decorativas, de contexto o que solo sean "recomendables".
+- Si imageRequired es true, añade "imageDescription" con una descripción técnica y precisa de qué imagen debe buscar el profesor (ej: "Mapa mudo físico de España con un río en Andalucía señalado con el número 1"). Si es false, "imageDescription": null.
+- En la mayoría de preguntas imageRequired será false. Solo márcalo true cuando sin imagen la pregunta sea imposible de responder.
+
+════════════════════════════════════════
+ETIQUETAS Y SOPORTE VISUAL MERMAID (OBLIGATORIO EN CADA PREGUNTA)
+════════════════════════════════════════
+Añade a CADA pregunta estos campos:
+
+- "tags": array de 2 a 4 etiquetas con formato #minúsculas_sin_espacios. Ej: ["#fracciones", "#matematicas"].
+
+- "visualSupport": true o false.
+- "visualType": "mermaid" (si visualSupport es true) o null.
+- "mermaidCode": código Mermaid válido en español (si visualSupport es true) o null.
+
+REGLAS POR TIPO — cuándo poner visualSupport: true:
+
+USA MERMAID con frecuencia en:
+  · "order"    → flowchart LR o graph LR mostrando la secuencia correcta de pasos/etapas
+  · "classify" → graph TD con las categorías como nodos padre y los términos como hijos
+  · "match"    → graph LR con los pares izquierda→derecha como flechas
+
+USA MERMAID ocasionalmente en (solo si añade valor real):
+  · "definition" → mindmap o graph TD si el concepto tiene partes o relaciones que aclarar
+  · "multi"      → graph TD si hay una jerarquía o clasificación implícita
+  · "fill"       → graph TD si el texto con huecos encaja en un esquema de relaciones
+
+NO uses Mermaid normalmente en:
+  · "test", "tf", "short", "vocab", "translate", "emoji"
+  (solo si la pregunta consiste explícitamente en interpretar un esquema)
+
+TIPOS DE DIAGRAMA recomendados:
+  · graph TD   → jerarquías, clasificaciones, anatomía
+  · graph LR   → procesos lineales, relaciones horizontales
+  · flowchart LR → secuencias con pasos
+  · mindmap    → conceptos con ramas (usar con moderación)
+
+El código Mermaid DEBE:
+  · Estar en español
+  · Ser sintácticamente válido (sin caracteres especiales sin escapar en los nodos)
+  · Usar comillas dobles para nodos con espacios: A["Fotosíntesis"] --> B["Luz solar"]
+  · Tener máximo 12 nodos para que sea legible en móvil
+
 Responde SOLO con JSON válido, sin texto adicional ni markdown:
 {
   "title": "Control de ${subject}",
@@ -2396,7 +2566,9 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
 ✓ ¿Cada pregunta evalúa un concepto distinto del material?
 ✓ ¿Todos los enunciados son claros para un alumno de 10-12 años?
 ✓ ¿Los distractores y afirmaciones falsas son errores plausibles, no absurdos obvios?
-✓ ¿La suma de puntos es exactamente 10?`;
+✓ ¿La suma de puntos es exactamente 10?
+✓ ¿imageRequired es true SOLO en preguntas que son imposibles de responder sin imagen?
+✓ ¿Cada pregunta tiene "tags", "visualSupport", "visualType" y "mermaidCode"?`;
 
   // Build multimodal message content
   let messageContent = [];
@@ -2493,13 +2665,25 @@ function loadQuizIntoEditor(quiz) {
 function sanitizeQuestion(q) {
   if (!q) return q;
   if (q.type === 'short' || q.type === 'definition') {
-    // acceptedAnswers siempre debe ser un array no vacío
     if (!q.acceptedAnswers || q.acceptedAnswers.length === 0) {
       q.acceptedAnswers = q.correct ? [q.correct] : [''];
     }
-    // correct siempre debe ser la primera respuesta aceptada
     if (q.acceptedAnswers[0]) q.correct = q.acceptedAnswers[0];
   }
+  // Asegurar campos de sugerencia visual
+  if (q.imageRequired === undefined) q.imageRequired = false;
+  if (q.imageDescription === undefined) q.imageDescription = null;
+  // Normalizar campos mermaid: soportar tanto {visualSupport, visualType, mermaidCode}
+  // como el campo plano {mermaidCode} usado internamente
+  if (q.visualSupport && q.visualType === 'mermaid' && q.mermaidCode) {
+    // formato nuevo del prompt → ya tiene mermaidCode, no hacer nada
+  } else if (q.visualSupport && q.visualType === 'mermaid' && !q.mermaidCode) {
+    q.mermaidCode = null; // mal formado, ignorar
+  }
+  if (q.mermaidCode === undefined) q.mermaidCode = null;
+  // Limpiar campos auxiliares del prompt que no necesitamos guardar
+  // (los mantenemos por si acaso, pero mermaidCode es la fuente de verdad)
+  if (!q.tags) q.tags = [];
   return q;
 }
 
@@ -2543,6 +2727,9 @@ function syncPublishedQuiz() {
 function updatePointsBar() {
   if (!editorQuestions.length) {
     document.getElementById('points-total-bar').style.display = 'none';
+    // Limpiar aviso de imágenes si no hay preguntas
+    const imgWarn = document.getElementById('img-required-warn');
+    if (imgWarn) imgWarn.style.display = 'none';
     return;
   }
   const total = Math.round(editorQuestions.reduce((s, q) => s + (parseFloat(q.points) || 0), 0) * 100) / 100;
@@ -2554,6 +2741,18 @@ function updatePointsBar() {
   const ok = Math.abs(total - 10) < 0.01;
   bar.className = 'points-total-bar ' + (ok ? 'ok' : 'warn');
   msg.textContent = ok ? '✅ ¡Todo cuadra!' : total < 10 ? `⚠️ Faltan ${Math.round((10 - total) * 100) / 100} pts` : `⚠️ Sobran ${Math.round((total - 10) * 100) / 100} pts`;
+
+  // Aviso de imágenes obligatorias pendientes
+  const faltanImagenes = editorQuestions.some(q => q.imageRequired && !q.image);
+  let imgWarn = document.getElementById('img-required-warn');
+  if (!imgWarn) {
+    imgWarn = document.createElement('div');
+    imgWarn.id = 'img-required-warn';
+    imgWarn.style.cssText = 'display:none;background:#fff9e6;border:2px solid #f59e0b;border-radius:10px;padding:9px 14px;margin-top:8px;font-size:0.85rem;font-weight:700;color:#b45309;display:flex;align-items:center;gap:8px';
+    imgWarn.innerHTML = '⚠️ Faltan imágenes obligatorias en algunas preguntas — búscalas y súbelas antes de publicar';
+    bar.parentNode.insertBefore(imgWarn, bar.nextSibling);
+  }
+  imgWarn.style.display = faltanImagenes ? 'flex' : 'none';
 }
 
 // ══════════════════════════════════════════════
@@ -2842,6 +3041,7 @@ CRITERIOS PEDAGÓGICOS OBLIGATORIOS (igual que en la generación inicial):
 - La respuesta debe requerir haber estudiado el tema, no deducirse por sentido común.
 - VERIFICA antes de responder: ¿alguna pregunta nueva da pistas para responder otra? Si es así, reformúlala.
 - Elige el TIPO más adecuado para el concepto: match/classify para categorías, fill para fórmulas con hueco clave, order para procesos, short para términos técnicos exactos, definition para comprensión conceptual.
+- SUGERENCIAS VISUALES: en cada pregunta nueva incluye "imageRequired": true SOLO si el alumno no puede responderla sin ver una imagen. Si es true, añade "imageDescription" con descripción técnica precisa de qué imagen buscar. Si no es necesaria (mayoría de casos), "imageRequired": false, "imageDescription": null.
 
 FORMATO DE RESPUESTA — responde SIEMPRE con este JSON seguido de tu explicación:
 {
@@ -3056,6 +3256,7 @@ CRITERIOS PEDAGÓGICOS:
 - La respuesta debe requerir haber estudiado el tema.
 - El enunciado debe ser claro y sin ambigüedades para un niño de 10-12 años.
 - Responde en español.
+- SUGERENCIAS VISUALES: incluye "imageRequired": true SOLO si el alumno no puede responder sin ver una imagen. Si es true, añade "imageDescription" con descripción técnica precisa. En la mayoría de casos será false/null.
 
 Responde SOLO con JSON válido, sin explicaciones, sin markdown, sin bloques de código.
 Formato exacto:
@@ -3141,7 +3342,47 @@ function buildEditorBlock(q, i) {
     </div>
     <label>Pregunta</label>
     <textarea oninput="editorQuestions[${i}].text=this.value" style="min-height:60px">${escHtml(q.text || '')}</textarea>
+
+    <!-- ── TAGS ── -->
+    <div class="q-tags-section">
+      <div class="q-tags-label">🏷️ Etiquetas</div>
+      <div class="q-tags-list" id="tags-list-${i}">
+        ${(q.tags || []).map((tag, ti) => `
+          <span class="tag-chip">${escHtml(tag)}<button class="tag-del" onclick="removeTag(${i},${ti})" title="Eliminar etiqueta">×</button></span>
+        `).join('')}
+      </div>
+      <div class="tag-input-row">
+        <input class="tag-input-field" type="text" id="tag-input-${i}" placeholder="#matemáticas…" maxlength="30"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addTag(${i})}"
+          autocomplete="off">
+        <span class="tag-add-hint">↵ Enter para añadir</span>
+      </div>
+    </div>
+
+    <!-- ── MERMAID ── -->
+    ${q.mermaidCode ? `
+    <div class="q-mermaid-section" id="mermaid-section-${i}">
+      <div class="q-mermaid-label">🗺️ Esquema conceptual <button class="q-mermaid-edit-toggle" onclick="toggleMermaidEditor(${i})">✏️ Editar esquema</button></div>
+      <div class="q-mermaid-render" id="mermaid-render-${i}"></div>
+      <div class="q-mermaid-error" id="mermaid-error-${i}"></div>
+      <textarea class="q-mermaid-textarea" id="mermaid-ta-${i}"
+        oninput="debounceMermaid(${i},this.value)">${escHtml(q.mermaidCode)}</textarea>
+    </div>` : `
+    <div style="margin-top:8px">
+      <button type="button" onclick="addMermaidToQuestion(${i})" style="background:none;border:1.5px dashed #c7d2fe;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:0.78rem;color:#6d28d9;font-family:'Nunito',sans-serif;font-weight:700">🗺️ Añadir esquema Mermaid</button>
+    </div>`}
+
     <div class="q-img-section">
+      ${q.imageRequired && !q.image
+        ? `<div style="background:#fff9e6;border:2px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+            <span style="font-size:1.3rem;flex-shrink:0">⚠️</span>
+            <div>
+              <div style="font-weight:800;color:#b45309;font-size:0.88rem;margin-bottom:3px">Imagen OBLIGATORIA para esta pregunta</div>
+              <div style="font-size:0.83rem;color:#78350f;line-height:1.5">${escHtml(q.imageDescription || 'La IA indica que esta pregunta requiere una imagen para poder responderse.')}</div>
+            </div>
+          </div>`
+        : ''
+      }
       ${q.image
         ? `<div class="q-img-preview-wrap"><img class="q-img-preview" src="${q.image}"><button class="q-img-remove" onclick="removeQImage(${i})">✕</button></div>`
         : `<label class="q-img-add-btn" for="qimg-${i}">🖼️ Añadir imagen a esta pregunta</label><input type="file" id="qimg-${i}" accept=".png,.jpg,.jpeg,.webp,.gif" style="display:none" onchange="handleQImage(event,${i})">`
@@ -3458,8 +3699,10 @@ function previewQuiz() {
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
     const pvTotalPoints = questions.reduce((s, qq) => s + (qq.points || 0), 0);
     const pvWeight = pvTotalPoints > 0 ? Math.round((q.points / pvTotalPoints) * 100) / 10 : q.points;
-    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${pvWeight} pt${pvWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="pv-answer-${i}"></div>`;
+    const pvMermaidHtml = q.mermaidCode ? `<div class="sq-mermaid-wrap" id="pv-mermaid-${i}"><div class="sq-mermaid-label">🗺️ Esquema</div></div>` : '';
+    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${pvWeight} pt${pvWeight !== 1 ? 's' : ''}</div></div>${imgHtml}${pvMermaidHtml}<div class="sq-answer" id="pv-answer-${i}"></div>`;
     container.appendChild(card);
+    if (q.mermaidCode) renderMermaidInStudent(q.mermaidCode, `pv-mermaid-${i}`);
 
     // Render answer using temp IDs prefixed with pv-
     const wrap = card.querySelector(`#pv-answer-${i}`);
@@ -3716,9 +3959,12 @@ function renderStudentQuestions() {
     card.className = 'sq-card';
     const typeLabels = { test: 'Test', tf: 'Verdadero/Falso', fill: 'Completar', match: 'Relacionar', short: 'Respuesta corta', order: 'Ordenar', vocab: '🔠 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji→palabra', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
     const imgHtml = q.image ? `<img class="sq-q-img" src="${q.image}" alt="Imagen de la pregunta">` : '';
-    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${sqWeight} pt${sqWeight !== 1 ? 's' : ''}</div></div>${imgHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
+    const mermaidHtml = q.mermaidCode ? `<div class="sq-mermaid-wrap" id="sq-mermaid-${i}"><div class="sq-mermaid-label">🗺️ Esquema</div></div>` : '';
+    card.innerHTML = `<div class="sq-top"><div class="sq-num q-num" style="flex-shrink:0">${i + 1}</div><div class="sq-text">${escHtml(q.text)}</div><div class="sq-type-tag">${typeLabels[q.type]}</div><div style="margin-left:auto;background:#fef3c7;color:#92400e;border-radius:8px;padding:3px 10px;font-size:0.8rem;font-weight:800;white-space:nowrap;flex-shrink:0">⭐ ${sqWeight} pt${sqWeight !== 1 ? 's' : ''}</div></div>${imgHtml}${mermaidHtml}<div class="sq-answer" id="sq-answer-${i}"></div>`;
     container.appendChild(card);
     renderStudentAnswer(q, i);
+    // Renderizar Mermaid si existe (tras appendChild para que el nodo esté en el DOM)
+    if (q.mermaidCode) renderMermaidInStudent(q.mermaidCode, `sq-mermaid-${i}`);
   });
 }
 
@@ -4370,20 +4616,31 @@ function submitQuiz() {
     .map((q, i) => ({ q, i, r: review[i] }))
     .filter(({ q, r }) => openTypes.includes(q.type) && r && !r.correct);
 
-  if (openToReview.length > 0) {
-    // Mostrar pantalla de corrección mientras la IA revisa
-    document.getElementById('student-view').style.display = 'none';
-    document.getElementById('correcting-screen').style.display = 'block';
-  }
+  // Mostrar resultados INMEDIATAMENTE con la corrección exacta disponible
+  // La IA mejorará puntuaciones en segundo plano sin que el alumno lo vea
+  showResults(score, name, review, totalPoints, null);
+  showGlobalFeedbackSkeleton();
 
   // Revisión IA + guardado en Sheets
   const saveAndReview = async () => {
     let updatedReview = [...review];
     let updatedEarned = earnedPoints;
 
+    // ── Recopilar fallos del alumno (todas las preguntas no perfectas) ──
+    const fallosAlumno = review
+      .map((r, i) => {
+        if (r.correct) return null;
+        const q = questions[i];
+        return q ? q.text.substring(0, 80) : null;
+      })
+      .filter(Boolean);
+    const fallosTexto = fallosAlumno.length > 0
+      ? fallosAlumno.map((f, n) => `${n + 1}. "${f}"`).join('; ')
+      : null;
+    const subject = currentQuiz.subject || currentQuiz.title || 'la asignatura';
+
     if (openToReview.length > 0) {
       try {
-        const subject = currentQuiz.subject || currentQuiz.title || 'la asignatura';
         // Build items: for translate, expand each failed pair as a separate item
         const aiItems = [];
         openToReview.forEach(({ q, i, r }) => {
@@ -4422,6 +4679,10 @@ function submitQuiz() {
           }
         });
 
+        const globalFeedbackInstructions = fallosTexto
+          ? `\n\nAdemás de los items, genera un campo "globalFeedback" de máximo 30 palabras como conclusión final para el alumno. Analiza estos fallos: ${fallosTexto}. Anímalo y dile concretamente qué conceptos debe repasar. Si todo está bien, felicítalo brevemente.`
+          : `\n\nAdemás de los items, genera un campo "globalFeedback" de máximo 30 palabras felicitando al alumno por su excelente resultado.`;
+
         const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa cada respuesta con criterio MUY generoso y flexible, propio de primaria.
 
 CRITERIOS — aplica estos sin excepción:
@@ -4447,19 +4708,17 @@ ${aiItems.map((p, n) => {
   const defHint = p.type === 'definition' ? '\n   CRITERIO ESPECIAL DEFINICIÓN: usa estos 4 niveles exactos:\n   - correct (pts = maxPoints): explica el concepto correctamente aunque use otras palabras, incluye ejemplo correcto sin explicación, o captura la idea principal.\n   - partial_high (pts = maxPoints * 0.75): entiende la idea principal pero le falta un elemento importante o es demasiado vaga.\n   - partial_low (pts = maxPoints * 0.5): solo da un ejemplo sin explicar el concepto, o da una idea relacionada pero incompleta.\n   - wrong (pts = 0): vacía, completamente equivocada o sin relación con el concepto pedido.\n   Usa "partial" para partial_high y partial_low (indica el ratio en pts), y sé GENEROSO: ante la duda sube un nivel.' : '';
   return n+1 + '. [' + p.type + '] "' + (p.question||p.term) + '"\n   Respuesta correcta: ' + p.correctAnswer + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"' + defHint;
 }).join('\n\n')}
+${globalFeedbackInstructions}
 
-Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alumno (máximo 15 palabras, sin explicaciones elaboradas):
-- CORRECTO: "Correcto. La respuesta era: [respuesta correcta]."
-- PARCIAL: "Casi. La respuesta correcta era: [respuesta correcta]."
-- INCORRECTO: "Incorrecto. La respuesta correcta era: [respuesta correcta]."
-[{"itemIdx": <posición en este array 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos para este ítem>, "feedback": "..."}]`;
+Responde SOLO con JSON válido con esta estructura exacta:
+{"items": [{"itemIdx": <posición 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos>, "feedback": "<máx 15 palabras>"}], "globalFeedback": "<máx 30 palabras de conclusión y recomendación de repaso>"}`;
 
         const resp = await fetch('/.netlify/functions/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 800,
+            max_tokens: 900,
             messages: [{ role: 'user', content: aiPrompt }]
           })
         });
@@ -4467,7 +4726,11 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
         if (resp.ok && data.content) {
           const text = data.content.map(c => c.text || '').join('');
           const clean = text.replace(/```json|```/g, '').trim();
-          const aiResults = JSON.parse(clean);
+          const aiParsed = JSON.parse(clean);
+
+          // Soportar tanto {items, globalFeedback} (nuevo) como array directo (retrocompatibilidad)
+          const aiResults = Array.isArray(aiParsed) ? aiParsed : (aiParsed.items || []);
+          const globalFeedback = Array.isArray(aiParsed) ? null : (aiParsed.globalFeedback || null);
 
           // Reconstruct per-question results from per-item AI verdicts
           // Group items back by question idx
@@ -4540,14 +4803,15 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
 
           const newRawScore = totalPoints > 0 ? (updatedEarned / totalPoints) * 10 : 0;
           const newScore = Math.round(newRawScore * 10) / 10;
+          const finalScore = newScore > score ? newScore : score;
           document.getElementById('correcting-screen').style.display = 'none';
-          showResults(newScore > score ? newScore : score, name, updatedReview, totalPoints);
+          showResults(finalScore, name, updatedReview, totalPoints, globalFeedback);
 
           fetch('/.netlify/functions/save-score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              name, cls, quiz: currentQuiz.title, score: newScore > score ? newScore : score,
+              name, cls, quiz: currentQuiz.title, score: finalScore,
               date: today, time: timeNow,
               tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
               blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
@@ -4561,9 +4825,10 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
       }
     }
 
-    // Sin preguntas abiertas o si falló la IA: ocultar pantalla de corrección y mostrar resultados exactos
+    // Sin preguntas abiertas (todo test/tf/match…) o si falló la IA:
+    // mostrar resultados y luego pedir globalFeedback por separado (llamada ligera)
     document.getElementById('correcting-screen').style.display = 'none';
-    showResults(score, name, review, totalPoints);
+    showResults(score, name, review, totalPoints, null);
     fetch('/.netlify/functions/save-score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4574,14 +4839,27 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
         review
       })
     }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
+
+    // Mostrar skeleton mientras esperamos el feedback
+    showGlobalFeedbackSkeleton();
+    // Llamada ligera solo para el globalFeedback (controles de test puro)
+    fetchGlobalFeedbackOnly(score, fallosTexto, subject);
   };
 
   saveAndReview();
 }
 
-function showResults(score, name, review, totalPoints) {
+function showResults(score, name, review, totalPoints, globalFeedback) {
+  // Ocultar TODAS las vistas y pantallas antes de mostrar resultados
+  document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => {
+    el.style.display = 'none';
+    el.classList.remove('active');
+  });
   document.getElementById('student-view').style.display = 'none';
   document.getElementById('correcting-screen').style.display = 'none';
+  // Ocultar también la barra de tabs para que el alumno no pueda saltar de vista
+  document.querySelector('.tab-bar') && (document.querySelector('.tab-bar').style.visibility = 'hidden');
+
   const rs = document.getElementById('results-screen');
   rs.style.display = 'block';
 
@@ -4810,13 +5088,86 @@ function showResults(score, name, review, totalPoints) {
       </div>`;
   });
   if (score >= 7) launchConfetti();
+
+  // ── Feedback Global ──
+  const fbBox = document.getElementById('global-feedback-box');
+  if (fbBox) {
+    if (globalFeedback) {
+      renderGlobalFeedback(globalFeedback);
+    } else {
+      // Mostrar skeleton mientras llega (o si viene vacío, ocultarlo)
+      fbBox.style.display = 'none';
+    }
+  }
 }
 
 function backToStudent() {
   document.getElementById('results-screen').style.display = 'none';
+  // Restaurar visibilidad de la barra de tabs
+  const tabBar = document.querySelector('.tab-bar');
+  if (tabBar) tabBar.style.visibility = '';
   studentName = '';
   studentClass = '';
   showView('student');
+}
+
+// ══════════════════════════════════════════════
+//  FEEDBACK GLOBAL — Funciones auxiliares
+// ══════════════════════════════════════════════
+function renderGlobalFeedback(text) {
+  const box = document.getElementById('global-feedback-box');
+  if (!box || !text) return;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="global-fb-header">
+      <span class="global-fb-icon">👨‍🏫</span>
+      <span class="global-fb-title">📌 Próximos pasos — consejo de tu profe</span>
+    </div>
+    <div class="global-fb-text">${escHtml(text)}</div>`;
+}
+
+function showGlobalFeedbackSkeleton() {
+  const box = document.getElementById('global-feedback-box');
+  if (!box) return;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="global-fb-header">
+      <span class="global-fb-icon">👨‍🏫</span>
+      <span class="global-fb-title">📌 Próximos pasos — consejo de tu profe</span>
+    </div>
+    <div class="global-fb-skeleton">
+      <span>Preparando tu consejo personalizado</span>
+      <span class="loading-dots"><span></span><span></span><span></span></span>
+    </div>`;
+}
+
+async function fetchGlobalFeedbackOnly(score, fallosTexto, subject) {
+  try {
+    const fbPrompt = fallosTexto
+      ? `Eres un profesor de primaria (5º-6º) de ${subject}. El alumno ha sacado un ${score}/10. Ha fallado estos conceptos: ${fallosTexto}. Escribe UNA SOLA frase de máximo 30 palabras: anímalo y dile exactamente qué debe repasar. Sin saludos, sin explicaciones extra, solo la frase directa.`
+      : `Eres un profesor de primaria (5º-6º) de ${subject}. El alumno ha sacado un ${score}/10 sin ningún fallo. Escribe UNA SOLA frase de máximo 30 palabras felicitándolo. Sin saludos, sin explicaciones extra, solo la frase.`;
+
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        messages: [{ role: 'user', content: fbPrompt }]
+      })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.content) {
+      const text = data.content.map(c => c.text || '').join('').trim();
+      if (text) renderGlobalFeedback(text);
+    }
+  } catch(e) {
+    // Fallo silencioso: ocultar el skeleton para no dejar la UI rota
+    console.warn('fetchGlobalFeedbackOnly falló:', e);
+    const box = document.getElementById('global-feedback-box');
+    if (box) box.style.display = 'none';
+  }
 }
 
 function descargarControlAlumno() {
@@ -4830,6 +5181,20 @@ function descargarControlAlumno() {
 
   // Recoger las tarjetas de revisión del DOM actual
   const reviewHTML = document.getElementById('review-cards')?.innerHTML || '';
+
+  // Recoger el feedback global si existe
+  const fbBox = document.getElementById('global-feedback-box');
+  const fbText = fbBox && fbBox.style.display !== 'none'
+    ? fbBox.querySelector('.global-fb-text')?.textContent?.trim() || ''
+    : '';
+  const globalFeedbackBlock = fbText ? `
+    <div style="margin-top:24px;padding:18px 20px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2.5px solid #60a5fa;border-radius:14px;page-break-inside:avoid">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:1.4rem">👨‍🏫</span>
+        <span style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#1d4ed8">📌 Próximos pasos — consejo de tu profe</span>
+      </div>
+      <div style="font-size:0.97rem;font-weight:600;color:#1e3a5f;line-height:1.6">${esc(fbText)}</div>
+    </div>` : '';
 
   const html = `<!DOCTYPE html><html lang="es"><head>
     <meta charset="UTF-8">
@@ -4859,6 +5224,7 @@ function descargarControlAlumno() {
     </div>
     <div class="section-title">📝 Revisión de respuestas</div>
     ${reviewHTML}
+    ${globalFeedbackBlock}
     <div style="text-align:center;color:#9ca3af;font-size:0.75rem;padding:16px 0">
       © ${new Date().getFullYear()} Rafael de la Haza · Controles Profe Rafa
     </div>
@@ -6770,61 +7136,6 @@ function ocultarTodasPantallasExamen() {
   });
 }
 
-async function exCargarGuiaArchivo(input) {
-  const file = input.files[0];
-  if (!file) return;
-  document.getElementById('ex-guia-file-nombre').textContent = file.name;
-  document.getElementById('ex-guia-cargando').style.display = 'block';
-  document.getElementById('ex-guia-texto').value = '';
-
-  try {
-    const base64 = await new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = () => rej(new Error('Error leyendo el archivo'));
-      r.readAsDataURL(file);
-    });
-
-    const isPdf = file.type === 'application/pdf';
-    const mediaType = isPdf ? 'application/pdf' : file.type;
-
-    const body = {
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: isPdf ? 'document' : 'image',
-            source: { type: 'base64', media_type: mediaType, data: base64 }
-          },
-          {
-            type: 'text',
-            text: 'Extrae todo el texto de este documento de forma fiel y completa. Es material didáctico de un libro de texto o apuntes de primaria. Devuelve solo el texto extraído, sin comentarios ni explicaciones.'
-          }
-        ]
-      }]
-    };
-
-    const resp = await fetch('/.netlify/functions/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ _rawBody: body })
-    });
-
-    if (!resp.ok) throw new Error('Error en la respuesta del servidor');
-    const data = await resp.json();
-    const texto = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
-    document.getElementById('ex-guia-texto').value = texto || '(No se pudo extraer texto automáticamente — puedes pegarlo manualmente)';
-  } catch (err) {
-    document.getElementById('ex-guia-texto').value = '';
-    document.getElementById('ex-guia-file-nombre').textContent = file.name + ' — Error al extraer texto. Pégalo manualmente.';
-    console.error('exCargarGuiaArchivo:', err);
-  } finally {
-    document.getElementById('ex-guia-cargando').style.display = 'none';
-  }
-}
-
 // ── Helper: detecta tipo de archivo y extrae texto si es Word/TXT ─────────
 async function exLeerArchivo(file) {
   const isWord = file.name.match(/\.docx?$/i);
@@ -6843,18 +7154,31 @@ async function exLeerArchivo(file) {
   }
 
   if (isWord) {
-    // DOCX: extraer texto con mammoth (cargado desde CDN)
+    // DOCX: extraer texto con mammoth (cargado desde CDN si no está ya)
     if (typeof mammoth === 'undefined') {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
+      try {
+        await new Promise((res, rej) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+          s.onload = res;
+          s.onerror = () => rej(new Error('No se pudo cargar mammoth desde CDN'));
+          document.head.appendChild(s);
+        });
+      } catch(e) {
+        throw new Error('No se pudo leer el archivo Word. Comprueba tu conexión a internet o pega el texto manualmente.');
+      }
     }
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    return { tipo: 'texto', texto: result.value };
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      if (!result.value || !result.value.trim()) {
+        throw new Error('El archivo Word parece estar vacío o no tiene texto extraíble.');
+      }
+      return { tipo: 'texto', texto: result.value };
+    } catch(e) {
+      if (e.message.includes('Word')) throw e;
+      throw new Error('Error al leer el archivo Word: ' + e.message);
+    }
   }
 
   // PDF o imagen: base64
@@ -7127,6 +7451,230 @@ function exImportarDesdeAnalisis(analisis) {
   renderExPreguntas();
   document.getElementById('ex-preguntas-lista').scrollIntoView({ behavior: 'smooth' });
 }
+
+// ══════════════════════════════════════════════
+//  MERMAID.JS — Inicialización y renderizado
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { primaryColor: '#eef2ff', primaryTextColor: '#1e1b4b', primaryBorderColor: '#818cf8', lineColor: '#4f46e5', secondaryColor: '#fffbeb', tertiaryColor: '#f0fdf4' } });
+  }
+});
+
+function renderMermaidBlock(i) {
+  const q = editorQuestions[i];
+  if (!q || !q.mermaidCode) return;
+  const renderDiv = document.getElementById(`mermaid-render-${i}`);
+  const errDiv = document.getElementById(`mermaid-error-${i}`);
+  if (!renderDiv) return;
+  if (!window.mermaid) { renderDiv.innerHTML = '<em style="color:var(--muted);font-size:0.8rem">Mermaid no disponible</em>'; return; }
+  renderDiv.innerHTML = '';
+  if (errDiv) errDiv.style.display = 'none';
+  const id = 'mermaid-svg-' + i + '-' + Date.now();
+  mermaid.render(id, q.mermaidCode).then(({ svg }) => {
+    renderDiv.innerHTML = svg;
+  }).catch(err => {
+    renderDiv.innerHTML = '<em style="color:var(--muted);font-size:0.8rem">⚠️ Vista previa no disponible</em>';
+    if (errDiv) { errDiv.textContent = '⚠️ Error en el código Mermaid: ' + (err.message || ''); errDiv.style.display = 'block'; }
+  });
+}
+
+// Renderiza mermaid en un contenedor de la vista del alumno o preview
+// containerId: id del div .sq-mermaid-wrap ya en el DOM
+function renderMermaidInStudent(code, containerId) {
+  if (!code || !window.mermaid) return;
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const uid = containerId + '-svg-' + Date.now();
+  mermaid.render(uid, code).then(({ svg }) => {
+    // Mantener el label y añadir el SVG
+    const label = wrap.querySelector('.sq-mermaid-label');
+    wrap.innerHTML = '';
+    if (label) wrap.appendChild(label);
+    const svgWrap = document.createElement('div');
+    svgWrap.innerHTML = svg;
+    wrap.appendChild(svgWrap);
+  }).catch(() => {
+    // Fallo silencioso: ocultar el contenedor si el código es inválido
+    wrap.style.display = 'none';
+  });
+}
+
+// Llamar a renderMermaid tras cada renderEditor
+const _origRenderEditor = renderEditor;
+window.renderEditor = function() {
+  _origRenderEditor();
+  // Renderizar todos los bloques mermaid tras un tick
+  setTimeout(() => {
+    editorQuestions.forEach((q, i) => { if (q && q.mermaidCode) renderMermaidBlock(i); });
+  }, 80);
+};
+
+function toggleMermaidEditor(i) {
+  const ta = document.getElementById(`mermaid-ta-${i}`);
+  if (!ta) return;
+  ta.classList.toggle('visible');
+  const btn = ta.closest('.q-mermaid-section')?.querySelector('.q-mermaid-edit-toggle');
+  if (btn) btn.textContent = ta.classList.contains('visible') ? '🔼 Cerrar editor' : '✏️ Editar esquema';
+  if (ta.classList.contains('visible')) ta.focus();
+}
+
+const _mermaidDebounceTimers = {};
+function debounceMermaid(i, code) {
+  editorQuestions[i].mermaidCode = code;
+  clearTimeout(_mermaidDebounceTimers[i]);
+  _mermaidDebounceTimers[i] = setTimeout(() => renderMermaidBlock(i), 600);
+}
+
+function addMermaidToQuestion(i) {
+  const defaultCode = 'graph TD\n  A[Concepto principal] --> B[Subcategoría 1]\n  A --> C[Subcategoría 2]\n  B --> D[Detalle 1]\n  C --> E[Detalle 2]';
+  editorQuestions[i].mermaidCode = defaultCode;
+  renderEditor();
+}
+
+// ══════════════════════════════════════════════
+//  TAGS — Gestión de etiquetas por pregunta
+// ══════════════════════════════════════════════
+function addTag(i) {
+  const input = document.getElementById(`tag-input-${i}`);
+  if (!input) return;
+  let val = input.value.trim();
+  if (!val) return;
+  if (!val.startsWith('#')) val = '#' + val;
+  val = val.replace(/\s+/g, '_').toLowerCase();
+  if (!editorQuestions[i].tags) editorQuestions[i].tags = [];
+  if (!editorQuestions[i].tags.includes(val)) {
+    editorQuestions[i].tags.push(val);
+    // Actualizar solo la lista de chips sin re-render completo
+    const list = document.getElementById(`tags-list-${i}`);
+    if (list) {
+      const ti = editorQuestions[i].tags.length - 1;
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = `${escHtml(val)}<button class="tag-del" onclick="removeTag(${i},${ti})" title="Eliminar etiqueta">×</button>`;
+      list.appendChild(chip);
+    }
+  }
+  input.value = '';
+  input.focus();
+}
+
+function removeTag(i, ti) {
+  if (!editorQuestions[i] || !editorQuestions[i].tags) return;
+  editorQuestions[i].tags.splice(ti, 1);
+  // Re-render solo la sección de tags para mantener índices correctos
+  const list = document.getElementById(`tags-list-${i}`);
+  if (list) {
+    list.innerHTML = (editorQuestions[i].tags || []).map((tag, idx) =>
+      `<span class="tag-chip">${escHtml(tag)}<button class="tag-del" onclick="removeTag(${i},${idx})" title="Eliminar etiqueta">×</button></span>`
+    ).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  BANCO INTELIGENTE — Importar preguntas
+// ══════════════════════════════════════════════
+let _bankImportAllQuestions = [];
+
+function openBankImport() {
+  // Extraer todas las preguntas individuales de todos los controles guardados
+  const bank = loadBank();
+  _bankImportAllQuestions = [];
+  bank.forEach(control => {
+    (control.questions || []).forEach(q => {
+      _bankImportAllQuestions.push({
+        ...q,
+        _sourceTitle: control.title || 'Control sin título',
+        _sourceSubject: control.subject || '',
+        _sourceClass: control.class || '',
+        _sourceSavedAt: control.savedAt || ''
+      });
+    });
+  });
+
+  document.getElementById('bank-import-search').value = '';
+  filterBankImport('');
+  document.getElementById('bank-import-modal').classList.add('open');
+}
+
+function closeBankImport() {
+  document.getElementById('bank-import-modal').classList.remove('open');
+}
+
+function filterBankImport(query) {
+  const q = (query || '').trim().toLowerCase();
+  const isTagSearch = q.startsWith('#');
+
+  const results = _bankImportAllQuestions.filter(p => {
+    if (!q) return true;
+    if (isTagSearch) {
+      const tagQuery = q;
+      return (p.tags || []).some(t => t.toLowerCase().includes(tagQuery));
+    }
+    const textMatch = (p.text || '').toLowerCase().includes(q);
+    const tagMatch = (p.tags || []).some(t => t.toLowerCase().includes(q));
+    const subjectMatch = (p._sourceSubject || '').toLowerCase().includes(q);
+    const titleMatch = (p._sourceTitle || '').toLowerCase().includes(q);
+    return textMatch || tagMatch || subjectMatch || titleMatch;
+  });
+
+  const countEl = document.getElementById('bank-import-count');
+  if (countEl) countEl.textContent = results.length + ' pregunta' + (results.length !== 1 ? 's' : '');
+
+  const list = document.getElementById('bank-import-list');
+  if (!list) return;
+
+  if (_bankImportAllQuestions.length === 0) {
+    list.innerHTML = '<div class="bank-import-empty">📭 El banco está vacío.<br><small>Guarda controles en el banco para poder reutilizar sus preguntas.</small></div>';
+    return;
+  }
+
+  if (results.length === 0) {
+    list.innerHTML = '<div class="bank-import-empty">🔍 Sin resultados para "' + escHtml(query) + '"</div>';
+    return;
+  }
+
+  const typeLabels = { test: '📋 Test', tf: '✅ V/F', fill: '✏️ Huecos', match: '🔗 Relacionar', short: '💬 Corta', order: '🔢 Ordenar', vocab: '🔠 Test ampliado', translate: '🇫🇷 Traducción', emoji: '🇫🇷 Emoji', definition: '📖 Definición', multi: '☑️ Múltiple', classify: '🏷️ Clasificar' };
+
+  list.innerHTML = results.map((p, idx) => {
+    const tags = (p.tags || []).map(t => `<span class="bank-import-tag">${escHtml(t)}</span>`).join('');
+    const truncText = (p.text || '').substring(0, 120) + ((p.text || '').length > 120 ? '…' : '');
+    const globalIdx = _bankImportAllQuestions.indexOf(p);
+    return `<div class="bank-import-item">
+      <div class="bank-import-item-body">
+        <div class="bank-import-item-text" title="${escHtml(p.text || '')}">${escHtml(truncText)}</div>
+        <div class="bank-import-item-meta">
+          <span>${typeLabels[p.type] || p.type}</span>
+          <span>·</span>
+          <span>${escHtml(p._sourceTitle)}</span>
+          ${p._sourceSubject ? `<span>· ${escHtml(p._sourceSubject)}</span>` : ''}
+          ${p._sourceSavedAt ? `<span>· ${escHtml(p._sourceSavedAt)}</span>` : ''}
+        </div>
+        ${tags ? `<div class="bank-import-item-tags">${tags}</div>` : ''}
+      </div>
+      <button class="bank-import-add-btn" id="bimp-btn-${globalIdx}" onclick="importQuestionFromBank(${globalIdx}, this)">➕ Añadir</button>
+    </div>`;
+  }).join('');
+}
+
+function importQuestionFromBank(globalIdx, btn) {
+  const q = _bankImportAllQuestions[globalIdx];
+  if (!q) return;
+  const copy = JSON.parse(JSON.stringify(q));
+  // Limpiar propiedades de metadatos de la fuente
+  delete copy._sourceTitle; delete copy._sourceSubject; delete copy._sourceClass; delete copy._sourceSavedAt;
+  copy.id = Date.now() + Math.random();
+  editorQuestions.push(sanitizeQuestion(copy));
+  renderEditor();
+  showToast('✅ Pregunta añadida al control');
+  if (btn) { btn.disabled = true; btn.textContent = '✓ Añadida'; }
+  document.getElementById('editor-card').style.display = 'block';
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('bank-import-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeBankImport();
+});
 </script>
 </body>
 <!-- ═══════════════ EXAM STUDENT SCREEN ═══════════════ -->
@@ -7177,7 +7725,7 @@ function exImportarDesdeAnalisis(analisis) {
   <div class="card" style="text-align:center;padding:48px 32px">
     <div style="font-size:3rem;margin-bottom:16px">🔍</div>
     <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:12px">Corrigiendo tu examen…</h2>
-    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:24px">La IA está leyendo tus respuestas. Un momento.</p>
+    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:24px">Un momento, estamos revisando tus respuestas.</p>
     <div class="loading-dots" style="justify-content:center"><span></span><span></span><span></span></div>
   </div>
 </div>
@@ -7231,6 +7779,23 @@ function exImportarDesdeAnalisis(analisis) {
 </div>
 
 <!-- FOOTER -->
+<!-- ═══════════════ BANCO INTELIGENTE — MODAL IMPORTAR PREGUNTA ═══════════════ -->
+<div id="bank-import-modal">
+  <div class="bank-import-box">
+    <div class="bank-import-header">
+      <h3>🧠 Importar preguntas del Banco</h3>
+      <button class="bank-import-close" onclick="closeBankImport()" title="Cerrar">✕</button>
+    </div>
+    <div class="bank-import-search-bar">
+      <input type="text" id="bank-import-search" placeholder="Buscar por texto o #etiqueta…" oninput="filterBankImport(this.value)" autocomplete="off">
+      <span class="bank-import-count" id="bank-import-count">0 preguntas</span>
+    </div>
+    <div class="bank-import-list" id="bank-import-list">
+      <div class="bank-import-empty">Cargando…</div>
+    </div>
+  </div>
+</div>
+
 <footer style="text-align:center;padding:18px 24px;font-family:'Nunito',sans-serif;font-size:0.82rem;color:#9ca3af;background:#f0f4ff;border-top:1.5px solid #e0e7ff;margin-top:12px">
   © <span id="footer-year"></span> <strong style="color:#6b7280">Rafael de la Haza</strong> · Todos los derechos reservados
   <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
