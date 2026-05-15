@@ -1454,6 +1454,7 @@
   <div class="tab-bar">
     <button class="tab-btn active" onclick="showView('teacher')">👩‍🏫 Profesor</button>
     <button class="tab-btn" onclick="showView('student')">🎒 Alumno</button>
+    <button class="tab-btn" onclick="showView('examenes')">📝 Exámenes</button>
     
   </div>
 </header>
@@ -1549,7 +1550,19 @@
         <input type="number" id="time-limit" value="8" min="3" max="15">
       </div>
     </div>
-    <label>Dificultad del control</label>
+    <label style="display:flex;align-items:center;gap:6px">
+      Dificultad del control
+      <span style="position:relative;display:inline-flex;align-items:center" id="diff-tooltip-wrap">
+        <span style="width:16px;height:16px;border-radius:50%;background:#e0e7ff;color:#4f46e5;font-size:0.7rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;cursor:default;user-select:none"
+          onmouseenter="document.getElementById('diff-tooltip').style.display='block'"
+          onmouseleave="document.getElementById('diff-tooltip').style.display='none'"
+          ontouchstart="const t=document.getElementById('diff-tooltip');t.style.display=t.style.display==='block'?'none':'block'">ⓘ</span>
+        <span id="diff-tooltip" style="display:none;position:absolute;left:22px;top:-6px;background:#1e1b4b;color:#fff;font-size:0.78rem;font-weight:600;padding:8px 12px;border-radius:8px;width:220px;line-height:1.5;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.18)">
+          📎 El material que subas <strong>siempre</strong> es la fuente de las preguntas.<br>Fácil / Normal / Difícil solo cambia cómo se formulan.
+          <span style="position:absolute;left:-5px;top:12px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:5px solid #1e1b4b"></span>
+        </span>
+      </span>
+    </label>
     <div class="type-grid" id="difficulty-chips" style="margin-bottom:14px">
       <div class="diff-chip" data-diff="facil" onclick="selectDifficulty(this)">🟢 Fácil</div>
       <div class="diff-chip selected" data-diff="normal" onclick="selectDifficulty(this)">🟡 Normal</div>
@@ -1782,6 +1795,111 @@
 
 
 
+<!-- ═══════════════ EXÁMENES VIEW ═══════════════ -->
+<div id="examenes-view" class="view" style="display:none;padding:24px;max-width:860px;margin:0 auto">
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h2 style="margin:0;font-size:1.2rem">📝 Banco de Exámenes</h2>
+      <button class="btn btn-primary" onclick="mostrarCrearExamen()" style="margin-left:auto">+ Nuevo examen</button>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <select id="ex-filtro-clase" class="select-input" onchange="renderBancoExamenes()" style="flex:1;min-width:120px">
+        <option value="">Todas las clases</option>
+        <option value="5">5º Primaria</option>
+        <option value="6">6º Primaria</option>
+      </select>
+      <select id="ex-filtro-asig" class="select-input" onchange="renderBancoExamenes()" style="flex:1;min-width:140px">
+        <option value="">Todas las asignaturas</option>
+        <option value="Cono">Conocimiento del Medio</option>
+        <option value="Lengua">Lengua</option>
+        <option value="Francés">Francés</option>
+        <option value="Otra">Otra</option>
+      </select>
+    </div>
+    <div id="banco-examenes-lista"></div>
+  </div>
+
+  <!-- Panel creación/edición de examen -->
+  <div id="ex-editor-panel" style="display:none">
+    <div class="card" style="margin-bottom:16px;border:2px solid var(--primary)">
+      <h3 style="margin:0 0 16px;font-size:1.05rem">✏️ Nuevo examen</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <select id="ex-clase" class="select-input" style="flex:1;min-width:120px">
+          <option value="5">5º Primaria</option>
+          <option value="6">6º Primaria</option>
+        </select>
+        <select id="ex-asig" class="select-input" style="flex:1;min-width:140px">
+          <option value="Cono">Conocimiento del Medio</option>
+          <option value="Lengua">Lengua</option>
+          <option value="Francés">Francés</option>
+          <option value="Otra">Otra</option>
+        </select>
+        <input id="ex-tema" class="text-input" placeholder="Nombre del tema (ej: Tema 3 — La célula)" style="flex:2;min-width:200px">
+      </div>
+      <input id="ex-titulo" class="text-input" placeholder="Título del examen" style="width:100%;margin-bottom:16px">
+
+      <!-- Criterios, competencias y objetivos -->
+      <div style="margin-bottom:16px">
+        <label style="font-weight:700;font-size:0.88rem;color:var(--primary);display:block;margin-bottom:6px">📋 Criterios de evaluación, competencias y objetivos</label>
+        <textarea id="ex-criterios" class="text-input" rows="4"
+          placeholder="Escribe o pega aquí los criterios de evaluación, competencias clave y objetivos didácticos del examen. La IA los seguirá al corregir cada respuesta.&#10;&#10;Ej: CE 3.1 — Identifica los elementos del sistema solar. Competencia en conocimiento e interacción con el mundo físico.&#10;Objetivos: Conocer la composición del sistema solar y la posición de la Tierra."
+          style="width:100%;resize:vertical"></textarea>
+      </div>
+
+      <!-- Guía del profe -->
+      <div style="margin-bottom:16px">
+        <label style="font-weight:700;font-size:0.88rem;color:var(--primary);display:block;margin-bottom:6px">📖 Guía del profesor (contenido del tema)</label>
+        <p style="font-size:0.82rem;color:var(--muted);margin:0 0 8px">Sube el PDF del libro/apuntes o pega el texto. La IA lo usará como referencia para saber qué se ha dado en clase y corregir con más precisión.</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <button class="btn" onclick="document.getElementById('ex-guia-file').click()" style="font-size:0.85rem;padding:7px 14px">📎 Subir PDF, Word o imagen</button>
+          <input type="file" id="ex-guia-file" accept=".pdf,.doc,.docx,.txt,image/*" style="display:none" onchange="exCargarGuiaArchivo(this)">
+          <span id="ex-guia-file-nombre" style="font-size:0.82rem;color:var(--muted);align-self:center"></span>
+        </div>
+        <textarea id="ex-guia-texto" class="text-input" rows="5"
+          placeholder="…o pega aquí el texto de los apuntes / contenido del tema. Si subes un PDF, el texto extraído aparecerá aquí automáticamente."
+          style="width:100%;resize:vertical;font-size:0.88rem"></textarea>
+        <div id="ex-guia-cargando" style="display:none;font-size:0.83rem;color:var(--muted);margin-top:4px">⏳ Extrayendo texto del PDF…</div>
+      </div>
+
+      <!-- Subir examen físico -->
+      <div style="margin-bottom:16px">
+        <label style="font-weight:700;font-size:0.88rem;color:var(--primary);display:block;margin-bottom:6px">📄 Examen físico (opcional — para que la IA lo analice y digitalice)</label>
+        <p style="font-size:0.82rem;color:var(--muted);margin:0 0 8px">Sube el PDF o foto de tu examen en papel. La IA analizará cada pregunta, te dirá cuáles puede digitalizar tal cual y cuáles necesita adaptar, antes de crear nada.</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <button class="btn" onclick="document.getElementById('ex-examen-file').click()" style="font-size:0.85rem;padding:7px 14px">📎 Subir examen (PDF, Word, foto)</button>
+          <input type="file" id="ex-examen-file" accept=".pdf,.doc,.docx,.txt,image/*" style="display:none" onchange="exCargarExamenArchivo(this)">
+          <span id="ex-examen-file-nombre" style="font-size:0.82rem;color:var(--muted);align-self:center"></span>
+        </div>
+        <div id="ex-examen-cargando" style="display:none;font-size:0.83rem;color:var(--muted);margin-bottom:8px">⏳ Leyendo el examen…</div>
+
+        <!-- Botón analizar -->
+        <div id="ex-analizar-wrap" style="display:none;margin-bottom:12px">
+          <button class="btn btn-primary" onclick="exAnalizarConIA()" style="font-size:0.9rem;padding:10px 20px">
+            🔍 Analizar con IA — ver qué se puede digitalizar
+          </button>
+        </div>
+
+        <!-- Resultado del análisis -->
+        <div id="ex-analisis-resultado" style="display:none"></div>
+      </div>
+
+      <!-- Separador -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:0.8rem;color:var(--muted);font-weight:700">O AÑADE PREGUNTAS MANUALMENTE</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
+      <div id="ex-preguntas-lista" style="margin-bottom:12px"></div>
+      <button class="btn" onclick="exAgregarPregunta()" style="margin-bottom:12px">➕ Añadir pregunta de desarrollo</button>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="cancelarEditorExamen()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarExamen()">💾 Guardar examen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ CORRECTING SCREEN ═══════════════ -->
 <div id="correcting-screen" style="display:none;padding:32px;max-width:680px;margin:0 auto">
   <div class="card" style="text-align:center;padding:48px 32px">
@@ -1805,7 +1923,12 @@
   </div>
   <div class="section-title">📝 Revisión de respuestas</div>
   <div id="review-cards"></div>
-  <div style="text-align:center;color:var(--muted);font-size:0.88rem;padding:18px 0 8px">✅ Tu nota ha sido registrada. ¡Ya puedes cerrar esta página!</div>
+  <div style="text-align:center;padding:20px 0 8px">
+    <button onclick="descargarControlAlumno()" class="btn btn-primary" style="font-size:0.95rem;padding:12px 28px;margin-bottom:12px">
+      💾 Descargar mi control para repasar
+    </button>
+    <div style="color:var(--muted);font-size:0.88rem">✅ Tu nota ha sido registrada. ¡Ya puedes cerrar esta página!</div>
+  </div>
 </div>
 
 <!-- ═══════════════ MODAL INFORME POST-CONTROL ═══════════════ -->
@@ -1898,6 +2021,11 @@ function showView(v) {
     document.getElementById('student-view').classList.add('active');
     document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
     loadStudentView();
+  } else if (v === 'examenes') {
+    document.getElementById('examenes-view').style.display = 'block';
+    document.getElementById('examenes-view').classList.add('active');
+    document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
+    renderBancoExamenes();
   }
 }
 
@@ -2731,13 +2859,30 @@ Si el profe pide algo imposible (ej: no hay material suficiente), explícalo en 
   historyForAPI.push({ role: 'user', content: userMsg });
 
   try {
+    // ── Construir contenido multimodal (igual que en la generación inicial) ──
+    // Los archivos subidos van primero; el prompt del sistema + instrucción va al final como texto
+    let messageContent = [];
+
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      uploadedFiles.forEach(f => {
+        if (f.type === 'image') {
+          messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
+        } else if (f.type === 'pdf') {
+          messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+        }
+        // Los archivos de texto ya están incluidos en systemPrompt via material-input
+      });
+    }
+
+    messageContent.push({ type: 'text', text: systemPrompt + '\n\n---\nINSTRUCCIÓN DEL PROFE: ' + userMsg });
+
     const resp = await fetch('/.netlify/functions/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 2000,
-        messages: [{ role: 'user', content: systemPrompt + '\n\n---\nINSTRUCCIÓN DEL PROFE: ' + userMsg }]
+        messages: [{ role: 'user', content: messageContent }]
       })
     });
     const data = await resp.json();
@@ -2948,6 +3093,11 @@ ${jsonExamples[type] || jsonExamples.test}`;
       // Scroll suave hasta la pregunta
       document.getElementById(`regen-panel-${i}`)?.closest('.q-block')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+    // Rehabilitar el botón (renderEditor reconstruye el DOM, hay que buscarlo de nuevo)
+    const newBtn     = document.getElementById(`regen-btn-${i}`);
+    const newBtnText = document.getElementById(`regen-btn-text-${i}`);
+    if (newBtn)     newBtn.disabled = false;
+    if (newBtnText) newBtnText.textContent = '✦ Generar nueva pregunta';
     showToast('✅ Pregunta regenerada correctamente');
   } catch(e) {
     showToast('❌ Error al regenerar. Inténtalo de nuevo.');
@@ -4532,7 +4682,7 @@ function showResults(score, name, review, totalPoints) {
         <div style="padding:8px 14px;border-radius:8px;border:1.5px solid ${isOk ? '#10b981' : '#ef4444'};background:${isOk ? '#d1fae5' : '#fee2e2'};font-size:0.95rem;font-weight:700;color:${isOk ? '#065f46' : '#991b1b'}">
           Tu respuesta: ${escHtml(r.studentAnswer || '–')} ${isOk ? '✅' : '❌'}
         </div>
-        ${!isOk ? `<div style="padding:8px 14px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.95rem;font-weight:700;color:#065f46;margin-top:6px">✅ Respuesta correcta: ${escHtml(correctVal)}</div>` : ''}
+        ${!isOk ? `<div style="padding:8px 14px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.95rem;font-weight:700;color:#065f46;margin-top:6px">📖 Respuesta correcta: ${escHtml(correctVal)}</div>` : ''}
       </div>`;
 
     } else if (q.type === 'definition') {
@@ -4546,7 +4696,7 @@ function showResults(score, name, review, totalPoints) {
         </div>
         ${defPartialNote}
         ${!r.correct ? `<div style="padding:10px 14px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.92rem;color:#065f46">
-          <span style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px">💡 Definición de referencia:</span>
+          <span style="font-size:0.78rem;font-weight:700;display:block;margin-bottom:4px">📖 Definición del tema:</span>
           ${defRef}
         </div>` : ''}
       </div>`;
@@ -4654,6 +4804,61 @@ function backToStudent() {
   studentName = '';
   studentClass = '';
   showView('student');
+}
+
+function descargarControlAlumno() {
+  if (!currentQuiz || !_studentQuizQuestions) return;
+
+  const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const safe = s => s.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]/g,'').trim();
+  const nota = document.getElementById('score-num')?.textContent || '';
+  const fecha = new Date().toLocaleDateString('es-ES');
+  const clasePrefix = studentClass.includes('5') ? '5to_' : studentClass.includes('6') ? '6to_' : '';
+
+  // Recoger las tarjetas de revisión del DOM actual
+  const reviewHTML = document.getElementById('review-cards')?.innerHTML || '';
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+    <meta charset="UTF-8">
+    <title>Control — ${esc(currentQuiz.title||'Control')} — ${esc(studentName)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Nunito',sans-serif;color:#1e1b4b;padding:24px;max-width:680px;margin:0 auto}
+      .result-card{border:1.5px solid #e0e7ff;border-radius:12px;padding:14px 16px;margin-bottom:12px}
+      .result-card.correct{border-color:#6ee7b7;background:#f0fdf4}
+      .result-card.wrong{border-color:#fca5a5;background:#fff5f5}
+      .result-card.partial{border-color:#fcd34d;background:#fffbeb}
+      .section-title{font-family:'Baloo 2',cursive;font-size:1rem;color:#4f46e5;font-weight:800;margin:16px 0 10px}
+    </style>
+  </head><body>
+    <div style="background:#4f46e5;color:#fff;padding:16px 24px;border-radius:12px 12px 0 0">
+      <h2 style="font-family:'Baloo 2',cursive;font-size:1.15rem">📝 ${esc(currentQuiz.title||'Control')}</h2>
+      <div style="font-size:0.83rem;opacity:0.9;margin-top:4px">${esc(studentName)} · ${esc(studentClass)} · ${fecha}</div>
+    </div>
+    <div style="padding:14px 20px;border:1px solid #e0e7ff;border-top:none;border-radius:0 0 12px 12px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 0">
+        <span style="font-family:'Baloo 2',cursive;font-size:2.2rem;font-weight:800;color:#4f46e5">${esc(nota)}</span>
+        <div>
+          <div style="font-size:0.75rem;color:#6b7280;font-weight:700">NOTA · sobre 10</div>
+        </div>
+      </div>
+    </div>
+    <div class="section-title">📝 Revisión de respuestas</div>
+    ${reviewHTML}
+    <div style="text-align:center;color:#9ca3af;font-size:0.75rem;padding:16px 0">
+      © ${new Date().getFullYear()} Rafael de la Haza · Controles Profe Rafa
+    </div>
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `${clasePrefix}Control_${safe(studentName)}_${safe(currentQuiz.title||'Control')}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 Control descargado — ábrelo con cualquier navegador');
 }
 
 
@@ -5164,6 +5369,8 @@ function toggleAccordion(id) {
 function downloadReportPDF() {
   const modal = document.getElementById('report-modal');
   const box = modal.querySelector('.report-box');
+  const reportClass = liveActiveQuizClass || lastClosedQuizClass || (currentQuiz?.class || '');
+  const coursePrefix = reportClass.includes('5') ? '5to_' : reportClass.includes('6') ? '6to_' : '';
   const title = (liveActiveQuizTitle || lastClosedQuizTitle || 'Informe') + ' — Informe';
   const content = box.innerHTML;
   const html = `<!DOCTYPE html><html lang="es"><head>
@@ -5216,7 +5423,7 @@ function downloadReportPDF() {
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const fileName = title.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]/g, '').trim() + '.html';
+  const fileName = coursePrefix + title.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-]/g, '').trim() + '.html';
   a.href = url;
   a.download = fileName;
   a.click();
@@ -5830,8 +6037,1205 @@ window.addEventListener('load', () => {
     }
   }
 });
+
+// ══════════════════════════════════════════════
+//  EXÁMENES — Banco y lógica (Fase 1)
+// ══════════════════════════════════════════════
+
+function getExamenes() {
+  try { return JSON.parse(localStorage.getItem('proferafa_examenes') || '[]'); } catch { return []; }
+}
+function saveExamenes(arr) {
+  localStorage.setItem('proferafa_examenes', JSON.stringify(arr));
+}
+
+function renderBancoExamenes() {
+  const lista = document.getElementById('banco-examenes-lista');
+  if (!lista) return;
+  const examenes = getExamenes();
+  const filtClase = document.getElementById('ex-filtro-clase')?.value || '';
+  const filtAsig  = document.getElementById('ex-filtro-asig')?.value  || '';
+  const filtrados = examenes.filter(e =>
+    (!filtClase || e.clase === filtClase) &&
+    (!filtAsig  || e.asig  === filtAsig)
+  );
+  if (filtrados.length === 0) {
+    lista.innerHTML = '<p style="color:var(--muted);text-align:center;padding:24px">No hay exámenes guardados. Crea el primero con el botón de arriba.</p>';
+    return;
+  }
+  // Agrupar por clase › asignatura › tema
+  const grupos = {};
+  filtrados.forEach(e => {
+    const key = `${e.clase}|${e.asig}|${e.tema}`;
+    if (!grupos[key]) grupos[key] = { clase: e.clase, asig: e.asig, tema: e.tema, items: [] };
+    grupos[key].items.push(e);
+  });
+  lista.innerHTML = Object.values(grupos).map(g => `
+    <div style="margin-bottom:16px">
+      <div style="font-weight:800;font-size:0.85rem;color:var(--primary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">
+        ${g.clase}º · ${g.asig} · ${g.tema}
+      </div>
+      ${g.items.map(e => `
+        <div class="card" style="margin-bottom:8px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+          <div style="flex:1">
+            <div style="font-weight:700">${e.titulo}</div>
+            <div style="font-size:0.82rem;color:var(--muted)">${e.preguntas.length} pregunta(s) de desarrollo</div>
+          </div>
+          <button class="btn btn-primary" style="font-size:0.82rem;padding:6px 14px" onclick="publicarExamen('${e.id}')">▶ Publicar</button>
+          <button class="btn" style="font-size:0.82rem;padding:6px 14px;background:#ede9fe;color:#5b21b6;border:none;border-radius:10px;font-weight:700;cursor:pointer" onclick="abrirPanelExamenDesde('${e.id}')">📋 Panel</button>
+          <button class="btn" style="font-size:0.82rem;padding:6px 10px;color:var(--danger)" onclick="eliminarExamen('${e.id}')">🗑</button>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+let _exPreguntasTemp = [];
+let _exArchivoBase64 = null;
+let _exArchivoMediaType = null;
+let _exArchivoTexto = null;
+
+function mostrarCrearExamen() {
+  _exPreguntasTemp = [];
+  _exArchivoBase64 = null;
+  _exArchivoMediaType = null;
+  _exArchivoTexto = null;
+  document.getElementById('ex-titulo').value    = '';
+  document.getElementById('ex-criterios').value = '';
+  document.getElementById('ex-tema').value      = '';
+  document.getElementById('ex-guia-texto').value = '';
+  document.getElementById('ex-guia-file-nombre').textContent = '';
+  document.getElementById('ex-guia-cargando').style.display = 'none';
+  document.getElementById('ex-guia-file').value = '';
+  document.getElementById('ex-examen-file').value = '';
+  document.getElementById('ex-examen-file-nombre').textContent = '';
+  document.getElementById('ex-examen-cargando').style.display = 'none';
+  document.getElementById('ex-analizar-wrap').style.display = 'none';
+  document.getElementById('ex-analisis-resultado').style.display = 'none';
+  document.getElementById('ex-analisis-resultado').innerHTML = '';
+  document.getElementById('ex-preguntas-lista').innerHTML = '';
+  document.getElementById('ex-editor-panel').style.display = 'block';
+  document.getElementById('ex-editor-panel').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelarEditorExamen() {
+  document.getElementById('ex-editor-panel').style.display = 'none';
+  document.getElementById('ex-guia-file').value = '';
+  document.getElementById('ex-guia-file-nombre').textContent = '';
+  document.getElementById('ex-examen-file').value = '';
+  document.getElementById('ex-examen-file-nombre').textContent = '';
+  document.getElementById('ex-analisis-resultado').innerHTML = '';
+  document.getElementById('ex-analisis-resultado').style.display = 'none';
+  document.getElementById('ex-analizar-wrap').style.display = 'none';
+  _exArchivoBase64 = null;
+  _exArchivoMediaType = null;
+  _exArchivoTexto = null;
+  _exPreguntasTemp = [];
+}
+
+function exAgregarPregunta() {
+  _exPreguntasTemp.push({ enunciado: '', criterios: '', puntos: 2 });
+  renderExPreguntas();
+}
+
+function renderExPreguntas() {
+  const cont = document.getElementById('ex-preguntas-lista');
+  cont.innerHTML = _exPreguntasTemp.map((p, i) => `
+    <div class="card" style="margin-bottom:10px;padding:14px;border:1.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-weight:800;color:var(--primary)">Pregunta ${i+1}</span>
+        <input type="number" min="0.5" max="10" step="0.5" value="${p.puntos}"
+          style="width:64px;padding:4px 8px;border-radius:8px;border:1.5px solid var(--border);font-weight:700;text-align:center"
+          onchange="_exPreguntasTemp[${i}].puntos = parseFloat(this.value)||1" title="Puntos">
+        <span style="font-size:0.8rem;color:var(--muted)">pts</span>
+        <button onclick="exEliminarPregunta(${i})" style="margin-left:auto;background:none;border:none;color:var(--danger);cursor:pointer;font-size:1rem">🗑</button>
+      </div>
+      <textarea placeholder="Enunciado de la pregunta…" rows="2"
+        style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-size:0.93rem;resize:vertical;margin-bottom:8px"
+        oninput="_exPreguntasTemp[${i}].enunciado = this.value">${p.enunciado}</textarea>
+      <textarea placeholder="Criterios de corrección para esta pregunta (opcional — la IA los seguirá al corregir)" rows="2"
+        style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);font-size:0.88rem;resize:vertical;color:var(--muted)"
+        oninput="_exPreguntasTemp[${i}].criterios = this.value">${p.criterios}</textarea>
+    </div>
+  `).join('');
+}
+
+function exEliminarPregunta(i) {
+  _exPreguntasTemp.splice(i, 1);
+  renderExPreguntas();
+}
+
+function guardarExamen() {
+  const titulo          = document.getElementById('ex-titulo').value.trim();
+  const tema            = document.getElementById('ex-tema').value.trim();
+  const clase           = document.getElementById('ex-clase').value;
+  const asig            = document.getElementById('ex-asig').value;
+  const criteriosGlobal = document.getElementById('ex-criterios').value.trim();
+  const guiaTexto       = document.getElementById('ex-guia-texto').value.trim();
+
+  if (!titulo) { alert('Escribe un título para el examen.'); return; }
+  if (!tema)   { alert('Escribe el nombre del tema.'); return; }
+  if (_exPreguntasTemp.length === 0) { alert('Añade al menos una pregunta.'); return; }
+  if (_exPreguntasTemp.some(p => !p.enunciado.trim())) { alert('Hay preguntas sin enunciado.'); return; }
+
+  const examen = {
+    id: 'ex_' + Date.now(),
+    titulo, tema, clase, asig,
+    criteriosGlobal,
+    guiaTexto,
+    preguntas: _exPreguntasTemp.map(p => ({ ...p })),
+    creado: new Date().toISOString()
+  };
+  const arr = getExamenes();
+  arr.push(examen);
+  saveExamenes(arr);
+  cancelarEditorExamen();
+  renderBancoExamenes();
+}
+
+function eliminarExamen(id) {
+  if (!confirm('¿Eliminar este examen del banco?')) return;
+  const arr = getExamenes().filter(e => e.id !== id);
+  saveExamenes(arr);
+  renderBancoExamenes();
+}
+
+function publicarExamen(id) {
+  const examenes = getExamenes();
+  const examen = examenes.find(e => e.id === id);
+  if (!examen) { showToast('⚠️ Examen no encontrado'); return; }
+  // Publicar en sessionStorage para que la vista alumno lo detecte
+  sessionStorage.setItem('proferafa_exam_activo', JSON.stringify(examen));
+  showToast('✅ Examen publicado — los alumnos ya pueden hacerlo en la pestaña Alumno');
+  renderBancoExamenes();
+}
+
+function abrirPanelExamenDesde(id) {
+  const examenes = getExamenes();
+  const examen = examenes.find(e => e.id === id);
+  if (examen) abrirPanelExamen(examen);
+}
+
+// ══════════════════════════════════════════════
+//  EXÁMENES — Fase 2+3: alumno, corrección IA, panel profe, informes
+// ══════════════════════════════════════════════
+
+// ─── Estado ────────────────────────────────────────────────────────────────
+let _examActivo        = null;
+let _examAlumnoNombre  = '';
+let _examAlumnoClase   = '';
+let _examRespuestas    = [];
+let _examResultados    = null;
+let _examPanelActual   = null;
+let _examInformeData   = null;
+const EXAM_SS_KEY      = 'proferafa_exam_activo';
+const EXAM_STORE_KEY   = 'proferafa_exam_entregas';
+
+// ─── Almacenamiento de entregas ────────────────────────────────────────────
+function getEntregasExamen(examId) {
+  try { return JSON.parse(localStorage.getItem(EXAM_STORE_KEY) || '{}')[examId] || []; }
+  catch { return []; }
+}
+function saveEntregaExamen(examId, entrega) {
+  try {
+    const all = JSON.parse(localStorage.getItem(EXAM_STORE_KEY) || '{}');
+    if (!all[examId]) all[examId] = [];
+    const idx = all[examId].findIndex(e => e.nombre === entrega.nombre && e.clase === entrega.clase);
+    if (idx >= 0) all[examId][idx] = entrega; else all[examId].push(entrega);
+    localStorage.setItem(EXAM_STORE_KEY, JSON.stringify(all));
+  } catch(e) { console.error('saveEntregaExamen', e); }
+}
+
+// ─── Detectar examen activo al entrar en pestaña Alumno ────────────────────
+// Hook sobre showView para interceptar la pestaña Alumno
+const _origShowView = showView;
+function showView(v) {
+  if (v === 'student') {
+    try {
+      const raw = sessionStorage.getItem(EXAM_SS_KEY);
+      if (raw) {
+        _examActivo = JSON.parse(raw);
+        // Ocultar student-view normal, mostrar pantalla examen
+        document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => {
+          el.style.display = 'none'; el.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+        ocultarTodasPantallasExamen();
+        document.getElementById('exam-student-screen').style.display = 'block';
+        mostrarIdentificacionExamen();
+        return;
+      }
+    } catch(e) {}
+  }
+  _origShowView(v);
+}
+
+// ─── PANTALLA IDENTIFICACIÓN alumno ────────────────────────────────────────
+function mostrarIdentificacionExamen() {
+  ocultarTodasPantallasExamen();
+  document.getElementById('exam-student-screen').style.display = 'block';
+  document.getElementById('exam-identify-screen').style.display = 'block';
+  document.getElementById('exam-id-title').textContent = _examActivo.titulo || 'Examen';
+  const asig = _examActivo.asig || '';
+  const tema = _examActivo.tema || '';
+  document.getElementById('exam-id-subtitle').textContent = [asig, tema].filter(Boolean).join(' · ');
+
+  const selClase = document.getElementById('exam-id-clase');
+  selClase.value = '';
+  selClase.onchange = () => {
+    const cn = selClase.value;
+    const selNombre = document.getElementById('exam-id-nombre');
+    selNombre.innerHTML = '<option value="">— Elige tu nombre —</option>';
+    if (cn && CLASES[cn]) {
+      CLASES[cn].forEach(n => {
+        const o = document.createElement('option');
+        o.value = n; o.textContent = n; selNombre.appendChild(o);
+      });
+    }
+  };
+}
+
+function iniciarExamenAlumno() {
+  const nombre = document.getElementById('exam-id-nombre').value;
+  const clase  = document.getElementById('exam-id-clase').value;
+  if (!clase)  { showToast('⚠️ Elige tu clase'); return; }
+  if (!nombre) { showToast('⚠️ Elige tu nombre'); return; }
+  _examAlumnoNombre = nombre;
+  _examAlumnoClase  = clase;
+  _examRespuestas   = _examActivo.preguntas.map(() => ({ texto: '' }));
+  mostrarPreguntasExamen();
+}
+
+// ─── PANTALLA PREGUNTAS alumno ─────────────────────────────────────────────
+function mostrarPreguntasExamen() {
+  ocultarTodasPantallasExamen();
+  document.getElementById('exam-student-screen').style.display = 'block';
+  document.getElementById('exam-questions-screen').style.display = 'block';
+  document.getElementById('exam-q-title').textContent = _examActivo.titulo || 'Examen';
+  document.getElementById('exam-q-meta').textContent = _examAlumnoNombre + ' · ' + _examAlumnoClase;
+
+  document.getElementById('exam-questions-list').innerHTML = _examActivo.preguntas.map((p, i) => `
+    <div class="card" style="margin-bottom:14px;padding:18px 20px;border-left:4px solid var(--primary)">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px">
+        <span style="font-family:'Baloo 2',cursive;font-size:1rem;color:var(--primary);font-weight:800">Pregunta ${i+1}</span>
+        <span style="font-size:0.78rem;color:var(--muted);margin-left:auto">${p.puntos} ${p.puntos===1?'punto':'puntos'}</span>
+      </div>
+      <p style="font-size:0.97rem;font-weight:700;margin-bottom:12px;line-height:1.55">${escHtml(p.enunciado)}</p>
+      <textarea id="exam-resp-${i}" rows="5"
+        placeholder="Escribe tu respuesta aquí…"
+        style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-family:'Nunito',sans-serif;font-size:0.97rem;resize:vertical;line-height:1.6;transition:border-color 0.2s"
+        oninput="_examRespuestas[${i}].texto=this.value"
+        onfocus="this.style.borderColor='var(--primary)'"
+        onblur="this.style.borderColor='var(--border)'"
+      ></textarea>
+    </div>`).join('');
+}
+
+// ─── ENTREGAR EXAMEN ────────────────────────────────────────────────────────
+async function entregarExamen() {
+  _examActivo.preguntas.forEach((p, i) => {
+    const el = document.getElementById('exam-resp-' + i);
+    if (el) _examRespuestas[i].texto = el.value.trim();
+  });
+  const vacias = _examRespuestas.filter(r => !r.texto).length;
+  if (vacias === _examActivo.preguntas.length) {
+    showToast('⚠️ Escribe al menos una respuesta antes de entregar'); return;
+  }
+  if (vacias > 0 && !confirm(`Hay ${vacias} pregunta(s) sin responder. ¿Entregar igualmente?`)) return;
+
+  ocultarTodasPantallasExamen();
+  document.getElementById('exam-correcting-screen').style.display = 'block';
+
+  try {
+    const resultados = await corregirExamenConIA();
+    _examResultados = resultados;
+    const entrega = {
+      nombre: _examAlumnoNombre,
+      clase:  _examAlumnoClase,
+      fecha:  new Date().toISOString(),
+      hora:   new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }),
+      nota:   resultados.notaFinal,
+      respuestas: resultados.preguntas.map((rp, i) => ({
+        enunciado:       _examActivo.preguntas[i].enunciado,
+        respuestaAlumno: _examRespuestas[i].texto,
+        puntuacion:      rp.puntuacion,
+        puntosMax:       _examActivo.preguntas[i].puntos,
+        bienHecho:       rp.bienHecho,
+        falto:           rp.falto,
+        mejora:          rp.mejora
+      }))
+    };
+    saveEntregaExamen(_examActivo.id, entrega);
+    mostrarResultadosExamen(resultados);
+  } catch(err) {
+    console.error('entregarExamen:', err);
+    ocultarTodasPantallasExamen();
+    document.getElementById('exam-student-screen').style.display = 'block';
+    document.getElementById('exam-questions-screen').style.display = 'block';
+    showToast('❌ Error al corregir. Inténtalo de nuevo.');
+  }
+}
+
+// ─── CORRECCIÓN IA ─────────────────────────────────────────────────────────
+async function corregirExamenConIA() {
+  const ex = _examActivo;
+  const preguntasJson = ex.preguntas.map((p, i) => ({
+    num: i + 1,
+    enunciado: p.enunciado,
+    criteriosPregunta: p.criterios || '',
+    puntosPosibles: p.puntos,
+    respuestaAlumno: _examRespuestas[i].texto || '(sin respuesta)'
+  }));
+
+  const prompt = `Eres un corrector experto y generoso de exámenes de Educación Primaria española (5º-6º). Tu objetivo es dar feedback formativo y motivador.
+
+EXAMEN: "${ex.titulo || 'Examen'}"
+ASIGNATURA: ${ex.asig || 'General'} | TEMA: ${ex.tema || ''}
+ALUMNO/A: ${_examAlumnoNombre} (${_examAlumnoClase})
+${ex.criteriosGlobal ? `\nCRITERIOS DE EVALUACIÓN, COMPETENCIAS Y OBJETIVOS:\n${ex.criteriosGlobal}` : ''}
+${ex.guiaTexto ? `\nCONTENIDO DEL TEMA (referencia):\n${ex.guiaTexto.slice(0, 3000)}` : ''}
+
+PREGUNTAS Y RESPUESTAS:
+${JSON.stringify(preguntasJson, null, 2)}
+
+INSTRUCCIONES:
+- Sé generoso y justo; valora el esfuerzo y el conocimiento parcial
+- Acepta sinónimos, variantes correctas y respuestas que demuestren comprensión aunque no sean literales
+- Respuesta en blanco o claramente errónea: 0 puntos
+- Respuesta parcialmente correcta: puntuación proporcional
+- El feedback debe ser muy breve y directo (máximo 1 frase por campo; niños 10-12 años)
+- bienHecho: solo si hay algo claramente positivo que destacar; si está todo bien, omítelo
+- falto: la idea o dato clave que faltó, en menos de 15 palabras
+- mejora: una sola sugerencia concreta de repaso; omítelo si la respuesta es correcta
+- Si la respuesta es correcta (puntuacion = puntosMax): pon bienHecho breve y omite falto y mejora
+
+DEVUELVE SOLO JSON válido sin markdown:
+{
+  "notaFinal": 7.5,
+  "preguntas": [
+    {
+      "num": 1,
+      "puntuacion": 1.5,
+      "puntosMax": 2,
+      "bienHecho": "Has explicado correctamente la fotosíntesis.",
+      "falto": "Faltó mencionar la liberación de oxígeno.",
+      "mejora": "Recuerda que las plantas también liberan O₂."
+    }
+  ]
+}`;
+
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 3000,
+    messages: [{ role: 'user', content: prompt }]
+  };
+  const resp = await fetch('/.netlify/functions/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ _rawBody: body })
+  });
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  const raw  = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  return JSON.parse(raw.replace(/```json|```/g, '').trim());
+}
+
+// ─── PANTALLA RESULTADOS alumno ────────────────────────────────────────────
+function mostrarResultadosExamen(resultados) {
+  ocultarTodasPantallasExamen();
+  document.getElementById('exam-results-screen').style.display = 'block';
+
+  // Nota oculta al alumno — solo feedback
+  document.getElementById('exam-review-cards').innerHTML = resultados.preguntas.map((rp, i) => {
+    const p = _examActivo.preguntas[i];
+    const pct = p.puntos > 0 ? rp.puntuacion / p.puntos : 0;
+    const col = pct >= 0.8 ? '#10b981' : pct >= 0.5 ? '#f59e0b' : '#ef4444';
+    const bg  = pct >= 0.8 ? '#f0fdf4' : pct >= 0.5 ? '#fffbeb' : '#fff5f5';
+    const ico = pct >= 0.8 ? '✅' : pct >= 0.5 ? '🟡' : '❌';
+    return `<div class="card" style="margin-bottom:14px;padding:16px 18px;border-left:4px solid ${col};background:${bg}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:1.1rem">${ico}</span>
+        <span style="font-weight:800;font-size:0.97rem;flex:1">${i+1}. ${escHtml(p.enunciado)}</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.7);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:0.9rem;color:#374151">
+        <span style="font-size:0.75rem;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Tu respuesta:</span>
+        ${escHtml(_examRespuestas[i]?.texto || '(sin respuesta)')}
+      </div>
+      ${rp.bienHecho ? `<div style="font-size:0.87rem;margin-bottom:5px"><span style="color:#15803d;font-weight:700">✔ Bien: </span>${escHtml(rp.bienHecho)}</div>` : ''}
+      ${rp.falto     ? `<div style="font-size:0.87rem;margin-bottom:5px"><span style="color:#b45309;font-weight:700">⚠ Faltó: </span>${escHtml(rp.falto)}</div>` : ''}
+      ${rp.mejora    ? `<div style="font-size:0.85rem;background:#eff6ff;padding:7px 10px;border-radius:8px;color:#1e40af"><span style="font-weight:700">💡 </span>${escHtml(rp.mejora)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ─── DESCARGA ALUMNO: sus respuestas + feedback, sin nota ─────────────────
+function descargarResumenAlumno() {
+  if (!_examActivo || !_examResultados) return;
+  const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fecha = new Date().toLocaleDateString('es-ES');
+
+  const pregsHtml = _examActivo.preguntas.map((p, i) => {
+    const rp  = _examResultados.preguntas[i] || {};
+    const txt = _examRespuestas[i]?.texto || '(sin respuesta)';
+    const pct = p.puntos > 0 ? (rp.puntuacion||0) / p.puntos : 0;
+    const col = pct >= 0.8 ? '#10b981' : pct >= 0.5 ? '#f59e0b' : '#ef4444';
+    const bg  = pct >= 0.8 ? '#f0fdf4' : pct >= 0.5 ? '#fffbeb' : '#fff5f5';
+    const ico = pct >= 0.8 ? '✅' : pct >= 0.5 ? '🟡' : '❌';
+    return `<div style="margin-bottom:16px;padding:14px 16px;border-radius:10px;border-left:4px solid ${col};background:${bg};border:1.5px solid ${col}33">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span>${ico}</span>
+        <strong style="font-size:0.95rem;flex:1">${i+1}. ${esc(p.enunciado)}</strong>
+      </div>
+      <div style="background:rgba(255,255,255,0.75);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:0.9rem;color:#374151">
+        <span style="font-size:0.72rem;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Tu respuesta:</span>
+        ${esc(txt)}
+      </div>
+      ${rp.bienHecho ? `<p style="font-size:0.87rem;margin-bottom:4px"><strong style="color:#15803d">✔ Bien:</strong> ${esc(rp.bienHecho)}</p>` : ''}
+      ${rp.falto     ? `<p style="font-size:0.87rem;margin-bottom:4px"><strong style="color:#b45309">⚠ Faltó:</strong> ${esc(rp.falto)}</p>` : ''}
+      ${rp.mejora    ? `<div style="font-size:0.85rem;background:#eff6ff;padding:8px 10px;border-radius:8px;color:#1e40af"><strong>💡</strong> ${esc(rp.mejora)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+    <meta charset="UTF-8">
+    <title>Mis respuestas — ${esc(_examActivo.titulo||'Examen')}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif;color:#1e1b4b;padding:24px;max-width:680px;margin:0 auto}</style>
+  </head><body>
+    <div style="background:#4f46e5;color:#fff;padding:16px 24px;border-radius:12px 12px 0 0;margin-bottom:0">
+      <h2 style="font-family:'Baloo 2',cursive;font-size:1.15rem">📝 ${esc(_examActivo.titulo||'Examen')}</h2>
+      <div style="font-size:0.83rem;opacity:0.9;margin-top:4px">${esc(_examAlumnoNombre)} · ${esc(_examAlumnoClase)} · ${fecha}</div>
+    </div>
+    <div style="padding:6px 16px 10px;background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 0 0;font-size:0.85rem;color:#92400e;font-weight:700">
+      ⏳ La nota la comunicará el profesor/a. Guarda este documento para poder revisarlo.
+    </div>
+    <div style="padding:20px 24px;border:1px solid #e0e7ff;border-top:none;border-radius:0 0 12px 12px">
+      ${pregsHtml}
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:0.75rem;padding:14px 0">
+      © ${new Date().getFullYear()} Rafael de la Haza · Controles Profe Rafa
+    </div>
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const safe = s => s.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]/g,'').trim();
+  const clasePrefix = _examAlumnoClase.includes('5') ? '5to_' : _examAlumnoClase.includes('6') ? '6to_' : '';
+  a.href = url;
+  a.download = `${clasePrefix}MisRespuestas_${safe(_examAlumnoNombre)}_${safe(_examActivo.titulo||'Examen')}.html`;
+  a.click();
+}
+
+// ─── PANEL PROFE ────────────────────────────────────────────────────────────
+function abrirPanelExamen(examen) {
+  _examPanelActual = examen;
+  document.getElementById('exam-panel-title').textContent = '📋 ' + (examen.titulo || 'Examen');
+  document.getElementById('exam-panel-lista').style.display = 'block';
+  document.getElementById('exam-panel-stats').style.display = '';
+  document.getElementById('exam-informe-alumno').style.display = 'none';
+  renderPanelExamen();
+  document.getElementById('exam-panel-modal').style.display = 'block';
+}
+
+function cerrarPanelExamen() {
+  document.getElementById('exam-panel-modal').style.display = 'none';
+}
+
+function renderPanelExamen() {
+  if (!_examPanelActual) return;
+  const entregas = getEntregasExamen(_examPanelActual.id);
+  const claseKey = _examPanelActual.clase === '5' ? '5º Primaria' : '6º Primaria';
+  const totalAlumnos = (CLASES[claseKey] || []).length || '?';
+  const entregaron = entregas.length;
+  const pendientes = typeof totalAlumnos === 'number' ? Math.max(0, totalAlumnos - entregaron) : '?';
+  const media = entregaron > 0
+    ? (entregas.reduce((s, e) => s + (e.nota || 0), 0) / entregaron).toFixed(1)
+    : '—';
+
+  document.getElementById('exam-panel-stats').innerHTML = `
+    <div class="card" style="flex:1;min-width:80px;text-align:center;padding:12px 8px;border:1.5px solid var(--border)">
+      <div style="font-family:'Baloo 2',cursive;font-size:1.7rem;color:var(--accent2)">${entregaron}</div>
+      <div style="font-size:0.73rem;color:var(--muted);font-weight:700">ENTREGADOS</div>
+    </div>
+    <div class="card" style="flex:1;min-width:80px;text-align:center;padding:12px 8px;border:1.5px solid var(--border)">
+      <div style="font-family:'Baloo 2',cursive;font-size:1.7rem;color:var(--accent)">${pendientes}</div>
+      <div style="font-size:0.73rem;color:var(--muted);font-weight:700">PENDIENTES</div>
+    </div>
+    <div class="card" style="flex:1;min-width:80px;text-align:center;padding:12px 8px;border:1.5px solid var(--border)">
+      <div style="font-family:'Baloo 2',cursive;font-size:1.7rem;color:var(--primary)">${media}</div>
+      <div style="font-size:0.73rem;color:var(--muted);font-weight:700">NOTA MEDIA</div>
+    </div>
+    <button class="btn" onclick="refrescarPanelExamen()" style="font-size:0.82rem;padding:8px 14px;align-self:center;background:#e0e7ff;color:var(--primary)">🔄 Actualizar</button>
+    <button class="btn btn-primary" onclick="descargarTodosInformes()" style="font-size:0.82rem;padding:8px 14px;align-self:center">⬇️ Todos los informes</button>
+  `;
+
+  const lista = document.getElementById('exam-panel-lista');
+  if (!entregaron) {
+    lista.innerHTML = '<p style="color:var(--muted);text-align:center;padding:24px">Aún no hay entregas.</p>';
+    return;
+  }
+  const sorted = [...entregas].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  window._examEntregasSorted = sorted;
+  lista.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:0.87rem;margin-top:4px">
+      <thead><tr style="background:#eef2ff">
+        <th style="padding:8px 10px;text-align:left;color:var(--primary);font-weight:800">Alumno/a</th>
+        <th style="padding:8px 10px;text-align:left;color:var(--primary);font-weight:800">Clase</th>
+        <th style="padding:8px 10px;text-align:center;color:var(--primary);font-weight:800">Nota</th>
+        <th style="padding:8px 10px;text-align:center;color:var(--primary);font-weight:800">Hora</th>
+        <th style="padding:8px 10px;text-align:center;color:var(--primary);font-weight:800">Acciones</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.map((e, idx) => {
+          const pillCls = e.nota >= 7 ? 'high' : e.nota >= 5 ? 'mid-pill' : 'low';
+          const notaFmt = typeof e.nota === 'number' ? (e.nota % 1 === 0 ? e.nota : e.nota.toFixed(1)) : e.nota;
+          return `<tr style="border-bottom:1px solid #e0e7ff">
+            <td style="padding:8px 10px;font-weight:700">${escHtml(e.nombre)}</td>
+            <td style="padding:8px 10px;color:var(--muted)">${escHtml(e.clase)}</td>
+            <td style="padding:8px 10px;text-align:center"><span class="score-pill ${pillCls}">${notaFmt}</span></td>
+            <td style="padding:8px 10px;text-align:center;color:var(--muted);font-size:0.8rem">${escHtml(e.hora || '')}</td>
+            <td style="padding:8px 10px;text-align:center;display:flex;gap:6px;justify-content:center">
+              <button onclick="verInformeAlumno(${idx})" style="background:#ede9fe;color:#5b21b6;border:none;border-radius:8px;padding:4px 10px;font-weight:700;cursor:pointer;font-size:0.8rem">👁 Ver</button>
+              <button onclick="descargarInformeAlumnoIdx(${idx})" style="background:#e0e7ff;color:var(--primary);border:none;border-radius:8px;padding:4px 10px;font-weight:700;cursor:pointer;font-size:0.8rem">⬇️</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function refrescarPanelExamen() {
+  renderPanelExamen();
+  showToast('🔄 Panel actualizado');
+}
+
+// ─── INFORME INDIVIDUAL ─────────────────────────────────────────────────────
+function verInformeAlumno(idx) {
+  const entrega = (window._examEntregasSorted || [])[idx];
+  if (!entrega) return;
+  _examInformeData = entrega;
+  document.getElementById('exam-panel-lista').style.display  = 'none';
+  document.getElementById('exam-panel-stats').style.display  = 'none';
+  document.getElementById('exam-informe-alumno').style.display = 'block';
+  document.getElementById('exam-informe-nombre').textContent = entrega.nombre + ' · ' + entrega.clase;
+
+  const nota = typeof entrega.nota === 'number' ? (entrega.nota % 1 === 0 ? entrega.nota : entrega.nota.toFixed(1)) : entrega.nota;
+  const pillCls  = entrega.nota >= 7 ? 'high' : entrega.nota >= 5 ? 'mid-pill' : 'low';
+  const pillText = entrega.nota >= 7 ? '✅ Aprobado' : entrega.nota >= 5 ? '✔ Aprobado justo' : '❌ Suspenso';
+
+  document.getElementById('exam-informe-contenido').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding:12px 16px;background:#f8f9ff;border-radius:10px;border:1.5px solid #e0e7ff">
+      <span style="font-family:'Baloo 2',cursive;font-size:2.2rem;font-weight:800;color:var(--primary)">${nota}</span>
+      <div>
+        <div style="font-size:0.78rem;color:#6b7280;font-weight:700">NOTA FINAL · sobre 10</div>
+        <span class="score-pill ${pillCls}">${pillText}</span>
+      </div>
+      <span style="color:var(--muted);font-size:0.8rem;margin-left:auto">${escHtml(entrega.hora||'')} · ${new Date(entrega.fecha||'').toLocaleDateString('es-ES')}</span>
+    </div>
+    ${(entrega.respuestas || []).map((r, i) => {
+      const pct = r.puntosMax > 0 ? r.puntuacion / r.puntosMax : 0;
+      const col = pct >= 0.8 ? '#10b981' : pct >= 0.5 ? '#f59e0b' : '#ef4444';
+      const bg  = pct >= 0.8 ? '#f0fdf4' : pct >= 0.5 ? '#fffbeb' : '#fff5f5';
+      const ico = pct >= 0.8 ? '✅' : pct >= 0.5 ? '🟡' : '❌';
+      return `<div class="card" style="margin-bottom:12px;padding:14px 16px;border-left:4px solid ${col};background:${bg}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span>${ico}</span>
+          <span style="font-weight:800;flex:1;font-size:0.92rem">${i+1}. ${escHtml(r.enunciado)}</span>
+          <span style="font-weight:800;color:${col}">${r.puntuacion}/${r.puntosMax} pts</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.7);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:0.88rem;color:#374151">
+          <span style="font-size:0.73rem;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Respuesta del alumno/a:</span>
+          ${escHtml(r.respuestaAlumno || '(sin respuesta)')}
+        </div>
+        ${r.bienHecho ? `<div style="font-size:0.85rem;margin-bottom:4px"><span style="color:#15803d;font-weight:700">✔ Bien: </span>${escHtml(r.bienHecho)}</div>` : ''}
+        ${r.falto     ? `<div style="font-size:0.85rem;margin-bottom:4px"><span style="color:#b45309;font-weight:700">⚠ Faltó: </span>${escHtml(r.falto)}</div>` : ''}
+        ${r.mejora    ? `<div style="font-size:0.83rem;background:#eff6ff;padding:6px 10px;border-radius:8px;color:#1e40af"><span style="font-weight:700">💡 </span>${escHtml(r.mejora)}</div>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
+function volverListaExamen() {
+  document.getElementById('exam-informe-alumno').style.display = 'none';
+  document.getElementById('exam-panel-lista').style.display   = 'block';
+  document.getElementById('exam-panel-stats').style.display   = 'flex';
+}
+
+// ─── GENERACIÓN HTML INFORME ────────────────────────────────────────────────
+function _htmlInforme(entrega, titulo) {
+  const nota    = typeof entrega.nota === 'number' ? (entrega.nota % 1 === 0 ? entrega.nota : entrega.nota.toFixed(1)) : entrega.nota;
+  const pillCss = entrega.nota >= 7
+    ? 'color:#065f46;background:#d1fae5'
+    : entrega.nota >= 5 ? 'color:#92400e;background:#fef3c7' : 'color:#991b1b;background:#fee2e2';
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const pregsHtml = (entrega.respuestas || []).map((r, i) => {
+    const pct = r.puntosMax > 0 ? r.puntuacion / r.puntosMax : 0;
+    const col = pct >= 0.8 ? '#10b981' : pct >= 0.5 ? '#f59e0b' : '#ef4444';
+    const bg  = pct >= 0.8 ? '#f0fdf4' : pct >= 0.5 ? '#fffbeb' : '#fff5f5';
+    const ico = pct >= 0.8 ? '✅' : pct >= 0.5 ? '🟡' : '❌';
+    return `<div style="margin-bottom:14px;padding:14px 16px;border-radius:10px;border-left:4px solid ${col};background:${bg};border:1.5px solid ${col}33">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span>${ico}</span><strong style="flex:1;font-size:0.93rem">${i+1}. ${esc(r.enunciado)}</strong>
+        <strong style="color:${col}">${r.puntuacion}/${r.puntosMax} pts</strong>
+      </div>
+      <div style="background:rgba(255,255,255,0.7);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:0.9rem;color:#374151">
+        <span style="font-size:0.72rem;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Respuesta:</span>
+        ${esc(r.respuestaAlumno || '(sin respuesta)')}
+      </div>
+      ${r.bienHecho ? `<p style="font-size:0.87rem;margin-bottom:4px"><strong style="color:#15803d">✔ Bien:</strong> ${esc(r.bienHecho)}</p>` : ''}
+      ${r.falto     ? `<p style="font-size:0.87rem;margin-bottom:4px"><strong style="color:#b45309">⚠ Faltó:</strong> ${esc(r.falto)}</p>` : ''}
+      ${r.mejora    ? `<div style="font-size:0.85rem;background:#eff6ff;padding:8px 10px;border-radius:8px;color:#1e40af"><strong>💡</strong> ${esc(r.mejora)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html lang="es"><head>
+    <meta charset="UTF-8">
+    <title>Informe — ${esc(entrega.nombre)} — ${esc(titulo)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif;color:#1e1b4b;padding:24px;max-width:680px;margin:0 auto}</style>
+  </head><body>
+    <div style="background:#4f46e5;color:#fff;padding:16px 24px;border-radius:12px 12px 0 0">
+      <h2 style="font-family:'Baloo 2',cursive;font-size:1.15rem">📝 ${esc(titulo)}</h2>
+      <div style="font-size:0.83rem;opacity:0.9;margin-top:4px">${esc(entrega.nombre)} · ${esc(entrega.clase)} · ${new Date(entrega.fecha||'').toLocaleDateString('es-ES')}</div>
+    </div>
+    <div style="padding:20px 24px;border:1px solid #e0e7ff;border-top:none;border-radius:0 0 12px 12px">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px;padding:12px 16px;background:#f8f9ff;border-radius:10px;border:1.5px solid #e0e7ff">
+        <span style="font-family:'Baloo 2',cursive;font-size:2.2rem;font-weight:800;color:#4f46e5">${nota}</span>
+        <div>
+          <div style="font-size:0.75rem;color:#6b7280;font-weight:700">NOTA FINAL · sobre 10</div>
+          <span style="display:inline-block;padding:3px 12px;border-radius:20px;font-weight:800;font-size:0.83rem;${pillCss}">${nota >= 7 ? '✅ Aprobado' : nota >= 5 ? '✔ Aprobado' : '❌ Suspenso'}</span>
+        </div>
+      </div>
+      ${pregsHtml}
+    </div>
+    <div style="text-align:center;color:#9ca3af;font-size:0.75rem;padding:14px 0">© ${new Date().getFullYear()} Rafael de la Haza · Controles Profe Rafa</div>
+  </body></html>`;
+}
+
+function descargarInformeAlumnoIdx(idx) {
+  const entrega = (window._examEntregasSorted || [])[idx];
+  if (!entrega || !_examPanelActual) return;
+  _descargarHtmlInforme(entrega, _examPanelActual.titulo || 'Examen');
+}
+
+function descargarInformeAlumno() {
+  if (!_examInformeData || !_examPanelActual) return;
+  _descargarHtmlInforme(_examInformeData, _examPanelActual.titulo || 'Examen');
+}
+
+function _descargarHtmlInforme(entrega, titulo) {
+  const html = _htmlInforme(entrega, titulo);
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const safe = s => s.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]/g, '').trim();
+  const prefix = _examPanelActual?.clase === '5' ? '5to_' : _examPanelActual?.clase === '6' ? '6to_' : '';
+  a.href = url; a.download = `${prefix}Informe_${safe(entrega.nombre||'alumno')}_${safe(titulo)}.html`;
+  a.click();
+}
+
+function descargarTodosInformes() {
+  if (!_examPanelActual) return;
+  const entregas = getEntregasExamen(_examPanelActual.id);
+  if (!entregas.length) { showToast('⚠️ No hay entregas aún'); return; }
+  const titulo = _examPanelActual.titulo || 'Examen';
+  const sorted = [...entregas].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  const media  = (sorted.reduce((s, e) => s + (e.nota || 0), 0) / sorted.length).toFixed(1);
+  const esc    = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cuerpo = sorted.map(e => _htmlInforme(e, titulo)).join('<div style="page-break-after:always;height:36px"></div>');
+  const html   = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    <title>Informes — ${esc(titulo)}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Nunito',sans-serif;color:#1e1b4b}</style>
+  </head><body>
+    <div style="background:#4f46e5;color:#fff;padding:20px 28px;margin-bottom:28px">
+      <h1 style="font-family:'Baloo 2',cursive;font-size:1.35rem">📋 Informes — ${esc(titulo)}</h1>
+      <div style="font-size:0.85rem;opacity:0.9;margin-top:4px">${sorted.length} alumnos · Nota media: ${media} · ${new Date().toLocaleDateString('es-ES')}</div>
+    </div>
+    <div style="max-width:680px;margin:0 auto;padding:0 20px">${cuerpo}</div>
+  </body></html>`;
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const prefix = _examPanelActual?.clase === '5' ? '5to_' : _examPanelActual?.clase === '6' ? '6to_' : '';
+  a.href = url; a.download = `${prefix}Informes_${titulo.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s]/g,'').trim()}.html`;
+  a.click();
+}
+
+// ─── Helper: ocultar todas las pantallas del flujo de examen ───────────────
+function ocultarTodasPantallasExamen() {
+  ['exam-student-screen','exam-correcting-screen','exam-results-screen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  ['exam-identify-screen','exam-questions-screen'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+async function exCargarGuiaArchivo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('ex-guia-file-nombre').textContent = file.name;
+  document.getElementById('ex-guia-cargando').style.display = 'block';
+  document.getElementById('ex-guia-texto').value = '';
+
+  try {
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Error leyendo el archivo'));
+      r.readAsDataURL(file);
+    });
+
+    const isPdf = file.type === 'application/pdf';
+    const mediaType = isPdf ? 'application/pdf' : file.type;
+
+    const body = {
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: isPdf ? 'document' : 'image',
+            source: { type: 'base64', media_type: mediaType, data: base64 }
+          },
+          {
+            type: 'text',
+            text: 'Extrae todo el texto de este documento de forma fiel y completa. Es material didáctico de un libro de texto o apuntes de primaria. Devuelve solo el texto extraído, sin comentarios ni explicaciones.'
+          }
+        ]
+      }]
+    };
+
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _rawBody: body })
+    });
+
+    if (!resp.ok) throw new Error('Error en la respuesta del servidor');
+    const data = await resp.json();
+    const texto = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    document.getElementById('ex-guia-texto').value = texto || '(No se pudo extraer texto automáticamente — puedes pegarlo manualmente)';
+  } catch (err) {
+    document.getElementById('ex-guia-texto').value = '';
+    document.getElementById('ex-guia-file-nombre').textContent = file.name + ' — Error al extraer texto. Pégalo manualmente.';
+    console.error('exCargarGuiaArchivo:', err);
+  } finally {
+    document.getElementById('ex-guia-cargando').style.display = 'none';
+  }
+}
+
+// ── Helper: detecta tipo de archivo y extrae texto si es Word/TXT ─────────
+async function exLeerArchivo(file) {
+  const isWord = file.name.match(/\.docx?$/i);
+  const isTxt  = file.name.match(/\.txt$/i);
+  const isPdf  = file.type === 'application/pdf';
+
+  if (isTxt) {
+    // TXT: leer como texto plano
+    const texto = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = () => rej(new Error('Error leyendo TXT'));
+      r.readAsText(file, 'UTF-8');
+    });
+    return { tipo: 'texto', texto };
+  }
+
+  if (isWord) {
+    // DOCX: extraer texto con mammoth (cargado desde CDN)
+    if (typeof mammoth === 'undefined') {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return { tipo: 'texto', texto: result.value };
+  }
+
+  // PDF o imagen: base64
+  const base64 = await new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Error leyendo archivo'));
+    r.readAsDataURL(file);
+  });
+  const mediaType = isPdf ? 'application/pdf' : file.type;
+  return { tipo: isPdf ? 'pdf' : 'imagen', base64, mediaType };
+}
+
+// ── Carga de la guía del profe ────────────────────────────────────────────
+async function exCargarGuiaArchivo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('ex-guia-file-nombre').textContent = file.name;
+  document.getElementById('ex-guia-cargando').style.display = 'block';
+  document.getElementById('ex-guia-texto').value = '';
+
+  try {
+    const leido = await exLeerArchivo(file);
+
+    if (leido.tipo === 'texto') {
+      // TXT o Word: texto ya extraído, no hace falta llamar a la IA
+      document.getElementById('ex-guia-texto').value = leido.texto || '(Documento vacío)';
+    } else {
+      // PDF o imagen: pedir a la IA que extraiga el texto
+      const isPdf = leido.tipo === 'pdf';
+      const body = {
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: isPdf ? 'document' : 'image',
+              source: { type: 'base64', media_type: leido.mediaType, data: leido.base64 }
+            },
+            { type: 'text', text: 'Extrae todo el texto de este documento de forma fiel y completa. Es material didáctico de un libro de texto o apuntes de primaria. Devuelve solo el texto extraído, sin comentarios ni explicaciones.' }
+          ]
+        }]
+      };
+      const resp = await fetch('/.netlify/functions/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _rawBody: body })
+      });
+      if (!resp.ok) throw new Error('Error servidor');
+      const data = await resp.json();
+      const texto = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+      document.getElementById('ex-guia-texto').value = texto || '(No se pudo extraer texto — puedes pegarlo manualmente)';
+    }
+  } catch (err) {
+    document.getElementById('ex-guia-texto').value = '';
+    document.getElementById('ex-guia-file-nombre').textContent = file.name + ' — Error al extraer texto. Pégalo manualmente.';
+    console.error('exCargarGuiaArchivo:', err);
+  } finally {
+    document.getElementById('ex-guia-cargando').style.display = 'none';
+  }
+}
+
+// ── Carga del examen físico (PDF/Word/imagen) ─────────────────────────────
+async function exCargarExamenArchivo(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('ex-examen-file-nombre').textContent = file.name;
+  document.getElementById('ex-examen-cargando').style.display = 'block';
+  document.getElementById('ex-analizar-wrap').style.display = 'none';
+  document.getElementById('ex-analisis-resultado').style.display = 'none';
+  document.getElementById('ex-analisis-resultado').innerHTML = '';
+
+  try {
+    const leido = await exLeerArchivo(file);
+
+    if (leido.tipo === 'texto') {
+      // TXT o Word: guardamos el texto para mandarlo a la IA como texto plano
+      _exArchivoBase64    = null;
+      _exArchivoMediaType = null;
+      _exArchivoTexto     = leido.texto;
+    } else {
+      _exArchivoBase64    = leido.base64;
+      _exArchivoMediaType = leido.mediaType;
+      _exArchivoTexto     = null;
+    }
+    document.getElementById('ex-analizar-wrap').style.display = 'block';
+  } catch (err) {
+    document.getElementById('ex-examen-file-nombre').textContent = file.name + ' — Error al leer el archivo.';
+    _exArchivoBase64 = null; _exArchivoMediaType = null; _exArchivoTexto = null;
+    console.error('exCargarExamenArchivo:', err);
+  } finally {
+    document.getElementById('ex-examen-cargando').style.display = 'none';
+  }
+}
+
+// ── Análisis IA del examen físico ─────────────────────────────────────────
+async function exAnalizarConIA() {
+  if (!_exArchivoBase64 && !_exArchivoTexto) return;
+
+  const btnAnalizar = document.querySelector('#ex-analizar-wrap button');
+  btnAnalizar.disabled = true;
+  btnAnalizar.textContent = '⏳ Analizando…';
+
+  const resDiv = document.getElementById('ex-analisis-resultado');
+  resDiv.style.display = 'block';
+  resDiv.innerHTML = `
+    <div class="card" style="padding:20px;text-align:center;border:1.5px solid var(--border)">
+      <div class="loading-dots" style="justify-content:center"><span></span><span></span><span></span></div>
+      <p style="color:var(--muted);font-size:0.9rem;margin-top:12px">La IA está leyendo tu examen y analizando cada pregunta…</p>
+    </div>`;
+
+  const criterios = document.getElementById('ex-criterios').value.trim();
+  const guia      = document.getElementById('ex-guia-texto').value.trim();
+
+  const contextoExtra = [
+    criterios ? `CRITERIOS DE EVALUACIÓN:\n${criterios}` : '',
+    guia      ? `CONTENIDO DEL TEMA (guía del profe):\n${guia.slice(0, 3000)}` : ''
+  ].filter(Boolean).join('\n\n');
+
+  const promptSistema = `Eres un asistente experto en digitalización de exámenes de educación primaria española (5º-6º). 
+Tu tarea es analizar un examen en papel y clasificar cada pregunta según si se puede digitalizar para que los alumnos la hagan en el ordenador con corrección automática por IA.
+
+CRITERIOS DE DIGITALIZACIÓN:
+✅ DIGITALIZABLE tal cual: preguntas de desarrollo/respuesta larga, preguntas cortas de respuesta escrita, verdadero/falso, relacionar con texto, completar frases, definir conceptos, explicar procesos, ordenar elementos con texto, preguntas de traducción.
+⚠️ NECESITA ADAPTACIÓN: preguntas que piden dibujar, señalar en imagen, completar esquemas visuales, colorear mapas. Se adaptan manteniendo lo que evalúan (ej: "Dibuja el aparato digestivo" → "Describe las partes del aparato digestivo y su función").
+❌ NO DIGITALIZABLE: ejercicios de audio (francés/inglés), cálculo matemático con procedimiento visual, dictados en papel.
+
+FORMATO DE RESPUESTA — devuelve SOLO JSON válido, sin markdown, con esta estructura exacta:
+{
+  "tema": "nombre del tema detectado (ej: Tema 3 — El sistema solar)",
+  "titulo": "título breve para el examen (ej: Examen Tema 3 — El sistema solar)",
+  "resumen": "2-3 frases resumiendo el examen y el porcentaje digitalizable",
+  "preguntas": [
+    {
+      "num": 1,
+      "enunciado_original": "texto exacto de la pregunta",
+      "tipo": "digitalizable" | "adaptacion" | "no_digitalizable",
+      "razon": "explicación breve de por qué",
+      "enunciado_adaptado": "nueva redacción si tipo=adaptacion, si no null",
+      "puntos": 2
+    }
+  ]
+}`;
+
+  const promptUsuario = `${contextoExtra ? contextoExtra + '\n\n---\n\n' : ''}Analiza este examen y devuelve el JSON solicitado.`;
+
+  try {
+    // Construir el contenido del mensaje según el tipo de archivo
+    let contenidoMensaje;
+    if (_exArchivoTexto) {
+      // Word o TXT: mandar como texto plano
+      contenidoMensaje = [
+        { type: 'text', text: `EXAMEN A ANALIZAR:\n\n${_exArchivoTexto}\n\n---\n\n${promptUsuario}` }
+      ];
+    } else {
+      // PDF o imagen: mandar como bloque binario
+      const isPdf = _exArchivoMediaType === 'application/pdf';
+      contenidoMensaje = [
+        {
+          type: isPdf ? 'document' : 'image',
+          source: { type: 'base64', media_type: _exArchivoMediaType, data: _exArchivoBase64 }
+        },
+        { type: 'text', text: promptUsuario }
+      ];
+    }
+
+    const body = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 3000,
+      system: promptSistema,
+      messages: [{ role: 'user', content: contenidoMensaje }]
+    };
+
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _rawBody: body })
+    });
+    if (!resp.ok) throw new Error('Error servidor');
+    const data = await resp.json();
+    const raw = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const analisis = JSON.parse(clean);
+    // Autorrellenar tema y título si los campos están vacíos
+    if (analisis.tema) {
+      const campoTema = document.getElementById('ex-tema');
+      if (!campoTema.value.trim()) campoTema.value = analisis.tema;
+    }
+    if (analisis.titulo) {
+      const campoTitulo = document.getElementById('ex-titulo');
+      if (!campoTitulo.value.trim()) campoTitulo.value = analisis.titulo;
+    }
+    exMostrarAnalisis(analisis);
+  } catch (err) {
+    resDiv.innerHTML = `<div class="card" style="padding:16px;border:1.5px solid #fca5a5;background:#fff5f5;color:#b91c1c">
+      ❌ Error al analizar el examen. Comprueba que el archivo se subió correctamente e inténtalo de nuevo.
+    </div>`;
+    console.error('exAnalizarConIA:', err);
+  } finally {
+    btnAnalizar.disabled = false;
+    btnAnalizar.textContent = '🔍 Analizar con IA — ver qué se puede digitalizar';
+  }
+}
+
+// ── Renderiza el resultado del análisis ───────────────────────────────────
+function exMostrarAnalisis(analisis) {
+  const resDiv = document.getElementById('ex-analisis-resultado');
+  const total  = analisis.preguntas.length;
+  const nDig   = analisis.preguntas.filter(p => p.tipo === 'digitalizable').length;
+  const nAdap  = analisis.preguntas.filter(p => p.tipo === 'adaptacion').length;
+  const nNo    = analisis.preguntas.filter(p => p.tipo === 'no_digitalizable').length;
+
+  const colorTipo = { digitalizable: '#16a34a', adaptacion: '#d97706', no_digitalizable: '#dc2626' };
+  const iconTipo  = { digitalizable: '✅', adaptacion: '⚠️', no_digitalizable: '❌' };
+  const labelTipo = { digitalizable: 'Digitalizable', adaptacion: 'Necesita adaptación', no_digitalizable: 'No digitalizable' };
+
+  const filasPreguntas = analisis.preguntas.map(p => `
+    <div class="card" style="margin-bottom:10px;padding:14px;border-left:4px solid ${colorTipo[p.tipo]}">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:1.1rem;flex-shrink:0">${iconTipo[p.tipo]}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <span style="font-weight:800;font-size:0.88rem">Pregunta ${p.num}</span>
+            <span style="font-size:0.75rem;font-weight:700;padding:2px 8px;border-radius:20px;background:${colorTipo[p.tipo]}22;color:${colorTipo[p.tipo]}">${labelTipo[p.tipo]}</span>
+            <span style="font-size:0.78rem;color:var(--muted);margin-left:auto">${p.puntos} pts</span>
+          </div>
+          <div style="font-size:0.88rem;margin-bottom:4px"><strong>Original:</strong> ${p.enunciado_original}</div>
+          ${p.tipo === 'adaptacion' ? `<div style="font-size:0.88rem;color:#92400e;background:#fef3c7;padding:6px 10px;border-radius:8px;margin-top:6px">✏️ <strong>Adaptación propuesta:</strong> ${p.enunciado_adaptado}</div>` : ''}
+          <div style="font-size:0.8rem;color:var(--muted);margin-top:4px">💬 ${p.razon}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  resDiv.innerHTML = `
+    <div class="card" style="margin-bottom:12px;padding:16px;background:#f0f9ff;border:1.5px solid #bae6fd">
+      <div style="font-weight:800;font-size:0.95rem;margin-bottom:6px">📊 Resumen del análisis</div>
+      <p style="font-size:0.88rem;margin:0 0 10px;color:#1e40af">${analisis.resumen}</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <span style="font-size:0.83rem;font-weight:700;color:#16a34a">✅ Digitalizables: ${nDig}</span>
+        <span style="font-size:0.83rem;font-weight:700;color:#d97706">⚠️ Con adaptación: ${nAdap}</span>
+        <span style="font-size:0.83rem;font-weight:700;color:#dc2626">❌ No digitalizables: ${nNo}</span>
+        <span style="font-size:0.83rem;color:var(--muted)">Total: ${total}</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">${filasPreguntas}</div>
+
+    ${(nDig + nAdap) > 0 ? `
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <p style="font-size:0.82rem;color:var(--muted);align-self:center;flex:1;min-width:180px">
+        Se añadirán ${nDig + nAdap} pregunta(s) al editor. Las no digitalizables se omiten.
+      </p>
+      <button class="btn btn-primary" onclick="exImportarDesdeAnalisis(${JSON.stringify(analisis).replace(/'/g, "&#39;")})" style="font-size:0.9rem;padding:10px 20px">
+        ✅ Usar estas preguntas → ir al editor
+      </button>
+    </div>` : `<p style="color:var(--danger);font-weight:700;text-align:center">Ninguna pregunta es digitalizable en este examen.</p>`}
+  `;
+}
+
+// ── Importa las preguntas aprobadas al editor ─────────────────────────────
+function exImportarDesdeAnalisis(analisis) {
+  const usables = analisis.preguntas.filter(p => p.tipo !== 'no_digitalizable');
+  _exPreguntasTemp = usables.map(p => ({
+    enunciado: p.tipo === 'adaptacion' ? p.enunciado_adaptado : p.enunciado_original,
+    criterios: '',
+    puntos: p.puntos || 2
+  }));
+  renderExPreguntas();
+  document.getElementById('ex-preguntas-lista').scrollIntoView({ behavior: 'smooth' });
+}
 </script>
 </body>
+<!-- ═══════════════ EXAM STUDENT SCREEN ═══════════════ -->
+<div id="exam-student-screen" style="display:none;padding:24px;max-width:720px;margin:0 auto">
+
+  <!-- Identificación -->
+  <div id="exam-identify-screen" style="display:none">
+    <div class="card" style="text-align:center;padding:40px 32px">
+      <div style="font-size:2.5rem;margin-bottom:12px">📝</div>
+      <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:6px" id="exam-id-title">Examen</h2>
+      <p style="color:var(--muted);font-size:0.92rem;margin-bottom:24px" id="exam-id-subtitle"></p>
+      <div style="max-width:360px;margin:0 auto;text-align:left">
+        <label style="font-weight:700;margin-bottom:6px;display:block">Tu clase</label>
+        <select id="exam-id-clase" class="select-input" style="width:100%;margin-bottom:14px">
+          <option value="">— Selecciona tu clase —</option>
+          <option value="5º Primaria">5º Primaria</option>
+          <option value="6º Primaria">6º Primaria</option>
+        </select>
+        <label style="font-weight:700;margin-bottom:6px;display:block">Tu nombre</label>
+        <select id="exam-id-nombre" class="select-input" style="width:100%;margin-bottom:24px">
+          <option value="">— Primero elige tu clase —</option>
+        </select>
+        <button class="btn btn-primary" onclick="iniciarExamenAlumno()" style="width:100%;font-size:1rem;padding:14px">▶ Empezar el examen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preguntas -->
+  <div id="exam-questions-screen" style="display:none">
+    <div style="background:var(--primary);color:#fff;border-radius:14px 14px 0 0;padding:16px 24px;display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-family:'Baloo 2',cursive;font-size:1.1rem;font-weight:800" id="exam-q-title"></div>
+        <div style="font-size:0.82rem;opacity:0.85" id="exam-q-meta"></div>
+      </div>
+    </div>
+    <div id="exam-questions-list" style="margin-top:0"></div>
+    <div style="padding:20px 0;text-align:center">
+      <button class="btn btn-primary" onclick="entregarExamen()" style="font-size:1.05rem;padding:14px 36px;min-width:200px">
+        📤 Entregar examen
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════ EXAM CORRECTING SCREEN ═══════════════ -->
+<div id="exam-correcting-screen" style="display:none;padding:32px;max-width:680px;margin:0 auto">
+  <div class="card" style="text-align:center;padding:48px 32px">
+    <div style="font-size:3rem;margin-bottom:16px">🔍</div>
+    <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:12px">Corrigiendo tu examen…</h2>
+    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:24px">La IA está leyendo tus respuestas. Un momento.</p>
+    <div class="loading-dots" style="justify-content:center"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<!-- ═══════════════ EXAM RESULTS SCREEN ═══════════════ -->
+<div id="exam-results-screen" style="display:none;padding:24px;max-width:720px;margin:0 auto">
+  <!-- Cabecera sin nota -->
+  <div class="card" style="text-align:center;margin-bottom:16px;padding:28px 24px">
+    <div style="font-size:3rem;margin-bottom:12px">📬</div>
+    <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:8px">Examen entregado</h2>
+    <p id="exam-score-sub" style="color:var(--muted);font-size:0.95rem;margin-bottom:14px"></p>
+    <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:0.9rem;color:#92400e;font-weight:700;margin-bottom:18px">
+      ⏳ El profesor/a revisará la corrección y te comunicará la nota. Guarda este documento para poder revisarlo mañana.
+    </div>
+    <button onclick="descargarResumenAlumno()" class="btn btn-primary" style="font-size:0.95rem;padding:12px 28px">
+      💾 Guardar mis respuestas y correcciones
+    </button>
+  </div>
+
+  <!-- Feedback por pregunta (sin puntuación) -->
+  <div style="font-family:'Baloo 2',cursive;font-size:1rem;color:var(--primary);font-weight:800;margin-bottom:12px">
+    📝 Revisión de tu examen
+  </div>
+  <div id="exam-review-cards"></div>
+  <div style="text-align:center;color:var(--muted);font-size:0.83rem;padding:16px 0 8px">
+    ✅ Tus respuestas han sido registradas.
+  </div>
+</div>
+
+<!-- ═══════════════ EXAM PANEL MODAL (profe) ═══════════════ -->
+<div id="exam-panel-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:2000;padding:20px;overflow-y:auto">
+  <div style="background:#fff;border-radius:16px;max-width:840px;margin:0 auto;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.22)">
+    <div style="background:var(--primary);color:#fff;padding:16px 24px;display:flex;align-items:center;gap:12px">
+      <h3 style="font-family:'Baloo 2',cursive;font-size:1.1rem;margin:0;flex:1" id="exam-panel-title">Panel del examen</h3>
+      <button onclick="cerrarPanelExamen()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer">✕ Cerrar</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div id="exam-panel-stats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
+      <div id="exam-panel-lista"></div>
+      <!-- Informe individual -->
+      <div id="exam-informe-alumno" style="display:none;border-top:2px solid var(--border);padding-top:16px;margin-top:4px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <button onclick="volverListaExamen()" style="background:none;border:none;color:var(--primary);font-weight:700;cursor:pointer;font-size:0.9rem">← Volver a la lista</button>
+          <span id="exam-informe-nombre" style="font-weight:800;font-size:1rem;flex:1"></span>
+          <button onclick="descargarInformeAlumno()" class="btn btn-primary" style="font-size:0.82rem;padding:7px 16px">⬇️ Descargar informe</button>
+        </div>
+        <div id="exam-informe-contenido"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer style="text-align:center;padding:18px 24px;font-family:'Nunito',sans-serif;font-size:0.82rem;color:#9ca3af;background:#f0f4ff;border-top:1.5px solid #e0e7ff;margin-top:12px">
   © <span id="footer-year"></span> <strong style="color:#6b7280">Rafael de la Haza</strong> · Todos los derechos reservados
