@@ -684,6 +684,54 @@
   }
   .bank-item-link.visible { display: block; }
   .bank-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 0.93rem; }
+
+  /* ── FEEDBACK GLOBAL (Próximos pasos) ── */
+  #global-feedback-box {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border: 2.5px solid #60a5fa;
+    border-radius: 16px;
+    padding: 20px 22px;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  #global-feedback-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    border-radius: 16px 16px 0 0;
+  }
+  .global-fb-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .global-fb-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .global-fb-title {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #1d4ed8;
+  }
+  .global-fb-text {
+    font-size: 0.97rem;
+    font-weight: 600;
+    color: #1e3a5f;
+    line-height: 1.55;
+  }
+  .global-fb-skeleton {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+  .global-fb-skeleton .loading-dots { display: inline-flex; }
   .bank-folder {
     border: 1.5px solid var(--border);
     border-radius: 12px;
@@ -1923,6 +1971,7 @@
   </div>
   <div class="section-title">📝 Revisión de respuestas</div>
   <div id="review-cards"></div>
+  <div id="global-feedback-box" style="display:none"></div>
   <div style="text-align:center;padding:20px 0 8px">
     <button onclick="descargarControlAlumno()" class="btn btn-primary" style="font-size:0.95rem;padding:12px 28px;margin-bottom:12px">
       💾 Descargar mi control para repasar
@@ -2014,6 +2063,9 @@ function showView(v) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   // Ocultar también pantallas de examen al cambiar de pestaña
   ocultarTodasPantallasExamen();
+  // Restaurar siempre la visibilidad de la tab-bar al navegar
+  const tabBar = document.querySelector('.tab-bar');
+  if (tabBar) tabBar.style.visibility = '';
   if (v === 'teacher') {
     document.getElementById('teacher-view').style.display = 'block';
     document.getElementById('teacher-view').classList.add('active');
@@ -4381,9 +4433,17 @@ function submitQuiz() {
     let updatedReview = [...review];
     let updatedEarned = earnedPoints;
 
+    // ── Recopilar fallos (preguntas no perfectas) para el feedback global ──
+    const subject = currentQuiz.subject || currentQuiz.title || 'la asignatura';
+    const fallosAlumno = review
+      .map((r, i) => (!r.correct && questions[i]) ? questions[i].text.substring(0, 80) : null)
+      .filter(Boolean);
+    const fallosTexto = fallosAlumno.length > 0
+      ? fallosAlumno.map((f, n) => `${n + 1}. "${f}"`).join('; ')
+      : null;
+
     if (openToReview.length > 0) {
       try {
-        const subject = currentQuiz.subject || currentQuiz.title || 'la asignatura';
         // Build items: for translate, expand each failed pair as a separate item
         const aiItems = [];
         openToReview.forEach(({ q, i, r }) => {
@@ -4422,6 +4482,10 @@ function submitQuiz() {
           }
         });
 
+        const globalFeedbackInstructions = fallosTexto
+          ? `\n\nAdemás de los items, genera un campo "globalFeedback" de máximo 30 palabras como conclusión final para el alumno. Analiza estos fallos: ${fallosTexto}. Anímalo y dile concretamente qué conceptos debe repasar. Si todo está bien, felicítalo brevemente.`
+          : `\n\nAdemás de los items, genera un campo "globalFeedback" de máximo 30 palabras felicitando al alumno por su excelente resultado.`;
+
         const aiPrompt = `Eres un profesor corrector de primaria (5º-6º) de ${subject}. Evalúa cada respuesta con criterio MUY generoso y flexible, propio de primaria.
 
 CRITERIOS — aplica estos sin excepción:
@@ -4447,19 +4511,17 @@ ${aiItems.map((p, n) => {
   const defHint = p.type === 'definition' ? '\n   CRITERIO ESPECIAL DEFINICIÓN: usa estos 4 niveles exactos:\n   - correct (pts = maxPoints): explica el concepto correctamente aunque use otras palabras, incluye ejemplo correcto sin explicación, o captura la idea principal.\n   - partial_high (pts = maxPoints * 0.75): entiende la idea principal pero le falta un elemento importante o es demasiado vaga.\n   - partial_low (pts = maxPoints * 0.5): solo da un ejemplo sin explicar el concepto, o da una idea relacionada pero incompleta.\n   - wrong (pts = 0): vacía, completamente equivocada o sin relación con el concepto pedido.\n   Usa "partial" para partial_high y partial_low (indica el ratio en pts), y sé GENEROSO: ante la duda sube un nivel.' : '';
   return n+1 + '. [' + p.type + '] "' + (p.question||p.term) + '"\n   Respuesta correcta: ' + p.correctAnswer + '\n   Respuesta del alumno: "' + (p.studentAnswer || '–') + '"' + defHint;
 }).join('\n\n')}
+${globalFeedbackInstructions}
 
-Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alumno (máximo 15 palabras, sin explicaciones elaboradas):
-- CORRECTO: "Correcto. La respuesta era: [respuesta correcta]."
-- PARCIAL: "Casi. La respuesta correcta era: [respuesta correcta]."
-- INCORRECTO: "Incorrecto. La respuesta correcta era: [respuesta correcta]."
-[{"itemIdx": <posición en este array 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos para este ítem>, "feedback": "..."}]`;
+Responde SOLO con JSON válido con esta estructura exacta:
+{"items": [{"itemIdx": <posición 0-based>, "verdict": "correct"|"partial"|"wrong", "pts": <puntos>, "feedback": "<máx 15 palabras>"}], "globalFeedback": "<máx 30 palabras>"}`;
 
         const resp = await fetch('/.netlify/functions/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 800,
+            max_tokens: 1400,
             messages: [{ role: 'user', content: aiPrompt }]
           })
         });
@@ -4467,10 +4529,13 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
         if (resp.ok && data.content) {
           const text = data.content.map(c => c.text || '').join('');
           const clean = text.replace(/```json|```/g, '').trim();
-          const aiResults = JSON.parse(clean);
+          const aiParsed = JSON.parse(clean);
+
+          // Soportar {items, globalFeedback} (nuevo) y array plano (retrocompatibilidad)
+          const aiResults = Array.isArray(aiParsed) ? aiParsed : (aiParsed.items || []);
+          const globalFeedback = Array.isArray(aiParsed) ? null : (aiParsed.globalFeedback || null);
 
           // Reconstruct per-question results from per-item AI verdicts
-          // Group items back by question idx
           const byIdx = {};
           aiItems.forEach((item, n) => {
             const ar = aiResults.find(r => r.itemIdx === n);
@@ -4485,7 +4550,6 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
             if (!origR || !qEntry) return;
 
             if (qEntry.q.type === 'translate') {
-              // Recalculate translate score: previously matched pairs + newly AI-corrected ones
               const totalPairs = (qEntry.q.pairs || []).length;
               const alreadyCorrect = (qEntry.r.pairDetails || []).filter(pd => pd.matched).length;
               const aiCorrect = items.filter(x => x.ar.verdict === 'correct').length;
@@ -4495,7 +4559,6 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
               const oldPts = origR.pts || 0;
               if (newPts > oldPts) {
                 updatedEarned += (newPts - oldPts);
-                // Build updated pairDetails with AI verdicts merged in
                 const updatedPairDetails = (qEntry.r.pairDetails || []).map((pd, pi) => {
                   if (pd.matched) return { ...pd, matched: true };
                   const aiItem = items.find(x => x.item.pairIdx === pi);
@@ -4520,7 +4583,6 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
                 };
               }
             } else {
-              // short / fill: single item
               const ar = items[0]?.ar;
               if (!ar) return;
               const newPts = Math.min(ar.pts || 0, origR.maxPts);
@@ -4540,14 +4602,15 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
 
           const newRawScore = totalPoints > 0 ? (updatedEarned / totalPoints) * 10 : 0;
           const newScore = Math.round(newRawScore * 10) / 10;
+          const finalScore = newScore > score ? newScore : score;
           document.getElementById('correcting-screen').style.display = 'none';
-          showResults(newScore > score ? newScore : score, name, updatedReview, totalPoints);
+          showResults(finalScore, name, updatedReview, totalPoints, globalFeedback);
 
           fetch('/.netlify/functions/save-score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              name, cls, quiz: currentQuiz.title, score: newScore > score ? newScore : score,
+              name, cls, quiz: currentQuiz.title, score: finalScore,
               date: today, time: timeNow,
               tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
               blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
@@ -4561,9 +4624,10 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
       }
     }
 
-    // Sin preguntas abiertas o si falló la IA: ocultar pantalla de corrección y mostrar resultados exactos
+    // Sin preguntas abiertas (todo test/tf/match…) o si falló la IA:
+    // mostrar resultados y pedir globalFeedback aparte (llamada ligera)
     document.getElementById('correcting-screen').style.display = 'none';
-    showResults(score, name, review, totalPoints);
+    showResults(score, name, review, totalPoints, null);
     fetch('/.netlify/functions/save-score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4574,14 +4638,26 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
         review
       })
     }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
+
+    // Mostrar skeleton y pedir feedback en paralelo
+    showGlobalFeedbackSkeleton();
+    fetchGlobalFeedbackOnly(score, fallosTexto, subject);
   };
 
   saveAndReview();
 }
 
-function showResults(score, name, review, totalPoints) {
-  document.getElementById('student-view').style.display = 'none';
+function showResults(score, name, review, totalPoints, globalFeedback) {
+  // Ocultar TODAS las vistas antes de mostrar resultados
+  document.querySelectorAll('.view, #results-screen, #correcting-screen').forEach(el => {
+    el.style.display = 'none';
+    el.classList.remove('active');
+  });
   document.getElementById('correcting-screen').style.display = 'none';
+  // Ocultar barra de pestañas mientras el alumno ve sus resultados
+  const tabBar = document.querySelector('.tab-bar');
+  if (tabBar) tabBar.style.visibility = 'hidden';
+
   const rs = document.getElementById('results-screen');
   rs.style.display = 'block';
 
@@ -4806,14 +4882,26 @@ function showResults(score, name, review, totalPoints) {
         <div style="font-size:0.78rem;font-weight:700;color:${statusColor};margin-bottom:4px">${statusLabel}</div>
         ${questionBodyHtml}
         ${feedbackHtml}
-        ${r.aiReviewPending ? `<div id="ai-feedback-${i}" style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#f3f4f6;border:1.5px solid #e5e7eb;font-size:0.85rem;color:#6b7280">⏳ Revisando con IA…</div>` : ''}
+        ${r.aiReviewPending ? `<div id="ai-feedback-${i}" style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#f3f4f6;border:1.5px solid #e5e7eb;font-size:0.85rem;color:#6b7280">⏳ Revisando…</div>` : ''}
       </div>`;
   });
   if (score >= 7) launchConfetti();
+
+  // ── Feedback Global ──
+  const fbBox = document.getElementById('global-feedback-box');
+  if (fbBox) {
+    if (globalFeedback) {
+      renderGlobalFeedback(globalFeedback);
+    } else {
+      fbBox.style.display = 'none';
+    }
+  }
 }
 
 function backToStudent() {
   document.getElementById('results-screen').style.display = 'none';
+  const tabBar = document.querySelector('.tab-bar');
+  if (tabBar) tabBar.style.visibility = '';
   studentName = '';
   studentClass = '';
   showView('student');
@@ -4828,8 +4916,21 @@ function descargarControlAlumno() {
   const fecha = new Date().toLocaleDateString('es-ES');
   const clasePrefix = studentClass.includes('5') ? '5to_' : studentClass.includes('6') ? '6to_' : '';
 
-  // Recoger las tarjetas de revisión del DOM actual
   const reviewHTML = document.getElementById('review-cards')?.innerHTML || '';
+
+  // Recoger el feedback global si existe y está visible
+  const fbBox = document.getElementById('global-feedback-box');
+  const fbText = (fbBox && fbBox.style.display !== 'none')
+    ? (fbBox.querySelector('.global-fb-text')?.textContent?.trim() || '')
+    : '';
+  const globalFeedbackBlock = fbText ? `
+    <div style="margin-top:24px;padding:18px 20px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:2.5px solid #60a5fa;border-radius:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:1.4rem">👨‍🏫</span>
+        <span style="font-family:'Baloo 2',cursive;font-size:1rem;font-weight:800;color:#1d4ed8">📌 Próximos pasos — consejo de tu profe</span>
+      </div>
+      <div style="font-size:0.97rem;font-weight:600;color:#1e3a5f;line-height:1.6">${esc(fbText)}</div>
+    </div>` : '';
 
   const html = `<!DOCTYPE html><html lang="es"><head>
     <meta charset="UTF-8">
@@ -4859,6 +4960,7 @@ function descargarControlAlumno() {
     </div>
     <div class="section-title">📝 Revisión de respuestas</div>
     ${reviewHTML}
+    ${globalFeedbackBlock}
     <div style="text-align:center;color:#9ca3af;font-size:0.75rem;padding:16px 0">
       © ${new Date().getFullYear()} Rafael de la Haza · Controles Profe Rafa
     </div>
@@ -5986,13 +6088,23 @@ function renderBank() {
   const MAX_SWITCHES = 3;
 
   function isStudentActive() {
+    // Control normal activo
     const container = document.getElementById('quiz-student-container');
     const results = document.getElementById('results-screen');
     const identifying = !document.getElementById('identify-screen').classList.contains('hidden');
-    return currentQuiz &&
+    const controlActivo = currentQuiz &&
       container && container.style.display !== 'none' &&
       results && results.style.display === 'none' &&
       !identifying;
+
+    // Examen físico activo (pantalla de preguntas o corrección — NO resultados finales)
+    const examQuestionsEl = document.getElementById('exam-questions-screen');
+    const examCorrectingEl = document.getElementById('exam-correcting-screen');
+    const examActivo =
+      (examQuestionsEl && examQuestionsEl.style.display === 'block') ||
+      (examCorrectingEl && examCorrectingEl.style.display === 'block');
+
+    return controlActivo || examActivo;
   }
 
   // 1) Deshabilitar clic derecho, selección de texto y copiar
@@ -6340,6 +6452,8 @@ async function entregarExamen() {
 
   ocultarTodasPantallasExamen();
   document.getElementById('exam-correcting-screen').style.display = 'block';
+  const _tabBarExam = document.querySelector('.tab-bar');
+  if (_tabBarExam) _tabBarExam.style.visibility = 'hidden';
 
   try {
     const resultados = await corregirExamenConIA();
@@ -6439,6 +6553,8 @@ DEVUELVE SOLO JSON válido sin markdown:
 function mostrarResultadosExamen(resultados) {
   ocultarTodasPantallasExamen();
   document.getElementById('exam-results-screen').style.display = 'block';
+  const _tabBarExam2 = document.querySelector('.tab-bar');
+  if (_tabBarExam2) _tabBarExam2.style.visibility = 'hidden';
 
   // Nota oculta al alumno — solo feedback
   document.getElementById('exam-review-cards').innerHTML = resultados.preguntas.map((rp, i) => {
@@ -6502,7 +6618,7 @@ function descargarResumenAlumno() {
       <div style="font-size:0.83rem;opacity:0.9;margin-top:4px">${esc(_examAlumnoNombre)} · ${esc(_examAlumnoClase)} · ${fecha}</div>
     </div>
     <div style="padding:6px 16px 10px;background:#fffbeb;border:1.5px solid #fde68a;border-top:none;border-radius:0 0 0 0;font-size:0.85rem;color:#92400e;font-weight:700">
-      ⏳ La nota la comunicará el profesor/a. Guarda este documento para poder revisarlo.
+      ⏳ El profesor/a revisará tus respuestas y te comunicará la nota.
     </div>
     <div style="padding:20px 24px;border:1px solid #e0e7ff;border-top:none;border-radius:0 0 12px 12px">
       ${pregsHtml}
@@ -7127,8 +7243,65 @@ function exImportarDesdeAnalisis(analisis) {
   renderExPreguntas();
   document.getElementById('ex-preguntas-lista').scrollIntoView({ behavior: 'smooth' });
 }
+
+// ══════════════════════════════════════════════
+//  FEEDBACK GLOBAL — Funciones auxiliares
+// ══════════════════════════════════════════════
+function renderGlobalFeedback(text) {
+  const box = document.getElementById('global-feedback-box');
+  if (!box || !text) return;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="global-fb-header">
+      <span class="global-fb-icon">👨‍🏫</span>
+      <span class="global-fb-title">📌 Próximos pasos — consejo de tu profe</span>
+    </div>
+    <div class="global-fb-text">${escHtml(text)}</div>`;
+}
+
+function showGlobalFeedbackSkeleton() {
+  const box = document.getElementById('global-feedback-box');
+  if (!box) return;
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="global-fb-header">
+      <span class="global-fb-icon">👨‍🏫</span>
+      <span class="global-fb-title">📌 Próximos pasos — consejo de tu profe</span>
+    </div>
+    <div class="global-fb-skeleton">
+      <span>Preparando tu consejo personalizado</span>
+      <span class="loading-dots"><span></span><span></span><span></span></span>
+    </div>`;
+}
+
+async function fetchGlobalFeedbackOnly(score, fallosTexto, subject) {
+  try {
+    const fbPrompt = fallosTexto
+      ? `Eres un profesor de primaria (5º-6º) de ${subject}. El alumno ha sacado un ${score}/10. Ha fallado estos conceptos: ${fallosTexto}. Escribe UNA SOLA frase de máximo 30 palabras: anímalo y dile exactamente qué debe repasar. Sin saludos, sin explicaciones extra, solo la frase directa.`
+      : `Eres un profesor de primaria (5º-6º) de ${subject}. El alumno ha sacado un ${score}/10 sin ningún fallo. Escribe UNA SOLA frase de máximo 30 palabras felicitándolo. Sin saludos, sin explicaciones extra, solo la frase.`;
+
+    const resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        messages: [{ role: 'user', content: fbPrompt }]
+      })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.content) {
+      const text = data.content.map(c => c.text || '').join('').trim();
+      if (text) renderGlobalFeedback(text);
+    }
+  } catch(e) {
+    console.warn('fetchGlobalFeedbackOnly falló:', e);
+    const box = document.getElementById('global-feedback-box');
+    if (box) box.style.display = 'none';
+  }
+}
 </script>
-</body>
 <!-- ═══════════════ EXAM STUDENT SCREEN ═══════════════ -->
 <div id="exam-student-screen" style="display:none;padding:24px;max-width:720px;margin:0 auto">
 
@@ -7177,7 +7350,7 @@ function exImportarDesdeAnalisis(analisis) {
   <div class="card" style="text-align:center;padding:48px 32px">
     <div style="font-size:3rem;margin-bottom:16px">🔍</div>
     <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:12px">Corrigiendo tu examen…</h2>
-    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:24px">La IA está leyendo tus respuestas. Un momento.</p>
+    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:24px">Un momento, estamos revisando tus respuestas.</p>
     <div class="loading-dots" style="justify-content:center"><span></span><span></span><span></span></div>
   </div>
 </div>
@@ -7190,7 +7363,7 @@ function exImportarDesdeAnalisis(analisis) {
     <h2 style="justify-content:center;font-size:1.4rem;margin-bottom:8px">Examen entregado</h2>
     <p id="exam-score-sub" style="color:var(--muted);font-size:0.95rem;margin-bottom:14px"></p>
     <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:12px 16px;font-size:0.9rem;color:#92400e;font-weight:700;margin-bottom:18px">
-      ⏳ El profesor/a revisará la corrección y te comunicará la nota. Guarda este documento para poder revisarlo mañana.
+      ⏳ El profesor/a revisará tus respuestas y te comunicará la nota.
     </div>
     <button onclick="descargarResumenAlumno()" class="btn btn-primary" style="font-size:0.95rem;padding:12px 28px">
       💾 Guardar mis respuestas y correcciones
@@ -7235,4 +7408,5 @@ function exImportarDesdeAnalisis(analisis) {
   © <span id="footer-year"></span> <strong style="color:#6b7280">Rafael de la Haza</strong> · Todos los derechos reservados
   <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
 </footer>
+</body>
 </html>
