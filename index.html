@@ -2478,7 +2478,10 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
         messages: [{ role: 'user', content: messageContent }]
       })
     });
-    const data = await resp.json();
+    let data;
+    try { data = await resp.json(); } catch(e) {
+      throw new Error('El archivo es demasiado grande o la conexión tardó mucho. Prueba con un PDF más pequeño o pega el texto directamente.');
+    }
     if (!resp.ok || data.error) {
       throw new Error(data.error?.message || data.error || 'Error de la API');
     }
@@ -2487,7 +2490,10 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
     }
     const text = data.content.map(i => i.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
-    const quiz = JSON.parse(clean);
+    let quiz;
+    try { quiz = JSON.parse(clean); } catch(e) {
+      throw new Error('No se pudo generar el control. Inténtalo de nuevo.');
+    }
     loadQuizIntoEditor(quiz);
     bankEditingId = null; // es un control nuevo, no proviene del banco
     document.getElementById('editor-card').style.display = 'block';
@@ -2673,10 +2679,17 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
   // Construir mensaje multimodal si hay archivos
   let messageContent = [];
   if (uploadedFiles) {
-    uploadedFiles.forEach(f => {
+    for (const f of uploadedFiles) {
+      if (f.base64 && f.base64.length > 4000000) {
+        showToast('⚠️ El archivo es muy grande. Prueba con un PDF más pequeño o pega el texto directamente.');
+        btn.disabled = false;
+        btnIcon.textContent = '✦';
+        btnText.textContent = 'Analizar material y sugerir configuración';
+        return;
+      }
       if (f.type === 'image') messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
       else if (f.type === 'pdf') messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
-    });
+    }
   }
   messageContent.push({ type: 'text', text: analyzePrompt });
 
@@ -2686,16 +2699,31 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1200,
+        max_tokens: 800,
         messages: [{ role: 'user', content: messageContent }]
       })
     });
-    const data = await resp.json();
-    if (!resp.ok || data.error) throw new Error(data.error?.message || 'Error API');
+
+    let data;
+    try {
+      data = await resp.json();
+    } catch (parseErr) {
+      // La función Netlify devolvió una respuesta vacía o no-JSON
+      // Probablemente timeout (>10s) o body demasiado grande
+      throw new Error('El archivo es demasiado grande o la conexión tardó mucho. Prueba con un PDF más pequeño o pega el texto directamente en el campo de material.');
+    }
+
+    if (!resp.ok || data.error) throw new Error(data.error?.message || 'Error en la API');
 
     const raw = data.content.map(c => c.text || '').join('');
     const clean = raw.replace(/```json|```/g, '').trim();
-    const result = JSON.parse(clean);
+
+    let result;
+    try {
+      result = JSON.parse(clean);
+    } catch(jsonErr) {
+      throw new Error('La respuesta no es JSON válido. Inténtalo de nuevo.');
+    }
     lastAnalysis = result;
 
     // Mostrar resultados
@@ -3140,7 +3168,8 @@ ${jsonExamples[type] || jsonExamples.test}`;
     if (!resp.ok || data.error) throw new Error(data.error?.message || 'Error API');
     const text = data.content.map(c => c.text || '').join('');
     const clean = text.replace(/```json|```/g, '').trim();
-    const newQ = JSON.parse(clean);
+    let newQ;
+    try { newQ = JSON.parse(clean); } catch(e) { throw new Error('No se pudo regenerar la pregunta. Inténtalo de nuevo.'); }
     // Conservar los puntos del profe si los había ajustado manualmente
     newQ.points = editorQuestions[i]?.points ?? newQ.points;
     newQ.id = Date.now();
@@ -7150,11 +7179,13 @@ FORMATO DE RESPUESTA — devuelve SOLO JSON válido, sin markdown, con esta estr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _rawBody: body })
     });
+    let data;
+    try { data = await resp.json(); } catch(e) { throw new Error('El archivo es demasiado grande o tardó mucho. Prueba con un PDF más pequeño.'); }
     if (!resp.ok) throw new Error('Error servidor');
-    const data = await resp.json();
     const raw = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
     const clean = raw.replace(/```json|```/g, '').trim();
-    const analisis = JSON.parse(clean);
+    let analisis;
+    try { analisis = JSON.parse(clean); } catch(e) { throw new Error('No se pudo analizar el examen. Inténtalo de nuevo.'); }
     // Autorrellenar tema y título si los campos están vacíos
     if (analisis.tema) {
       const campoTema = document.getElementById('ex-tema');
