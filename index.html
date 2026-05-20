@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controles Profe Rafa</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     --bg: #f0f4ff;
@@ -2155,8 +2156,26 @@ function processUploadedFile(file) {
     const reader = new FileReader();
     reader.onload = e => {
       const b64 = e.target.result.split(',')[1];
-      uploadedFiles.push({ type: 'pdf', mediaType: 'application/pdf', base64: b64, name: file.name });
+      const fileObj = { type: 'pdf', mediaType: 'application/pdf', base64: b64, name: file.name, extractedText: null };
+      uploadedFiles.push(fileObj);
       renderFileChips();
+
+      // Extraer texto en segundo plano con pdf.js
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const arrayBuffer = e.target.result;
+        pdfjsLib.getDocument({ data: atob(b64) }).promise.then(pdfDoc => {
+          const pagePromises = [];
+          for (let i = 1; i <= pdfDoc.numPages; i++) {
+            pagePromises.push(pdfDoc.getPage(i).then(page => page.getTextContent()).then(tc => tc.items.map(it => it.str).join(' ')));
+          }
+          return Promise.all(pagePromises);
+        }).then(pages => {
+          fileObj.extractedText = pages.join('\n\n').substring(0, 8000);
+        }).catch(() => {
+          // Si falla la extracción, seguimos sin texto — se usará el base64 si cabe
+        });
+      }
     };
     reader.readAsDataURL(file);
   } else if (isTxt) {
@@ -2454,13 +2473,19 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
   let messageContent = [];
 
   // Add all visual files (images + PDFs) in order
-  uploadedFiles.forEach(f => {
+  for (const f of uploadedFiles) {
     if (f.type === 'image') {
       messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
     } else if (f.type === 'pdf') {
-      messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+      const isLarge = f.base64 && f.base64.length > 4000000;
+      if (isLarge && f.extractedText) {
+        messageContent.push({ type: 'text', text: `[Contenido del PDF "${f.name}"]:\n${f.extractedText}` });
+      } else if (!isLarge) {
+        messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+      }
+      // Si grande y sin texto: simplemente no lo incluimos, se usará el material del textarea
     }
-  });
+  }
 
   // Append text prompt (with optional extra text from textarea)
   const finalPrompt = material
@@ -2680,8 +2705,23 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
   let messageContent = [];
   if (uploadedFiles) {
     for (const f of uploadedFiles) {
-      if (f.type === 'image') messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
-      else if (f.type === 'pdf') messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+      if (f.type === 'image') {
+        messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
+      } else if (f.type === 'pdf') {
+        const isLarge = f.base64 && f.base64.length > 4000000; // >3MB real
+        if (isLarge && f.extractedText) {
+          // PDF grande: usar texto extraído en vez del binario
+          messageContent.push({ type: 'text', text: `[Contenido del PDF "${f.name}"]:\n${f.extractedText}` });
+        } else if (!isLarge) {
+          // PDF pequeño: mandar binario directamente
+          messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+        } else {
+          // Grande pero sin texto extraído aún — avisar
+          showToast('⚠️ PDF muy grande y sin texto extraído. Espera un momento y vuelve a intentarlo.');
+          btn.disabled = false; btnIcon.textContent = '✦'; btnText.textContent = 'Analizar material y sugerir configuración';
+          return;
+        }
+      }
     }
   }
   messageContent.push({ type: 'text', text: analyzePrompt });
@@ -2950,14 +2990,19 @@ Si el profe pide algo imposible (ej: no hay material suficiente), explícalo en 
     let messageContent = [];
 
     if (uploadedFiles && uploadedFiles.length > 0) {
-      uploadedFiles.forEach(f => {
+      for (const f of uploadedFiles) {
         if (f.type === 'image') {
           messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
         } else if (f.type === 'pdf') {
-          messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+          const isLarge = f.base64 && f.base64.length > 4000000;
+          if (isLarge && f.extractedText) {
+            messageContent.push({ type: 'text', text: `[Contenido del PDF "${f.name}"]:\n${f.extractedText}` });
+          } else if (!isLarge) {
+            messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+          }
         }
         // Los archivos de texto ya están incluidos en systemPrompt via material-input
-      });
+      }
     }
 
     messageContent.push({ type: 'text', text: systemPrompt + '\n\n---\nINSTRUCCIÓN DEL PROFE: ' + userMsg });
@@ -3137,13 +3182,18 @@ ${jsonExamples[type] || jsonExamples.test}`;
   // ── Construir mensaje multimodal (incluye archivos subidos si los hay) ──
   let messageContent = [];
   if (typeof uploadedFiles !== 'undefined') {
-    uploadedFiles.forEach(f => {
+    for (const f of uploadedFiles) {
       if (f.type === 'image') {
         messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
       } else if (f.type === 'pdf') {
-        messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+        const isLarge = f.base64 && f.base64.length > 4000000;
+        if (isLarge && f.extractedText) {
+          messageContent.push({ type: 'text', text: `[Contenido del PDF "${f.name}"]:\n${f.extractedText}` });
+        } else if (!isLarge) {
+          messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
+        }
       }
-    });
+    }
   }
   messageContent.push({ type: 'text', text: prompt });
 
