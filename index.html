@@ -4796,7 +4796,11 @@ function showResults(score, name, review, totalPoints, globalFeedback) {
         const bold = (isStudentChoice || isCorrect) ? 'font-weight:800' : 'font-weight:500';
         return `<div style="padding:8px 12px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${color};font-size:0.9rem;${bold}">${label}${badge}</div>`;
       }).join('');
-      questionBodyHtml = `<div style="display:flex;gap:8px;margin-top:10px">${opts}</div>`;
+      const correctLabel = q.correct === 'verdadero' ? 'Verdadero' : 'Falso';
+      const wrongNote = !r.correct
+        ? `<div style="margin-top:8px;padding:7px 12px;border-radius:8px;background:#d1fae5;border:1.5px solid #10b981;font-size:0.85rem;font-weight:700;color:#065f46">✅ La respuesta correcta era: <strong>${correctLabel}</strong></div>`
+        : '';
+      questionBodyHtml = `<div style="display:flex;gap:8px;margin-top:10px">${opts}</div>${wrongNote}`;
 
     } else if (q.type === 'fill') {
       const parts = (q.text || '').split('___');
