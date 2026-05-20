@@ -2651,7 +2651,7 @@ Responde SOLO con JSON válido, sin texto adicional ni markdown:
   "numOptimal": <número óptimo dentro del rango — el que mejor equilibra cobertura y brevedad>,
   "timeMinutes": <minutos estimados entre 5 y 15>,
   "recommendedTypes": ["type1", "type2", ...],
-  "reasoning": "explicación breve (2-3 frases) de por qué estos tipos y este número son los más adecuados para este contenido"
+  "reasoning": "máximo 20 palabras explicando por qué estos tipos y número son los más adecuados"
 }
 
 Tipos disponibles: test, tf, fill, match, short, order, definition, multi, classify, vocab, translate, emoji.
@@ -2686,7 +2686,7 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 800,
+        max_tokens: 1200,
         messages: [{ role: 'user', content: messageContent }]
       })
     });
