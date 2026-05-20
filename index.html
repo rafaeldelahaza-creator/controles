@@ -2473,8 +2473,8 @@ LISTA DE VERIFICACIÓN FINAL — solo genera el JSON si puedes responder SÍ a t
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2500,
         messages: [{ role: 'user', content: messageContent }]
       })
     });
@@ -2915,7 +2915,7 @@ Si el profe pide algo imposible (ej: no hay material suficiente), explícalo en 
 
   // Incluir historial reciente (últimos 4 turnos)
   const historyForAPI = [];
-  const recent = aiChatHistory.slice(-8);
+  const recent = aiChatHistory.slice(-4);
   for (let i = 0; i < recent.length - 1; i++) {
     const h = recent[i];
     if (h.role === 'user') historyForAPI.push({ role: 'user', content: h.text });
@@ -3131,8 +3131,8 @@ ${jsonExamples[type] || jsonExamples.test}`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
         messages: [{ role: 'user', content: messageContent }]
       })
     });
@@ -4417,7 +4417,7 @@ function submitQuiz() {
   sessionStorage.setItem(submitKey, '1');
 
   // Detectar si hay preguntas abiertas que revisar con IA
-  const openTypes = ['translate', 'short', 'fill'];
+  const openTypes = ['translate', 'short', 'fill', 'definition'];
   const openToReview = questions
     .map((q, i) => ({ q, i, r: review[i] }))
     .filter(({ q, r }) => openTypes.includes(q.type) && r && !r.correct);
@@ -6906,7 +6906,7 @@ async function exCargarGuiaArchivo(input) {
 
     const body = {
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4000,
+      max_tokens: 1500,
       messages: [{
         role: 'user',
         content: [
@@ -7003,7 +7003,7 @@ async function exCargarGuiaArchivo(input) {
       const isPdf = leido.tipo === 'pdf';
       const body = {
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4000,
+        max_tokens: 1500,
         messages: [{
           role: 'user',
           content: [
