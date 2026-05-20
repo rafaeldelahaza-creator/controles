@@ -2680,13 +2680,6 @@ Elige los tipos que mejor encajen con el TIPO DE CONTENIDO:
   let messageContent = [];
   if (uploadedFiles) {
     for (const f of uploadedFiles) {
-      if (f.base64 && f.base64.length > 4000000) {
-        showToast('⚠️ El archivo es muy grande. Prueba con un PDF más pequeño o pega el texto directamente.');
-        btn.disabled = false;
-        btnIcon.textContent = '✦';
-        btnText.textContent = 'Analizar material y sugerir configuración';
-        return;
-      }
       if (f.type === 'image') messageContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.base64 } });
       else if (f.type === 'pdf') messageContent.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: f.base64 } });
     }
