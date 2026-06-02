@@ -3912,6 +3912,13 @@ function matchShortAnswer(studentRaw, acceptedList) {
     if (fuzzyMatch(studentSing, ansSing)) return { match: true, exact: false, correctAnswer: ans };
     if (fuzzyMatch(studentNorm, ansSing)) return { match: true, exact: false, correctAnswer: ans };
     if (fuzzyMatch(studentSing, ansNorm)) return { match: true, exact: false, correctAnswer: ans };
+    // Comparación sin espacios: captura "qu est ce" === "Qu'est-ce" (questce)
+    // útil para contracciones y apóstrofos en francés
+    const studentNoSp = studentNorm.replace(/\s/g, '');
+    const ansNoSp = ansNorm.replace(/\s/g, '');
+    if (studentNoSp && ansNoSp && (studentNoSp === ansNoSp || fuzzyMatch(studentNoSp, ansNoSp))) {
+      return { match: true, exact: false, correctAnswer: ans };
+    }
   }
   return { match: false, exact: false, correctAnswer: acceptedList[0] || '' };
 }
@@ -4103,24 +4110,22 @@ function submitQuiz() {
 
     } else if (q.type === 'fill') {
       const blankEls = document.querySelectorAll(`#sq-answer-${i} .blank-input`);
-      const answers = [...blankEls].map(el => normalizeAnswer(el.value));
-      const expected = (q.blanks || []).map(b => normalizeAnswer(b));
-      const matches = answers.filter((a, ai) => {
-        const exp = expected[ai] || '';
-        if (a === exp) return true;
-        if (exp.length >= 4) {
-          const wordRe = new RegExp('(?:^|\\s)' + exp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
-          if (wordRe.test(a)) return true;
-          const wordReRev = new RegExp('(?:^|\\s)' + a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$)');
-          if (a.length >= 4 && wordReRev.test(exp)) return true;
-        }
-        return false;
-      }).length;
-      studentAnswer = answers.join(', ');
-      if (matches === expected.length) { earnedPoints += q.points; }
-      else if (matches > 0) { earnedPoints += (q.points * matches / expected.length); }
-      feedback = `Respuesta: ${q.blanks.join(', ')}`;
-      review.push({ text: q.text, correct: matches === expected.length, partial: matches > 0 && matches < expected.length, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
+      const rawAnswers = [...blankEls].map(el => el.value.trim());
+      const blanks = q.blanks || [];
+      // Usar matchShortAnswer igual que 'short': soporta fuzzy, apóstrofos, espacios, tildes
+      let matchCount = 0;
+      rawAnswers.forEach((raw, ai) => {
+        const accepted = blanks[ai] ? [blanks[ai]] : [];
+        if (accepted.length && matchShortAnswer(raw, accepted).match) matchCount++;
+      });
+      studentAnswer = rawAnswers.join(', ');
+      const totalBlanks = Math.max(blanks.length, 1);
+      if (matchCount === totalBlanks) { earnedPoints += q.points; }
+      else if (matchCount > 0) { earnedPoints += (q.points * matchCount / totalBlanks); }
+      const fillCorrect = matchCount === totalBlanks;
+      const fillPartial = matchCount > 0 && !fillCorrect;
+      feedback = fillCorrect ? 'Correcto' : `Respuesta correcta: ${blanks.join(' | ')}`;
+      review.push({ text: q.text, correct: fillCorrect, partial: fillPartial, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
 
     } else if (q.type === 'match') {
