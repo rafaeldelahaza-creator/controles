@@ -68,19 +68,22 @@ function readSheet(token, sheetId, sheetName, range) {
 // Formato medio:    P | R | ✓ | pts | max   (stride 5)
 // Formato nuevo:    P | R | ✓ | pts | max | feedback  (stride 6)
 function detectColStride(row) {
-  // col 8 (0-based) = 4ª col desde inicio de preguntas (col 5)
-  // Si es número → tiene pts → stride >= 5
-  // Si col 10 existe y no parece número → stride 6 (feedback en col 10)
+  // Paso 1: sin pts (col 8 no es número) → stride 3 (formato antiguo)
   const col8 = (row[8] || '').toString().replace(',', '.');
-  if (!isNaN(parseFloat(col8)) && col8 !== '') {
-    // tiene pts — ¿tiene feedback en col 10?
-    const col10 = row[10];
-    if (col10 !== undefined && isNaN(parseFloat((col10 || '').toString().replace(',', '.')))) {
-      return 6; // texto en col 10 → es feedback
-    }
-    return 5;
-  }
-  return 3;
+  if (isNaN(parseFloat(col8)) || col8 === '') return 3;
+
+  // Paso 2: tiene pts. Distinguir stride 5 vs 6.
+  // BUG ANTERIOR: "si col10 no es número → stride 6" era incorrecto porque
+  // en stride 5, col10 es el TEXTO de P2 (también no-número).
+  // SOLUCIÓN: el feedback de IA siempre empieza con un veredicto concreto
+  // ("Correcto", "Casi", "Incorrecto", "Todo correcto", "Parcial")
+  // o contiene "La respuesta correcta". El texto de P2 nunca tiene ese patrón.
+  const col10 = String(row[10] || '').trim();
+  const isAiFeedback = /^(Correcto|Casi|Incorrecto|Todo correcto|Parcial)/i.test(col10)
+    || col10.includes('La respuesta correcta')
+    || col10.includes('respuesta era:');
+
+  return isAiFeedback ? 6 : 5;
 }
 
 // Agrupa por texto de pregunta (ignora el orden shuffle de cada alumno)
