@@ -1653,6 +1653,9 @@
       🔒 Contraseña activa: <span id="pw-active-text" style="letter-spacing:2px;font-size:1rem"></span> — dísela a tus alumnos en clase.
     </div>
     <p style="margin-top:14px;font-size:0.85rem;color:var(--muted)">📋 Copia este enlace y compártelo por <strong>Google Classroom</strong> o como prefieras. Los alumnos abrirán el enlace y verán el control directamente — sin pasos extra.</p>
+    <div id="url-too-long-warn" style="display:none;margin-top:10px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:10px 14px;font-size:0.88rem;color:#92400e">
+      ⚠️ <strong>Enlace muy largo:</strong> el control tiene muchas preguntas o imágenes. Algunos navegadores pueden truncarlo y el alumno vería la pantalla "sin control activo". Considera quitar imágenes incrustadas o reducir el nº de preguntas si ocurre.
+    </div>
     <hr style="margin:16px 0;border:none;border-top:1.5px solid var(--border)">
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-danger btn-sm" onclick="clearEditor()">🗑 Borrar control activo</button>
@@ -2399,7 +2402,7 @@ function syncPublishedQuiz() {
     const timeMin = parseInt(document.getElementById('time-limit')?.value) || currentQuiz?.timeMinutes || 8;
     const password = document.getElementById('quiz-password-input')?.value?.trim() || currentQuiz?.password || '';
     currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password };
-    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentQuiz))));
+    const encoded = quizEncode(currentQuiz);
     const base = window.location.href.split('?')[0];
     const quizUrl = base + '?quiz=' + encoded;
     const linkInput = document.getElementById('quiz-link');
@@ -3419,11 +3422,18 @@ function publishQuiz() {
   const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
   const password = (document.getElementById('quiz-password-input').value || '').trim();
   currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password: password || '' };
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(currentQuiz))));
+  const encoded = quizEncode(currentQuiz);
   const base = window.location.href.split('?')[0];
   const quizUrl = base + '?quiz=' + encoded;
   document.getElementById('publish-card').style.display = 'block';
   document.getElementById('quiz-link').value = quizUrl;
+
+  // Advertir si la URL es demasiado larga (>8000 chars) — el alumno vería pantalla en blanco
+  const urlWarn = document.getElementById('url-too-long-warn');
+  if (urlWarn) {
+    urlWarn.style.display = quizUrl.length > 8000 ? 'block' : 'none';
+  }
+
   // Guardar el enlace en el banco si este control ya está guardado
   if (bankEditingId !== null) {
     const bank = loadBank();
@@ -3449,11 +3459,36 @@ function copyLink() {
 // ══════════════════════════════════════════════
 //  STUDENT VIEW
 // ══════════════════════════════════════════════
+function quizEncode(obj) {
+  // Codificación robusta UTF-8: JSON → Uint8Array → base64
+  const json = JSON.stringify(obj);
+  const bytes = new TextEncoder().encode(json);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+
+function quizDecode(param) {
+  // Decodificación robusta: base64 → Uint8Array → JSON
+  // Admite también el formato antiguo (btoa+unescape+encodeURIComponent)
+  try {
+    const binary = atob(param);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch(e) {
+    // Fallback: formato antiguo
+    try { return JSON.parse(decodeURIComponent(escape(atob(param)))); } catch(e2) { return null; }
+  }
+}
+
 function getQuizFromUrl() {
   try {
     const param = new URLSearchParams(window.location.search).get('quiz');
     if (!param) return null;
-    return JSON.parse(decodeURIComponent(escape(atob(param))));
+    const quiz = quizDecode(param);
+    if (!quiz || !quiz.questions || !quiz.questions.length) return null;
+    return quiz;
   } catch(e) { return null; }
 }
 
@@ -5574,7 +5609,7 @@ function publishBankItem(id) {
   }
 
   currentQuiz = quiz;
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(quiz))));
+  const encoded = quizEncode(quiz);
   const base = window.location.href.split('?')[0];
   const quizUrl = base + '?quiz=' + encoded;
 
