@@ -4793,30 +4793,76 @@ function downloadStudentResults() {
     const studentAnswerHtml = '<div style="margin-top:8px;padding:8px 12px;border-radius:8px;border:1.5px solid ' + ansBorder + ';background:' + ansBg + ';font-size:0.9rem;font-weight:700;color:' + ansColor + '">'
       + 'Tu respuesta: ' + esc(ans) + '</div>';
 
-    // Respuesta correcta (solo si falló)
+    // Obtener la pregunta original para extraer la respuesta correcta directamente
+    const origQ = (currentQuiz && currentQuiz.questions) ? currentQuiz.questions[i] : null;
+    const qType2 = origQ ? origQ.type : '';
+
+    // Construir la respuesta correcta desde los datos de la pregunta (más fiable que parsear feedback)
     let correctAnswerHtml = '';
     if (!isOk) {
-      const feedbackRaw = String(r.feedback || '');
-      const correctMatch = feedbackRaw.match(/(?:respuesta correcta(?:\s+era)?:|correcto:|correcto\s*era:)\s*(.+)/i);
-      const correctText = correctMatch ? correctMatch[1].trim()
-        : feedbackRaw.replace(/^(Correcto|Casi|Incorrecto|Todo correcto|Orden correcto)[^:]*:\s*/i,'').trim();
-      if (correctText && correctText.length > 1) {
-        correctAnswerHtml = '<div style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.88rem;color:#065f46;font-weight:700">'
-          + '✅ Respuesta correcta: ' + esc(correctText) + '</div>';
+      let correctLines = [];
+
+      if (qType2 === 'fill') {
+        const blanks = origQ.blanks || [];
+        if (blanks.length) correctLines = ['Respuesta: ' + blanks.join(' | ')];
+      } else if (qType2 === 'translate') {
+        const pairs = origQ.pairs || [];
+        pairs.forEach(function(p) {
+          const accepted = (p.acceptedAnswers && p.acceptedAnswers.length) ? p.acceptedAnswers.join(' / ') : p.answer;
+          correctLines.push(p.term + ' → ' + accepted);
+        });
+      } else if (qType2 === 'emoji') {
+        const items = origQ.items || [];
+        items.forEach(function(it) { correctLines.push(it.emoji + ' → ' + it.answer); });
+      } else if (qType2 === 'match') {
+        Object.entries(origQ.correctPairs || {}).forEach(function(e) {
+          correctLines.push(e[0] + ' → ' + e[1]);
+        });
+      } else if (qType2 === 'order') {
+        const ord = origQ.correctOrder || origQ.items || [];
+        if (ord.length) correctLines = ['Orden: ' + ord.join(' → ')];
+      } else if (qType2 === 'classify') {
+        (origQ.items || []).forEach(function(it) { correctLines.push(it.term + ' → ' + it.category); });
+      } else if (qType2 === 'multi') {
+        const opts = origQ.correctOptions || [];
+        if (opts.length) correctLines = ['Correctas: ' + opts.join(', ')];
+      } else {
+        // test, tf, short, definition, vocab: extraer del feedback o del campo correct
+        const feedbackRaw = String(r.feedback || '');
+        const correctMatch = feedbackRaw.match(/(?:respuesta correcta(?:\s+era)?:|correcto:|correcta?:|definici[oó]n correcta:)\s*(.+)/i);
+        const cv = correctMatch ? correctMatch[1].trim()
+          : feedbackRaw.replace(/^(Correcto|Casi|Incorrecto|Todo correcto|Orden correcto)[^:]*:\s*/i,'').trim();
+        const fallback = (origQ && (origQ.correct || (origQ.acceptedAnswers && origQ.acceptedAnswers[0]))) || '';
+        const finalCv = (cv && cv.length > 1 && !/^(correcto|incorrecto|casi|todo correcto)$/i.test(cv)) ? cv : fallback;
+        if (finalCv) correctLines = [finalCv];
+      }
+
+      if (correctLines.length) {
+        const linesHtml = correctLines.map(function(l) {
+          return '<div style="padding:3px 0;border-bottom:1px solid #a7f3d0;font-size:0.87rem">' + esc(l) + '</div>';
+        }).join('');
+        correctAnswerHtml = '<div style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;color:#065f46;font-weight:700">'
+          + '<div style="font-size:0.75rem;margin-bottom:4px;opacity:0.8">✅ Respuesta correcta</div>'
+          + linesHtml + '</div>';
       }
     }
 
-    // Feedback adicional de la IA
+    // Feedback adicional de la IA (solo para tipos con corrección IA: short, definition, translate)
     let feedbackHtml2 = '';
     if (!isOk || isPart) {
       const feedbackRaw = String(r.feedback || '');
-      const fb = feedbackRaw
-        .replace(/^Correcto[^:]*:\s*/i,'')
-        .replace(/respuesta correcta(?:\s+era)?:[^\|]*/ig,'')
-        .trim().replace(/\|\s*$/, '').trim();
-      if (fb.length > 3 && !/^(correcto|incorrecto|casi)\.?\s*$/i.test(fb)) {
-        feedbackHtml2 = '<div style="margin-top:6px;padding:8px 12px;border-radius:8px;background:#fef3c7;border:1.5px solid #f59e0b;font-size:0.85rem;color:#92400e;font-weight:600">'
-          + '💡 ' + esc(fb) + '</div>';
+      // Solo mostrar feedback de IA si contiene una frase elaborada (no solo "X/4 correctas")
+      const isJustCount = /^\d+\/\d+\s*(correctas?|pares?)/i.test(feedbackRaw.trim());
+      const isJustVerdict = /^(correcto|incorrecto|casi|todo correcto|orden correcto|parcial)\.?\s*$/i.test(feedbackRaw.trim());
+      if (!isJustCount && !isJustVerdict) {
+        const fb = feedbackRaw
+          .replace(/^(Correcto|Casi|Incorrecto)[^:]*:\s*/i,'')
+          .replace(/respuesta correcta(?:\s+era)?:[^|]*/ig,'')
+          .trim().replace(/\|\s*$/,'').trim();
+        if (fb.length > 3) {
+          feedbackHtml2 = '<div style="margin-top:6px;padding:8px 12px;border-radius:8px;background:#fef3c7;border:1.5px solid #f59e0b;font-size:0.85rem;color:#92400e;font-weight:600">'
+            + '💡 ' + esc(fb) + '</div>';
+        }
       }
     }
 
