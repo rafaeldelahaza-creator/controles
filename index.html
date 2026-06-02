@@ -4112,19 +4112,36 @@ function submitQuiz() {
       const blankEls = document.querySelectorAll(`#sq-answer-${i} .blank-input`);
       const rawAnswers = [...blankEls].map(el => el.value.trim());
       const blanks = q.blanks || [];
-      // Usar matchShortAnswer igual que 'short': soporta fuzzy, apóstrofos, espacios, tildes
-      let matchCount = 0;
-      rawAnswers.forEach((raw, ai) => {
+      // Usar matchShortAnswer con detección de exactitud para dar puntos completos o parciales
+      let exactCount = 0;   // coincidencia exacta (normalizada) → puntos completos
+      let fuzzyCount = 0;   // coincidencia fuzzy/sin-espacios → puntos parciales (0.75)
+      const fillResults = rawAnswers.map((raw, ai) => {
         const accepted = blanks[ai] ? [blanks[ai]] : [];
-        if (accepted.length && matchShortAnswer(raw, accepted).match) matchCount++;
+        if (!accepted.length) return { match: false, exact: false };
+        const res = matchShortAnswer(raw, accepted);
+        if (res.match && res.exact) { exactCount++; return { match: true, exact: true }; }
+        if (res.match && !res.exact) { fuzzyCount++; return { match: true, exact: false }; }
+        return { match: false, exact: false };
       });
       studentAnswer = rawAnswers.join(', ');
       const totalBlanks = Math.max(blanks.length, 1);
-      if (matchCount === totalBlanks) { earnedPoints += q.points; }
-      else if (matchCount > 0) { earnedPoints += (q.points * matchCount / totalBlanks); }
-      const fillCorrect = matchCount === totalBlanks;
-      const fillPartial = matchCount > 0 && !fillCorrect;
-      feedback = fillCorrect ? 'Correcto' : `Respuesta correcta: ${blanks.join(' | ')}`;
+      const allExact  = exactCount === totalBlanks && fuzzyCount === 0;
+      const anyMatch  = exactCount + fuzzyCount > 0;
+      // Puntos: exacto=completo, fuzzy=0.75 del proporcional, no match=0
+      const ptsPerBlank = q.points / totalBlanks;
+      const earnedFill = (exactCount * ptsPerBlank) + (fuzzyCount * ptsPerBlank * 0.75);
+      earnedPoints += earnedFill;
+      const fillCorrect = allExact;
+      const fillPartial = !allExact && anyMatch;
+      // Feedback: si hay fuzzy, mostrar la forma correcta con nota
+      const fuzzyBlanks = fillResults.map((fr, ai) => !fr.exact && fr.match ? blanks[ai] : null).filter(Boolean);
+      if (allExact) {
+        feedback = 'Correcto';
+      } else if (fuzzyCount > 0 && exactCount + fuzzyCount === totalBlanks) {
+        feedback = `Casi correcto. Escríbelo así: ${blanks.join(' | ')}`;
+      } else {
+        feedback = `Respuesta correcta: ${blanks.join(' | ')}`;
+      }
       review.push({ text: q.text, correct: fillCorrect, partial: fillPartial, studentAnswer, feedback, pts: Math.round((earnedPoints - prevEarned) * 10) / 10, maxPts: q.points });
       return;
 
@@ -4612,15 +4629,26 @@ function showResults(score, name, review, totalPoints) {
         if (pi < parts.length - 1) {
           const studentVal = answers[pi] || '–';
           const correctVal = blanks[pi] || '';
-          const isOk = normalizeAnswer(studentVal) === normalizeAnswer(correctVal) || r.correct;
-          const bg = isOk ? '#d1fae5' : '#fee2e2';
-          const color = isOk ? '#065f46' : '#991b1b';
-          const border = isOk ? '#10b981' : '#ef4444';
+          // Usar matchShortAnswer para colorear correctamente (igual que el scoring)
+          const matchRes = matchShortAnswer(studentVal, correctVal ? [correctVal] : []);
+          const isExact  = matchRes.match && matchRes.exact;
+          const isFuzzy  = matchRes.match && !matchRes.exact;
+          const isWrong  = !matchRes.match;
+          const bg     = isExact ? '#d1fae5' : isFuzzy ? '#fef3c7' : '#fee2e2';
+          const color  = isExact ? '#065f46' : isFuzzy ? '#92400e' : '#991b1b';
+          const border = isExact ? '#10b981' : isFuzzy ? '#f59e0b' : '#ef4444';
           html += `<span style="display:inline-block;min-width:80px;padding:2px 10px;background:${bg};color:${color};border-bottom:2px solid ${border};border-radius:4px;font-weight:800;margin:0 2px">${escHtml(studentVal)}</span>`;
-          if (!isOk) html += `<span style="font-size:0.8rem;color:#10b981;font-weight:700"> (${escHtml(correctVal)})</span>`;
+          // Mostrar la forma correcta si es fuzzy o incorrecto
+          if (isFuzzy || isWrong) {
+            html += `<span style="font-size:0.8rem;color:#10b981;font-weight:700"> → ${escHtml(correctVal)}</span>`;
+          }
         }
       });
       html += '</div>';
+      // Si hay huecos fuzzy, añadir nota explicativa
+      if (r.partial && r.feedback && r.feedback.startsWith('Casi')) {
+        html += `<div style="margin-top:6px;padding:6px 12px;border-radius:8px;background:#fef3c7;border:1.5px solid #f59e0b;font-size:0.83rem;color:#92400e;font-weight:600">🟡 ${escHtml(r.feedback)}</div>`;
+      }
       questionBodyHtml = html;
 
     } else if (q.type === 'match') {
