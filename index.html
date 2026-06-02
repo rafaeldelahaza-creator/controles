@@ -1886,6 +1886,7 @@ let timerSeconds = 0;
 let submissions = [];
 let studentName = '';
 let studentClass = '';
+let _lastReview = []; // última revisión para descarga del alumno
 let bankEditingId = null; // ID del item del banco cargado en el editor (null = control nuevo)
 
 // ── Archivos cargados para IA ──
@@ -4471,6 +4472,14 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
           document.getElementById('correcting-screen').style.display = 'none';
           showResults(newScore > score ? newScore : score, name, updatedReview, totalPoints);
 
+          const _tl2 = { test:'Test', tf:'V/F', fill:'Huecos', match:'Relacionar', short:'Respuesta corta',
+            order:'Ordenar', vocab:'Test ampliado', translate:'Traducción', emoji:'Emoji→palabra',
+            definition:'Definición', multi:'Múltiple', classify:'Clasificar' };
+          const safeUpdatedReview = updatedReview.map((r, ri) => ({
+            ...r,
+            text: (r.text && r.text.trim()) ? r.text.trim()
+                  : (_tl2[(currentQuiz.questions[ri]||{}).type] || 'Pregunta') + ' ' + (ri + 1)
+          }));
           fetch('/.netlify/functions/save-score', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -4479,7 +4488,7 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
               date: today, time: timeNow,
               tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
               blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
-              review: updatedReview
+              review: safeUpdatedReview
             })
           }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
           return;
@@ -4492,6 +4501,15 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
     // Sin preguntas abiertas o si falló la IA: ocultar pantalla de corrección y mostrar resultados exactos
     document.getElementById('correcting-screen').style.display = 'none';
     showResults(score, name, review, totalPoints);
+    // Garantizar que ningún item del review tiene text vacío antes de enviar a Sheets
+    const _typeLabels = { test:'Test', tf:'V/F', fill:'Huecos', match:'Relacionar', short:'Respuesta corta',
+      order:'Ordenar', vocab:'Test ampliado', translate:'Traducción', emoji:'Emoji→palabra',
+      definition:'Definición', multi:'Múltiple', classify:'Clasificar' };
+    const safeReview = review.map((r, ri) => ({
+      ...r,
+      text: (r.text && r.text.trim()) ? r.text.trim()
+            : (_typeLabels[(currentQuiz.questions[ri]||{}).type] || 'Pregunta') + ' ' + (ri + 1)
+    }));
     fetch('/.netlify/functions/save-score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4499,7 +4517,7 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
         name, cls, quiz: currentQuiz.title, score, date: today, time: timeNow,
         tabSwitches: window._antiCheat ? window._antiCheat.tabSwitches : 0,
         blurCount: window._antiCheat ? window._antiCheat.blurCount : 0,
-        review
+        review: safeReview
       })
     }).catch(err => console.warn('No se pudo guardar en Sheets:', err));
   };
@@ -4508,6 +4526,7 @@ Responde SOLO con JSON array. "feedback" = frase MUY breve y directa para el alu
 }
 
 function showResults(score, name, review, totalPoints) {
+  _lastReview = review; // guardar para downloadStudentResults
   document.getElementById('student-view').style.display = 'none';
   document.getElementById('correcting-screen').style.display = 'none';
   const rs = document.getElementById('results-screen');
@@ -4714,11 +4733,16 @@ function showResults(score, name, review, totalPoints) {
     // ── Feedback / corrección ──
     let feedbackHtml = '';
     if (!r.correct && !r.aiReviewPending) {
-      // Para tipos con corrección IA pendiente se añade luego
-      const feedbackText = (r.feedback || '').replace(/^(Correcto|Casi|Incorrecto|Todo correcto|Orden correcto)[^:]*:\s*/i, '').trim();
-      if (feedbackText && q.type !== 'test' && q.type !== 'vocab' && q.type !== 'tf' && q.type !== 'fill' && q.type !== 'match' && q.type !== 'multi' && q.type !== 'classify' && q.type !== 'order' && q.type !== 'translate' && q.type !== 'emoji') {
-        // Solo mostrar feedback de texto para tipos donde no hemos ya mostrado las correcciones visualmente
-        feedbackHtml = `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fffbeb;border:1.5px solid #fcd34d;font-size:0.85rem;color:#92400e">
+      const feedbackText = (r.feedback || '').replace(/^Correcto[^:]*:\s*/i, '').trim();
+      if (feedbackText) {
+        feedbackHtml = `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fef3c7;border:1.5px solid #f59e0b;font-size:0.85rem;color:#92400e;font-weight:600">
+          💡 ${escHtml(feedbackText)}
+        </div>`;
+      }
+    } else if (r.partial && !r.aiReviewPending) {
+      const feedbackText = (r.feedback || '').replace(/^(Correcto|Todo correcto)[^:]*:\s*/i, '').trim();
+      if (feedbackText) {
+        feedbackHtml = `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:#fef3c7;border:1.5px solid #f59e0b;font-size:0.85rem;color:#92400e;font-weight:600">
           💡 ${escHtml(feedbackText)}
         </div>`;
       }
@@ -4741,52 +4765,107 @@ function showResults(score, name, review, totalPoints) {
 }
 
 function downloadStudentResults() {
+  if (!_lastReview || !_lastReview.length) { showToast('⚠️ No hay correcciones para descargar'); return; }
   const score = document.getElementById('score-num').textContent || '–';
   const msg   = document.getElementById('score-msg').textContent || '';
-  const cards = document.getElementById('review-cards').innerHTML || '';
   const title = (currentQuiz && currentQuiz.title) ? currentQuiz.title : 'Control';
   const name  = studentName || 'Alumno/a';
   const cls   = studentClass || '';
   const fecha = new Date().toLocaleDateString('es-ES');
+  const esc = function(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
 
-  const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Correcciones – ${title}</title>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 0 auto; padding: 24px 20px; color: #1f2937; background: #f8fafc; }
-    h1 { font-size: 1.4rem; color: #4f46e5; margin-bottom: 4px; }
-    .meta { font-size: 0.88rem; color: #6b7280; margin-bottom: 20px; }
-    .score-box { text-align: center; background: #fff; border: 2px solid #e0e7ff; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
-    .score-big { font-size: 3rem; font-weight: 900; color: #4f46e5; }
-    .score-msg { font-size: 1.1rem; font-weight: 700; color: #374151; margin-top: 6px; }
-    .result-card { background: #fff; border-radius: 12px; border: 1.5px solid #e5e7eb; padding: 14px 16px; margin-bottom: 12px; }
-    .result-card.correct { border-color: #10b981; }
-    .result-card.partial  { border-color: #f59e0b; }
-    .result-card.wrong    { border-color: #ef4444; }
-    .footer { text-align: center; font-size: 0.78rem; color: #9ca3af; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
-  </style>
-</head>
-<body>
-  <h1>📝 ${title}</h1>
-  <div class="meta">${name}${cls ? ' · ' + cls : ''} · ${fecha}</div>
-  <div class="score-box">
-    <div class="score-big">${score}<span style="font-size:1.2rem;color:#6b7280">/10</span></div>
-    <div class="score-msg">${msg}</div>
-  </div>
-  <div id="review">${cards}</div>
-  <div class="footer">Generado por Controles Profe Rafa · ${fecha}</div>
-</body>
-</html>`;
+  let cardsHtml = '';
+  _lastReview.forEach(function(r, i) {
+    const isOk = r.correct, isPart = r.partial;
+    const borderColor = isOk ? '#10b981' : isPart ? '#f59e0b' : '#ef4444';
+    const icon        = isOk ? '✅' : isPart ? '🟡' : '❌';
+    const statusLabel = isOk ? 'Correcto' : isPart ? 'Parcialmente correcto' : 'Incorrecto';
+    const statusColor = isOk ? '#065f46' : isPart ? '#92400e' : '#991b1b';
+    const statusBg    = isOk ? '#d1fae5' : isPart ? '#fef3c7' : '#fee2e2';
+    const pts    = r.pts !== undefined ? r.pts : 0;
+    const maxPts = r.maxPts !== undefined ? r.maxPts : 0;
+    const ans    = String(r.studentAnswer || '–');
+
+    // Respuesta del alumno
+    const ansBorder = isOk ? '#10b981' : isPart ? '#f59e0b' : '#ef4444';
+    const ansBg     = isOk ? '#d1fae5' : isPart ? '#fef3c7' : '#fee2e2';
+    const ansColor  = isOk ? '#065f46' : isPart ? '#92400e' : '#991b1b';
+    const studentAnswerHtml = '<div style="margin-top:8px;padding:8px 12px;border-radius:8px;border:1.5px solid ' + ansBorder + ';background:' + ansBg + ';font-size:0.9rem;font-weight:700;color:' + ansColor + '">'
+      + 'Tu respuesta: ' + esc(ans) + '</div>';
+
+    // Respuesta correcta (solo si falló)
+    let correctAnswerHtml = '';
+    if (!isOk) {
+      const feedbackRaw = String(r.feedback || '');
+      const correctMatch = feedbackRaw.match(/(?:respuesta correcta(?:\s+era)?:|correcto:|correcto\s*era:)\s*(.+)/i);
+      const correctText = correctMatch ? correctMatch[1].trim()
+        : feedbackRaw.replace(/^(Correcto|Casi|Incorrecto|Todo correcto|Orden correcto)[^:]*:\s*/i,'').trim();
+      if (correctText && correctText.length > 1) {
+        correctAnswerHtml = '<div style="margin-top:6px;padding:8px 12px;border-radius:8px;border:1.5px solid #10b981;background:#d1fae5;font-size:0.88rem;color:#065f46;font-weight:700">'
+          + '✅ Respuesta correcta: ' + esc(correctText) + '</div>';
+      }
+    }
+
+    // Feedback adicional de la IA
+    let feedbackHtml2 = '';
+    if (!isOk || isPart) {
+      const feedbackRaw = String(r.feedback || '');
+      const fb = feedbackRaw
+        .replace(/^Correcto[^:]*:\s*/i,'')
+        .replace(/respuesta correcta(?:\s+era)?:[^\|]*/ig,'')
+        .trim().replace(/\|\s*$/, '').trim();
+      if (fb.length > 3 && !/^(correcto|incorrecto|casi)\.?\s*$/i.test(fb)) {
+        feedbackHtml2 = '<div style="margin-top:6px;padding:8px 12px;border-radius:8px;background:#fef3c7;border:1.5px solid #f59e0b;font-size:0.85rem;color:#92400e;font-weight:600">'
+          + '💡 ' + esc(fb) + '</div>';
+      }
+    }
+
+    cardsHtml += '<div style="background:#fff;border-radius:12px;border:1.5px solid ' + borderColor + ';padding:14px 16px;margin-bottom:12px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+        + '<span style="font-size:1.1rem">' + icon + '</span>'
+        + '<span style="font-size:0.95rem;font-weight:800;flex:1;color:#1f2937">' + (i+1) + '. ' + esc(r.text) + '</span>'
+        + '<span style="font-size:0.78rem;font-weight:700;color:' + statusColor + ';background:' + statusBg + ';padding:2px 8px;border-radius:20px;white-space:nowrap">' + pts + ' / ' + maxPts + ' pts</span>'
+      + '</div>'
+      + '<div style="font-size:0.78rem;font-weight:700;color:' + statusColor + ';margin-bottom:4px">' + statusLabel + '</div>'
+      + studentAnswerHtml
+      + correctAnswerHtml
+      + feedbackHtml2
+      + '</div>';
+  });
+
+  const html = '<!DOCTYPE html>\n'
+    + '<html lang="es"><head><meta charset="UTF-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Correcciones \u2013 ' + esc(title) + '</title>'
+    + '<style>'
+    + '* { box-sizing: border-box; }'
+    + 'body { font-family: Segoe UI, Helvetica, Arial, sans-serif; max-width: 680px; margin: 0 auto; padding: 24px 20px; color: #1f2937; background: #f8fafc; }'
+    + 'h1 { font-size: 1.35rem; color: #4f46e5; margin: 0 0 4px; }'
+    + '.meta { font-size: 0.88rem; color: #6b7280; margin-bottom: 20px; }'
+    + '.score-box { text-align: center; background: #fff; border: 2px solid #e0e7ff; border-radius: 16px; padding: 20px; margin-bottom: 24px; }'
+    + '.score-big { font-size: 3rem; font-weight: 900; color: #4f46e5; line-height: 1; }'
+    + '.score-over { font-size: 1.2rem; color: #6b7280; }'
+    + '.score-msg { font-size: 1.1rem; font-weight: 700; color: #374151; margin-top: 8px; }'
+    + '.section-title { font-size: 1rem; font-weight: 800; color: #4f46e5; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #e0e7ff; }'
+    + '.footer { text-align: center; font-size: 0.78rem; color: #9ca3af; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }'
+    + '</style></head><body>'
+    + '<h1>\uD83D\uDCDD ' + esc(title) + '</h1>'
+    + '<div class="meta">' + esc(name) + (cls ? ' \u00B7 ' + esc(cls) : '') + ' \u00B7 ' + fecha + '</div>'
+    + '<div class="score-box">'
+      + '<div class="score-big">' + esc(score) + '<span class="score-over">/10</span></div>'
+      + '<div class="score-msg">' + esc(msg) + '</div>'
+    + '</div>'
+    + '<div class="section-title">\uD83D\uDCDD Revisi\u00F3n de respuestas</div>'
+    + cardsHtml
+    + '<div class="footer">Generado por Controles Profe Rafa \u00B7 ' + fecha + '</div>'
+    + '</body></html>';
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  const safeName = (name + '_' + title).replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '').substring(0, 60);
+  const safeName = (name + '_' + title).replace(/[^a-zA-Z0-9\u00e1\u00e9\u00ed\u00f3\u00fa\u00c1\u00c9\u00cd\u00d3\u00da\u00f1\u00d1 _-]/g, '').substring(0, 60);
   a.href     = url;
-  a.download = `correcciones_${safeName}.html`;
+  a.download = 'correcciones_' + safeName + '.html';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -5190,18 +5269,23 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
             });
             visualBody = html + '</div>';
           } else if (qType === 'match') {
-            const lefts = Object.keys(quizQ.correctPairs || {});
-            const pairs = (a.answer || '').split(' | ');
-            const html = lefts.map((left, li) => {
-              const cr = quizQ.correctPairs[left];
-              const sr = (pairs[li] || '').replace(`${left} → `, '');
-              const ok = sr === cr;
+            // Parsear directamente del studentAnswer guardado: "Left → StudentVal | Left2 → StudentVal2"
+            // Así el informe es fiel a lo que respondió el alumno aunque el control haya cambiado después
+            const pairs = (a.answer || '').split(' | ').filter(Boolean);
+            const correctPairs = quizQ.correctPairs || {};
+            const html = pairs.map(pair => {
+              const arrowIdx = pair.indexOf(' → ');
+              if (arrowIdx === -1) return '';
+              const left = pair.substring(0, arrowIdx).trim();
+              const sr   = pair.substring(arrowIdx + 3).trim();
+              const cr   = correctPairs[left];
+              const ok   = cr !== undefined ? sr === cr : false;
               return `<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:5px;align-items:center;background:${ok?'#d1fae5':'#fee2e2'};border:1px solid ${ok?'#10b981':'#ef4444'};border-radius:6px;padding:5px 8px;font-size:0.82rem">
                 <span style="font-weight:700">${escHtml(left)}</span><span>→</span>
-                <span>${ok?`<strong>${escHtml(sr)}</strong> ✅`:`<span style="text-decoration:line-through;color:#9ca3af">${escHtml(sr)}</span> → <strong style="color:#10b981">${escHtml(cr)}</strong>`}</span>
+                <span>${ok?`<strong>${escHtml(sr)}</strong> ✅`:`<span style="text-decoration:line-through;color:#9ca3af">${escHtml(sr)}</span>${cr!==undefined?' → <strong style=\"color:#10b981\">' + escHtml(cr) + '</strong>':' ❌'}`}</span>
               </div>`;
             }).join('');
-            visualBody = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${html}</div>`;
+            visualBody = `<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">${html || '<em style="color:#9ca3af;font-size:0.82rem">Sin datos de respuesta</em>'}</div>`;
           } else if (qType === 'order') {
             const expected = quizQ.correctOrder || quizQ.items || [];
             const items = (a.answer || '').split(' → ');
@@ -5275,6 +5359,15 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
           visualBody = `<div style="margin-top:6px"><div style="font-size:0.88rem;font-weight:700;padding:5px 10px;border-radius:6px;border:1px solid ${borderColor};background:${bgColor}">${escHtml(a.answer||'–')}</div>${feedbackTxt}</div>`;
         }
 
+        // Feedback de IA para el informe del profe
+        let reportFeedbackHtml = '';
+        if (!isCorrect && a.feedback && a.feedback !== 'Correcto' && a.feedback !== 'Todo correcto' && a.feedback !== 'Orden correcto' && qType !== 'definition') {
+          const fb = (a.feedback || '').replace(/^Correcto[^:]*:\s*/i,'').trim();
+          if (fb.length > 3) {
+            reportFeedbackHtml = `<div style="margin-top:5px;padding:6px 10px;border-radius:6px;background:#fef3c7;border:1px solid #f59e0b;font-size:0.8rem;color:#92400e;font-weight:600">💡 ${escHtml(fb)}</div>`;
+          }
+        }
+
         return `<div class="report-answer-row" style="border-bottom:1px solid #e0e7ff;padding:10px 14px;background:${bgColor}">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
             <span style="font-size:0.72rem;font-weight:800;color:#6b7280;min-width:18px">${a.num}</span>
@@ -5283,6 +5376,7 @@ function renderReport(submissions, questionStats, reportTitle, studentAnswers) {
             <span style="font-size:0.8rem;font-weight:800;color:${inputColor}">${ptsInput}</span>
           </div>
           ${visualBody}
+          ${reportFeedbackHtml}
         </div>`;
       }).join('');
       return `<div class="student-accordion" id="acc-${idx}">
