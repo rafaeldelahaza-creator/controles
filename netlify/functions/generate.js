@@ -83,7 +83,7 @@ exports.handler = async function(event) {
 
   // 5. Validar tamaño del payload (máx. 60 KB)
   const rawBody = event.body || '';
-  if (rawBody.length > 60_000) {
+  if (rawBody.length > 500_000) {
     return {
       statusCode: 413,
       body: JSON.stringify({ error: 'Payload demasiado grande.' })
