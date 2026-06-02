@@ -3485,11 +3485,14 @@ function quizDecode(param) {
 function getQuizFromUrl() {
   try {
     const param = new URLSearchParams(window.location.search).get('quiz');
-    if (!param) return null;
+    if (!param) { console.warn('[Quiz] No hay parámetro ?quiz en la URL'); return null; }
+    console.log('[Quiz] Param length:', param.length, '| First 50:', param.substring(0, 50));
     const quiz = quizDecode(param);
-    if (!quiz || !quiz.questions || !quiz.questions.length) return null;
+    if (!quiz) { console.error('[Quiz] quizDecode devolvió null'); return null; }
+    if (!quiz.questions || !quiz.questions.length) { console.error('[Quiz] Sin preguntas:', JSON.stringify(quiz).substring(0, 200)); return null; }
+    console.log('[Quiz] OK —', quiz.questions.length, 'preguntas, título:', quiz.title);
     return quiz;
-  } catch(e) { return null; }
+  } catch(e) { console.error('[Quiz] Error en getQuizFromUrl:', e); return null; }
 }
 
 function loadStudentView() {
