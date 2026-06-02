@@ -3467,25 +3467,38 @@ function copyLink() {
 //  STUDENT VIEW
 // ══════════════════════════════════════════════
 function quizEncode(obj) {
-  // Codificación robusta UTF-8: JSON → Uint8Array → base64
+  // Codificación base64url (segura en URLs: sin +, /, ni = que corrompen el param)
   const json = JSON.stringify(obj);
   const bytes = new TextEncoder().encode(json);
   let binary = '';
   bytes.forEach(b => binary += String.fromCharCode(b));
-  return btoa(binary);
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g,  '');
 }
 
 function quizDecode(param) {
-  // Decodificación robusta: base64 → Uint8Array → JSON
-  // Admite también el formato antiguo (btoa+unescape+encodeURIComponent)
-  try {
-    const binary = atob(param);
+  // Intentar base64url primero (formato nuevo), luego base64 clásico (formato antiguo)
+  // Restaurar padding y caracteres estándar antes de atob
+  const tryDecode = (p) => {
+    // Normalizar base64url → base64 estándar
+    const b64 = p.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '==='.slice((b64.length + 3) % 4);
+    const binary = atob(padded);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return JSON.parse(new TextDecoder().decode(bytes));
+  };
+  try {
+    return tryDecode(param);
   } catch(e) {
-    // Fallback: formato antiguo
-    try { return JSON.parse(decodeURIComponent(escape(atob(param)))); } catch(e2) { return null; }
+    // Fallback formato antiguo (escape/unescape para controles ya publicados)
+    try {
+      const b64 = param.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = b64 + '==='.slice((b64.length + 3) % 4);
+      return JSON.parse(decodeURIComponent(escape(atob(padded))));
+    } catch(e2) { return null; }
   }
 }
 
