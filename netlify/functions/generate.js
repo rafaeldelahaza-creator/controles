@@ -2,7 +2,7 @@ const https = require('https');
 
 // ─── RATE LIMITING EN MEMORIA ───────────────────────────────────────────────
 // Se resetea con cada cold start, pero es suficiente para proteger contra
-// ataques sostenidos. Límite: 15 peticiones por IP por minuto.
+// ataques sostenidos. Límite: 60 peticiones por IP por minuto.
 const requestLog = new Map();
 const RATE_LIMIT  = 60;
 const RATE_WINDOW = 60 * 1000; // 1 minuto en ms
@@ -81,7 +81,7 @@ exports.handler = async function(event) {
     return { statusCode: 500, body: JSON.stringify({ error: 'API key not configured' }) };
   }
 
-  // 5. Validar tamaño del payload (máx. 60 KB)
+  // 5. Validar tamaño del payload (máx. 500 KB)
   const rawBody = event.body || '';
   if (rawBody.length > 500_000) {
     return {
@@ -117,7 +117,7 @@ exports.handler = async function(event) {
 
   const safeBody = {
     model,
-    max_tokens: Math.min(Number(body.max_tokens) || 1000, 8000), // nunca más de 8000
+    max_tokens: Math.min(Number(body.max_tokens) || 4000, 16000), // nunca más de 16000
     messages: body.messages,
     ...(body.system ? { system: body.system } : {}),
   };
