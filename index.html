@@ -1809,6 +1809,11 @@
   <div class="section-title">📝 Revisión de respuestas</div>
   <div id="review-cards"></div>
   <div style="text-align:center;color:var(--muted);font-size:0.88rem;padding:18px 0 8px">✅ Tu nota ha sido registrada. ¡Ya puedes cerrar esta página!</div>
+  <div style="text-align:center;padding:8px 0 24px">
+    <button onclick="downloadStudentResults()" class="btn btn-primary" style="background:#7c3aed;gap:8px">
+      ⬇️ Descargar mis correcciones
+    </button>
+  </div>
 </div>
 
 <!-- ═══════════════ MODAL INFORME POST-CONTROL ═══════════════ -->
@@ -4722,6 +4727,57 @@ function showResults(score, name, review, totalPoints) {
   if (score >= 7) launchConfetti();
 }
 
+function downloadStudentResults() {
+  const score = document.getElementById('score-num').textContent || '–';
+  const msg   = document.getElementById('score-msg').textContent || '';
+  const cards = document.getElementById('review-cards').innerHTML || '';
+  const title = (currentQuiz && currentQuiz.title) ? currentQuiz.title : 'Control';
+  const name  = studentName || 'Alumno/a';
+  const cls   = studentClass || '';
+  const fecha = new Date().toLocaleDateString('es-ES');
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Correcciones – ${title}</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 0 auto; padding: 24px 20px; color: #1f2937; background: #f8fafc; }
+    h1 { font-size: 1.4rem; color: #4f46e5; margin-bottom: 4px; }
+    .meta { font-size: 0.88rem; color: #6b7280; margin-bottom: 20px; }
+    .score-box { text-align: center; background: #fff; border: 2px solid #e0e7ff; border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+    .score-big { font-size: 3rem; font-weight: 900; color: #4f46e5; }
+    .score-msg { font-size: 1.1rem; font-weight: 700; color: #374151; margin-top: 6px; }
+    .result-card { background: #fff; border-radius: 12px; border: 1.5px solid #e5e7eb; padding: 14px 16px; margin-bottom: 12px; }
+    .result-card.correct { border-color: #10b981; }
+    .result-card.partial  { border-color: #f59e0b; }
+    .result-card.wrong    { border-color: #ef4444; }
+    .footer { text-align: center; font-size: 0.78rem; color: #9ca3af; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <h1>📝 ${title}</h1>
+  <div class="meta">${name}${cls ? ' · ' + cls : ''} · ${fecha}</div>
+  <div class="score-box">
+    <div class="score-big">${score}<span style="font-size:1.2rem;color:#6b7280">/10</span></div>
+    <div class="score-msg">${msg}</div>
+  </div>
+  <div id="review">${cards}</div>
+  <div class="footer">Generado por Controles Profe Rafa · ${fecha}</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const safeName = (name + '_' + title).replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ _-]/g, '').substring(0, 60);
+  a.href     = url;
+  a.download = `correcciones_${safeName}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function backToStudent() {
   document.getElementById('results-screen').style.display = 'none';
   studentName = '';
@@ -5895,6 +5951,8 @@ window.addEventListener('load', () => {
         document.getElementById('teacher-view').classList.remove('active');
         document.getElementById('student-view').style.display = 'block';
         document.getElementById('student-view').classList.add('active');
+        document.getElementById('no-quiz-state').style.display = 'none';
+        document.getElementById('quiz-student-container').style.display = 'none';
         showPasswordScreen();
       } else {
         showView('student');
