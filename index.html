@@ -2402,7 +2402,8 @@ function syncPublishedQuiz() {
     const timeMin = parseInt(document.getElementById('time-limit')?.value) || currentQuiz?.timeMinutes || 8;
     const password = document.getElementById('quiz-password-input')?.value?.trim() || currentQuiz?.password || '';
     currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password };
-    const encoded = quizEncode(currentQuiz);
+    const { publishedUrl: _pu1, savedAt: _sa1, id: _id1, subject: _sub1, ...quizToEncode1 } = currentQuiz;
+    const encoded = quizEncode(quizToEncode1);
     const base = window.location.href.split('?')[0];
     const quizUrl = base + '?quiz=' + encoded;
     const linkInput = document.getElementById('quiz-link');
@@ -3422,7 +3423,8 @@ function publishQuiz() {
   const timeMin = parseInt(document.getElementById('time-limit').value) || 8;
   const password = (document.getElementById('quiz-password-input').value || '').trim();
   currentQuiz = { title, class: cls, timeMinutes: timeMin, questions: JSON.parse(JSON.stringify(editorQuestions)), password: password || '' };
-  const encoded = quizEncode(currentQuiz);
+  const { publishedUrl: _pu2, savedAt: _sa2, id: _id2, subject: _sub2, ...quizToEncode2 } = currentQuiz;
+  const encoded = quizEncode(quizToEncode2);
   const base = window.location.href.split('?')[0];
   const quizUrl = base + '?quiz=' + encoded;
   document.getElementById('publish-card').style.display = 'block';
@@ -5612,7 +5614,8 @@ function publishBankItem(id) {
   }
 
   currentQuiz = quiz;
-  const encoded = quizEncode(quiz);
+  const { publishedUrl: _pu3, savedAt: _sa3, ...quizToEncode3 } = quiz;
+  const encoded = quizEncode(quizToEncode3);
   const base = window.location.href.split('?')[0];
   const quizUrl = base + '?quiz=' + encoded;
 
